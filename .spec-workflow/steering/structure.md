@@ -47,17 +47,17 @@ cleaning-app/
 │   │   ├── (tabs)/
 │   │   │   ├── index.tsx              # ホーム → features/heatmap を使う
 │   │   │   └── history.tsx            # 履歴 → features/cleaning-record を使う
-│   │   ├── floorplan/
+│   │   ├── layout/
 │   │   │   ├── index.tsx
 │   │   │   └── [roomId].tsx
 │   │   └── _layout.tsx
 │   └── src/
 │       ├── features/
-│       │   ├── floorplan/             # 間取り図機能
-│       │   │   ├── components/        # FloorPlanCanvas, RoomShape, FurnitureItem ...
-│       │   │   ├── hooks/             # useFloorPlan, useDragDrop ...
+│       │   ├── layout/             # 間取り図機能
+│       │   │   ├── components/        # LayoutCanvas, RoomShape, FurnitureItem ...
+│       │   │   ├── hooks/             # useLayout, useDragDrop ...
 │       │   │   ├── usecases/          # AddRoomUseCase, PlaceFurnitureUseCase ...
-│       │   │   ├── repositories/      # FloorPlanRepository（API呼び出し実装）
+│       │   │   ├── repositories/      # LayoutRepository（API呼び出し実装）
 │       │   │   └── types.ts
 │       │   ├── heatmap/               # ヒートマップ機能
 │       │   │   ├── components/        # HeatmapOverlay, AreaColorBadge ...
@@ -78,7 +78,7 @@ cleaning-app/
 │       │       └── types.ts
 │       ├── capabilities/              # feature間境界インターフェース
 │       │   ├── CleaningStatusCapability.ts   # 掃除状態の照会（notification→cleaning-record）
-│       │   └── FloorPlanCapability.ts        # 間取り情報の照会（heatmap→floorplan）
+│       │   └── LayoutCapability.ts        # 間取り情報の照会（heatmap→layout）
 │       └── shared/                    # 機能横断の共通コード
 │           ├── api/                   # 生成されたAPIクライアント（コミット対象外）
 │           ├── components/            # 汎用UIパーツ（Button, Card, Icon ...）
@@ -89,17 +89,17 @@ cleaning-app/
 │                   └── di.ts          # Capability実装の配線（DI集中管理）
 ├── backend/
 │   └── src/main/kotlin/com/cleaningapp/
-│       ├── floorplan/                 # 間取り図機能
-│       │   ├── presentation/          # FloorPlanController（APIスタブ実装）
+│       ├── layout/                 # 間取り図機能
+│       │   ├── presentation/          # LayoutController（APIスタブ実装）
 │       │   ├── application/           # AddRoomUseCase, PlaceFurnitureUseCase ...
-│       │   ├── domain/                # FloorPlan, Room, Furniture（ドメインモデル）
-│       │   └── infrastructure/        # FloorPlanJpaRepository, FloorPlanEntity
+│       │   ├── domain/                # Layout, Room, Furniture（ドメインモデル）
+│       │   └── infrastructure/        # LayoutRepositoryImpl, LayoutMapper（MyBatis）
 │       ├── cleaningrecord/            # 掃除記録機能
 │       │   ├── presentation/          # CleaningRecordController
 │       │   ├── application/           # LogCleaningUseCase, GetOverdueAreasUseCase
 │       │   │                          # CleaningStatusPortImpl ← port実装
 │       │   ├── domain/                # CleaningRecord, CleaningSchedule
-│       │   └── infrastructure/        # CleaningRecordJpaRepository
+│       │   └── infrastructure/        # CleaningRecordRepositoryImpl, CleaningRecordMapper（MyBatis）
 │       ├── notification/              # 通知設定機能（サーバー側設定管理）
 │       │   ├── presentation/
 │       │   ├── application/           # ↑ CleaningStatusPortに依存
@@ -132,7 +132,7 @@ cleaning-app/
 | `presentation/` | HTTPの入出力のみ。バリデーション | `application/` |
 | `application/` | ユースケース実装。トランザクション境界 | `domain/`, `capabilities/` |
 | `domain/` | ビジネスルール。Springに非依存 | なし（純粋Kotlin） |
-| `infrastructure/` | JPAエンティティ・リポジトリ実装 | `domain/` |
+| `infrastructure/` | MyBatis Mapper・リポジトリ実装 | `domain/` |
 
 ## 依存方向のルール
 
@@ -202,7 +202,9 @@ export interface CleaningStatusCapability {
 | capability（interface） | PascalCase + `Capability.ts` | `CleaningStatusCapability.ts` |
 | Kotlin ユースケース | PascalCase + `UseCase.kt` | `LogCleaningUseCase.kt` |
 | Kotlin Port（interface） | PascalCase + `Port.kt` | `CleaningStatusPort.kt` |
-| Flywayマイグレーション | `V{番号}__{機能}_{説明}.sql` | `V1__floorplan_initial.sql` |
+| MyBatis Mapper（interface） | PascalCase + `Mapper.kt` | `LayoutMapper.kt` |
+| MyBatis Mapper XML | PascalCase + `Mapper.xml` | `LayoutMapper.xml` |
+| Flywayマイグレーション | `V{番号}__{機能}_{説明}.sql` | `V1__layout_initial.sql` |
 
 ### コード
 
