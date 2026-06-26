@@ -1,0 +1,130 @@
+openapi: 3.1.0
+info:
+  title: Cleaning App API
+  version: 0.1.0
+  description: |
+    一人暮らし向け掃除管理アプリのAPI。
+    契約ファースト（ADR-003）の唯一の正本。このファイルからクライアント・サーバースタブを生成する。
+
+servers:
+  - url: http://localhost:8080
+    description: ローカル開発
+
+# ───────────────────────────────────────────────
+# 再利用する部品（スキーマ・パラメータ）は components に置き、$ref で参照する
+# ───────────────────────────────────────────────
+components:
+  parameters:
+    # MVPは認証なし。初回起動時に発行したUUIDを X-User-Id ヘッダで渡して識別する
+    # （V2でKeycloak導入時はJWTに置き換わるが、契約上はここを差し替えるだけで済む）
+    UserIdHeader:
+      name: X-User-Id
+      in: header
+      required: true
+      description: 初回起動時に発行したユーザーUUID
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    RoomType:
+      type: string
+      description: 部屋の種別。プリセットパーツのseedに使う
+      enum: [KITCHEN, BATHROOM, BEDROOM, LIVING, TOILET, OTHER]
+
+    # サーバーが「返す」部屋。id・タイムスタンプ込み（＝サーバーが確定させる値）
+    Room:
+      type: object
+      required: [id, name, type, gridX, gridY, gridW, gridH]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: リビング
+        type:
+          $ref: '#/components/schemas/RoomType'
+        gridX:
+          type: integer
+          description: 左上セルX（グリッド座標）
+        gridY:
+          type: integer
+          description: 左上セルY（グリッド座標）
+        gridW:
+          type: integer
+          description: 幅（セル数）
+        gridH:
+          type: integer
+          description: 高さ（セル数）
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # 部屋の「作成入力」。id・userId・タイムスタンプは含めない
+    # → これらはサーバーが生成する値で、クライアントに送らせてはいけないため、入力スキーマと出力スキーマを分ける
+    RoomCreate:
+      type: object
+      required: [name, type, gridX, gridY, gridW, gridH]
+      properties:
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/RoomType'
+        gridX:
+          type: integer
+        gridY:
+          type: integer
+        gridW:
+          type: integer
+        gridH:
+          type: integer
+
+
+# ───────────────────────────────────────────────
+# エンドポイント定義
+# ───────────────────────────────────────────────
+paths:
+  /rooms:
+    post:
+      summary: 部屋を追加する
+      description: グリッド座標と種別を指定して部屋を作成する。（種別に応じたプリセットパーツのseedは後のスライスで実装）
+      operationId: createRoom
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomCreate'
+      responses:
+        '201':
+          description: 作成された部屋
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '400':
+          description: 入力が不正
+
+    get:
+      summary: 部屋一覧を取得する
+      description: ユーザーの部屋一覧を取得する
+      operationId: listRooms
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      responses:
+        '200':
+          description: 部屋一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
+        '400':
+          description: 入力が不正
