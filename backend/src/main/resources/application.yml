@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: backend
+
+  # PostgreSQL への接続（docker-compose の設定と一致させる）
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cleaning_app
+    username: cleaning
+    password: cleaning
+
+  # Flyway: 起動時に classpath:db/migration の V*.sql を順に適用する
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+# MyBatis の設定（アノテーション形式。Mapper XMLは使わない）
+mybatis:
+  # 自前の TypeHandler（UUID 用）を登録する
+  type-handlers-package: com.cleaningapp.shared.mybatis
+  configuration:
+    # snake_case のカラム(grid_x) を camelCase のプロパティ(gridX) に自動マッピングする
+    map-underscore-to-camel-case: true
+    # data class のコンストラクタ引数名で結果をマッピングする（-java-parameters と併用）
+    arg-name-based-constructor-auto-mapping: true
