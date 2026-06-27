@@ -1,6 +1,7 @@
 package com.cleaningapp.floorplan.application
 
 import com.cleaningapp.floorplan.domain.FurnitureRepository
+import com.cleaningapp.floorplan.domain.OwnerType
 import com.cleaningapp.floorplan.domain.PartRepository
 import com.cleaningapp.floorplan.domain.RoomRepository
 import com.cleaningapp.shared.exception.NotFoundException
@@ -29,7 +30,7 @@ class DeleteFurnitureUseCase(
             ?: throw NotFoundException("Furniture not found: ${command.furnitureId}")
 
         // part には FK がないため、application 層で明示削除する
-        partRepository.deleteByOwnerId(command.furnitureId)
+        partRepository.deleteByOwnerId(OwnerType.FURNITURE, command.furnitureId)
         furnitureRepository.deleteById(command.furnitureId)
     }
 }
