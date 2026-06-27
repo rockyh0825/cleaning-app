@@ -1,6 +1,5 @@
 package com.cleaningapp.floorplan.application
 
-import com.cleaningapp.floorplan.domain.Furniture
 import com.cleaningapp.floorplan.domain.FurnitureRepository
 import com.cleaningapp.floorplan.domain.Room
 import com.cleaningapp.floorplan.domain.RoomRepository
@@ -20,7 +19,6 @@ import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
 class AddFurnitureUseCaseTest {
-
     @MockK
     private lateinit var roomRepository: RoomRepository
 
@@ -32,31 +30,36 @@ class AddFurnitureUseCaseTest {
     private val userId: UUID = UUID.randomUUID()
     private val roomId: UUID = UUID.randomUUID()
 
-    private fun buildRoom(ownerId: UUID = userId) = Room(
-        id = roomId,
-        userId = ownerId,
-        name = "テストルーム",
-        type = RoomType.BEDROOM,
-        gridX = 0, gridY = 0, gridW = 4, gridH = 4,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun buildRoom(ownerId: UUID = userId) =
+        Room(
+            id = roomId,
+            userId = ownerId,
+            name = "テストルーム",
+            type = RoomType.BEDROOM,
+            gridX = 0,
+            gridY = 0,
+            gridW = 4,
+            gridH = 4,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
     @Test
     fun `saves_furniture_with_given_properties_when_command_is_valid`() {
         // Arrange
         every { roomRepository.findById(roomId) } returns buildRoom()
         justRun { furnitureRepository.save(any()) }
-        val command = AddFurnitureCommand(
-            userId = userId,
-            roomId = roomId,
-            name = "ベッド",
-            presetKey = "bed",
-            gridX = 1,
-            gridY = 1,
-            gridW = 2,
-            gridH = 3,
-        )
+        val command =
+            AddFurnitureCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "ベッド",
+                presetKey = "bed",
+                gridX = 1,
+                gridY = 1,
+                gridW = 2,
+                gridH = 3,
+            )
 
         // Act
         val result = useCase.execute(command)
@@ -76,10 +79,17 @@ class AddFurnitureUseCaseTest {
         // Arrange
         every { roomRepository.findById(roomId) } returns buildRoom()
         justRun { furnitureRepository.save(any()) }
-        val command = AddFurnitureCommand(
-            userId = userId, roomId = roomId, name = "ベッド",
-            presetKey = null, gridX = 0, gridY = 0, gridW = 2, gridH = 2,
-        )
+        val command =
+            AddFurnitureCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "ベッド",
+                presetKey = null,
+                gridX = 0,
+                gridY = 0,
+                gridW = 2,
+                gridH = 2,
+            )
 
         // Act
         val result = useCase.execute(command)
@@ -93,10 +103,17 @@ class AddFurnitureUseCaseTest {
         // Arrange
         every { roomRepository.findById(roomId) } returns buildRoom()
         justRun { furnitureRepository.save(any()) }
-        val command = AddFurnitureCommand(
-            userId = userId, roomId = roomId, name = "棚",
-            presetKey = null, gridX = 0, gridY = 0, gridW = 1, gridH = 1,
-        )
+        val command =
+            AddFurnitureCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "棚",
+                presetKey = null,
+                gridX = 0,
+                gridY = 0,
+                gridW = 1,
+                gridH = 1,
+            )
 
         // Act
         val result = useCase.execute(command)
@@ -109,10 +126,17 @@ class AddFurnitureUseCaseTest {
     fun `throws_not_found_when_room_does_not_exist`() {
         // Arrange
         every { roomRepository.findById(roomId) } returns null
-        val command = AddFurnitureCommand(
-            userId = userId, roomId = roomId, name = "ソファ",
-            presetKey = null, gridX = 0, gridY = 0, gridW = 2, gridH = 1,
-        )
+        val command =
+            AddFurnitureCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "ソファ",
+                presetKey = null,
+                gridX = 0,
+                gridY = 0,
+                gridW = 2,
+                gridH = 1,
+            )
 
         // Act & Assert
         assertThrows<NotFoundException> { useCase.execute(command) }
@@ -123,10 +147,17 @@ class AddFurnitureUseCaseTest {
         // Arrange
         val otherUserId = UUID.randomUUID()
         every { roomRepository.findById(roomId) } returns buildRoom(ownerId = otherUserId)
-        val command = AddFurnitureCommand(
-            userId = userId, roomId = roomId, name = "ソファ",
-            presetKey = null, gridX = 0, gridY = 0, gridW = 2, gridH = 1,
-        )
+        val command =
+            AddFurnitureCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "ソファ",
+                presetKey = null,
+                gridX = 0,
+                gridY = 0,
+                gridW = 2,
+                gridH = 1,
+            )
 
         // Act & Assert
         assertThrows<NotFoundException> { useCase.execute(command) }
@@ -137,10 +168,17 @@ class AddFurnitureUseCaseTest {
         // Arrange
         every { roomRepository.findById(roomId) } returns buildRoom()
         justRun { furnitureRepository.save(any()) }
-        val command = AddFurnitureCommand(
-            userId = userId, roomId = roomId, name = "テーブル",
-            presetKey = null, gridX = 0, gridY = 0, gridW = 2, gridH = 2,
-        )
+        val command =
+            AddFurnitureCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "テーブル",
+                presetKey = null,
+                gridX = 0,
+                gridY = 0,
+                gridW = 2,
+                gridH = 2,
+            )
 
         // Act
         useCase.execute(command)

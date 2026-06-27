@@ -16,7 +16,6 @@ import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
 class GetFloorPlanUseCaseTest {
-
     @MockK
     private lateinit var roomRepository: RoomRepository
 
@@ -27,25 +26,33 @@ class GetFloorPlanUseCaseTest {
 
     private val userId: UUID = UUID.randomUUID()
 
-    private fun buildRoom(id: UUID = UUID.randomUUID()) = Room(
-        id = id,
-        userId = userId,
-        name = "テストルーム",
-        type = RoomType.LIVING,
-        gridX = 0, gridY = 0, gridW = 4, gridH = 4,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun buildRoom(id: UUID = UUID.randomUUID()) =
+        Room(
+            id = id,
+            userId = userId,
+            name = "テストルーム",
+            type = RoomType.LIVING,
+            gridX = 0,
+            gridY = 0,
+            gridW = 4,
+            gridH = 4,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
-    private fun buildFurniture(roomId: UUID) = Furniture(
-        id = UUID.randomUUID(),
-        roomId = roomId,
-        name = "ソファ",
-        presetKey = null,
-        gridX = 0, gridY = 0, gridW = 2, gridH = 2,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun buildFurniture(roomId: UUID) =
+        Furniture(
+            id = UUID.randomUUID(),
+            roomId = roomId,
+            name = "ソファ",
+            presetKey = null,
+            gridX = 0,
+            gridY = 0,
+            gridW = 2,
+            gridH = 2,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
     @Test
     fun `returns_empty_floor_plan_when_user_has_no_rooms`() {

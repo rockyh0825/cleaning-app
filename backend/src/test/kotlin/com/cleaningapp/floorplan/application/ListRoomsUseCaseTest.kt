@@ -14,7 +14,6 @@ import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
 class ListRoomsUseCaseTest {
-
     @MockK
     private lateinit var roomRepository: RoomRepository
 
@@ -22,15 +21,19 @@ class ListRoomsUseCaseTest {
 
     private val userId: UUID = UUID.randomUUID()
 
-    private fun buildRoom(name: String = "テスト") = Room(
-        id = UUID.randomUUID(),
-        userId = userId,
-        name = name,
-        type = RoomType.OTHER,
-        gridX = 0, gridY = 0, gridW = 3, gridH = 3,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun buildRoom(name: String = "テスト") =
+        Room(
+            id = UUID.randomUUID(),
+            userId = userId,
+            name = name,
+            type = RoomType.OTHER,
+            gridX = 0,
+            gridY = 0,
+            gridW = 3,
+            gridH = 3,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
     @Test
     fun `returns_empty_list_when_user_has_no_rooms`() {

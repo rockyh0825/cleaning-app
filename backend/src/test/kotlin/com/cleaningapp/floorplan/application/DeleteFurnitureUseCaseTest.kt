@@ -22,7 +22,6 @@ import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
 class DeleteFurnitureUseCaseTest {
-
     @MockK
     private lateinit var roomRepository: RoomRepository
 
@@ -40,25 +39,33 @@ class DeleteFurnitureUseCaseTest {
     private val roomId: UUID = UUID.randomUUID()
     private val furnitureId: UUID = UUID.randomUUID()
 
-    private fun buildRoom(ownerId: UUID = userId) = Room(
-        id = roomId,
-        userId = ownerId,
-        name = "テストルーム",
-        type = RoomType.LIVING,
-        gridX = 0, gridY = 0, gridW = 5, gridH = 5,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun buildRoom(ownerId: UUID = userId) =
+        Room(
+            id = roomId,
+            userId = ownerId,
+            name = "テストルーム",
+            type = RoomType.LIVING,
+            gridX = 0,
+            gridY = 0,
+            gridW = 5,
+            gridH = 5,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
-    private fun buildFurniture() = Furniture(
-        id = furnitureId,
-        roomId = roomId,
-        name = "ソファ",
-        presetKey = null,
-        gridX = 0, gridY = 0, gridW = 2, gridH = 2,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun buildFurniture() =
+        Furniture(
+            id = furnitureId,
+            roomId = roomId,
+            name = "ソファ",
+            presetKey = null,
+            gridX = 0,
+            gridY = 0,
+            gridW = 2,
+            gridH = 2,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
     @Test
     fun `deletes_furniture_parts_and_then_furniture_when_command_is_valid`() {

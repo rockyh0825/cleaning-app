@@ -6,7 +6,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 
 class RoomTypeTest {
-
     @Test
     fun `kitchen_returns_preset_parts_with_correct_names_and_cycles`() {
         // Arrange & Act

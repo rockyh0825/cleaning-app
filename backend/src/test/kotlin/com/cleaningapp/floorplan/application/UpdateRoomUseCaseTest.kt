@@ -19,7 +19,6 @@ import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
 class UpdateRoomUseCaseTest {
-
     @MockK
     private lateinit var roomRepository: RoomRepository
 
@@ -28,26 +27,35 @@ class UpdateRoomUseCaseTest {
     private val userId: UUID = UUID.randomUUID()
     private val roomId: UUID = UUID.randomUUID()
 
-    private fun buildRoom() = Room(
-        id = roomId,
-        userId = userId,
-        name = "元の名前",
-        type = RoomType.BEDROOM,
-        gridX = 0, gridY = 0, gridW = 3, gridH = 3,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun buildRoom() =
+        Room(
+            id = roomId,
+            userId = userId,
+            name = "元の名前",
+            type = RoomType.BEDROOM,
+            gridX = 0,
+            gridY = 0,
+            gridW = 3,
+            gridH = 3,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
     @Test
     fun `updates_all_provided_fields`() {
         // Arrange
         every { roomRepository.findById(roomId) } returns buildRoom()
         justRun { roomRepository.update(any()) }
-        val command = UpdateRoomCommand(
-            userId = userId, roomId = roomId,
-            name = "新しい名前",
-            gridX = 5, gridY = 6, gridW = 7, gridH = 8,
-        )
+        val command =
+            UpdateRoomCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "新しい名前",
+                gridX = 5,
+                gridY = 6,
+                gridW = 7,
+                gridH = 8,
+            )
 
         // Act
         val result = useCase.execute(command)
@@ -66,10 +74,16 @@ class UpdateRoomUseCaseTest {
         val originalRoom = buildRoom()
         every { roomRepository.findById(roomId) } returns originalRoom
         justRun { roomRepository.update(any()) }
-        val command = UpdateRoomCommand(
-            userId = userId, roomId = roomId,
-            name = null, gridX = null, gridY = null, gridW = null, gridH = null,
-        )
+        val command =
+            UpdateRoomCommand(
+                userId = userId,
+                roomId = roomId,
+                name = null,
+                gridX = null,
+                gridY = null,
+                gridW = null,
+                gridH = null,
+            )
 
         // Act
         val result = useCase.execute(command)
@@ -88,10 +102,16 @@ class UpdateRoomUseCaseTest {
         val originalRoom = buildRoom()
         every { roomRepository.findById(roomId) } returns originalRoom
         justRun { roomRepository.update(any()) }
-        val command = UpdateRoomCommand(
-            userId = userId, roomId = roomId,
-            name = "更新後の名前", gridX = null, gridY = null, gridW = null, gridH = null,
-        )
+        val command =
+            UpdateRoomCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "更新後の名前",
+                gridX = null,
+                gridY = null,
+                gridW = null,
+                gridH = null,
+            )
 
         // Act
         val result = useCase.execute(command)
@@ -107,11 +127,16 @@ class UpdateRoomUseCaseTest {
         every { roomRepository.findById(roomId) } returns buildRoom()
         val updatedSlot = slot<Room>()
         every { roomRepository.update(capture(updatedSlot)) } returns Unit
-        val command = UpdateRoomCommand(
-            userId = userId, roomId = roomId,
-            name = "保存確認",
-            gridX = null, gridY = null, gridW = null, gridH = null,
-        )
+        val command =
+            UpdateRoomCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "保存確認",
+                gridX = null,
+                gridY = null,
+                gridW = null,
+                gridH = null,
+            )
 
         // Act
         useCase.execute(command)
@@ -125,10 +150,16 @@ class UpdateRoomUseCaseTest {
     fun `throws_not_found_when_room_does_not_exist`() {
         // Arrange
         every { roomRepository.findById(roomId) } returns null
-        val command = UpdateRoomCommand(
-            userId = userId, roomId = roomId,
-            name = "名前", gridX = null, gridY = null, gridW = null, gridH = null,
-        )
+        val command =
+            UpdateRoomCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "名前",
+                gridX = null,
+                gridY = null,
+                gridW = null,
+                gridH = null,
+            )
 
         // Act & Assert
         assertThrows<NotFoundException> { useCase.execute(command) }
@@ -139,10 +170,16 @@ class UpdateRoomUseCaseTest {
         // Arrange
         val otherUserId = UUID.randomUUID()
         every { roomRepository.findById(roomId) } returns buildRoom().copy(userId = otherUserId)
-        val command = UpdateRoomCommand(
-            userId = userId, roomId = roomId,
-            name = "名前", gridX = null, gridY = null, gridW = null, gridH = null,
-        )
+        val command =
+            UpdateRoomCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "名前",
+                gridX = null,
+                gridY = null,
+                gridW = null,
+                gridH = null,
+            )
 
         // Act & Assert
         assertThrows<NotFoundException> { useCase.execute(command) }

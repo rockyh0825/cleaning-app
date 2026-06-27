@@ -22,7 +22,6 @@ import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
 class DeleteRoomUseCaseTest {
-
     @MockK
     private lateinit var roomRepository: RoomRepository
 
@@ -37,25 +36,33 @@ class DeleteRoomUseCaseTest {
     private val userId: UUID = UUID.randomUUID()
     private val roomId: UUID = UUID.randomUUID()
 
-    private fun buildRoom(ownerId: UUID = userId) = Room(
-        id = roomId,
-        userId = ownerId,
-        name = "テストルーム",
-        type = RoomType.KITCHEN,
-        gridX = 0, gridY = 0, gridW = 4, gridH = 4,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun buildRoom(ownerId: UUID = userId) =
+        Room(
+            id = roomId,
+            userId = ownerId,
+            name = "テストルーム",
+            type = RoomType.KITCHEN,
+            gridX = 0,
+            gridY = 0,
+            gridW = 4,
+            gridH = 4,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
-    private fun buildFurniture(id: UUID = UUID.randomUUID()) = Furniture(
-        id = id,
-        roomId = roomId,
-        name = "家具",
-        presetKey = null,
-        gridX = 0, gridY = 0, gridW = 1, gridH = 1,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun buildFurniture(id: UUID = UUID.randomUUID()) =
+        Furniture(
+            id = id,
+            roomId = roomId,
+            name = "家具",
+            presetKey = null,
+            gridX = 0,
+            gridY = 0,
+            gridW = 1,
+            gridH = 1,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
     @Test
     fun `deletes_room_parts_furniture_parts_and_room_when_command_is_valid`() {
@@ -98,10 +105,11 @@ class DeleteRoomUseCaseTest {
         val furnitureId1 = UUID.randomUUID()
         val furnitureId2 = UUID.randomUUID()
         every { roomRepository.findById(roomId) } returns buildRoom()
-        every { furnitureRepository.findByRoomId(roomId) } returns listOf(
-            buildFurniture(furnitureId1),
-            buildFurniture(furnitureId2),
-        )
+        every { furnitureRepository.findByRoomId(roomId) } returns
+            listOf(
+                buildFurniture(furnitureId1),
+                buildFurniture(furnitureId2),
+            )
         justRun { partRepository.deleteByOwnerId(any(), any()) }
         justRun { roomRepository.deleteById(roomId) }
 

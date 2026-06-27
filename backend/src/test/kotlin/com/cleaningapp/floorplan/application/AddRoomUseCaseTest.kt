@@ -17,7 +17,6 @@ import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
 class AddRoomUseCaseTest {
-
     @MockK
     private lateinit var roomRepository: RoomRepository
 
@@ -33,15 +32,16 @@ class AddRoomUseCaseTest {
         // Arrange
         justRun { roomRepository.save(any()) }
         justRun { partRepository.saveAll(any()) }
-        val command = AddRoomCommand(
-            userId = userId,
-            name = "キッチン",
-            type = RoomType.KITCHEN,
-            gridX = 1,
-            gridY = 2,
-            gridW = 4,
-            gridH = 3,
-        )
+        val command =
+            AddRoomCommand(
+                userId = userId,
+                name = "キッチン",
+                type = RoomType.KITCHEN,
+                gridX = 1,
+                gridY = 2,
+                gridW = 4,
+                gridH = 3,
+            )
 
         // Act
         val result = useCase.execute(command)
@@ -61,12 +61,16 @@ class AddRoomUseCaseTest {
         // Arrange
         justRun { roomRepository.save(any()) }
         justRun { partRepository.saveAll(any()) }
-        val command = AddRoomCommand(
-            userId = userId,
-            name = "寝室",
-            type = RoomType.BEDROOM,
-            gridX = 0, gridY = 0, gridW = 3, gridH = 3,
-        )
+        val command =
+            AddRoomCommand(
+                userId = userId,
+                name = "寝室",
+                type = RoomType.BEDROOM,
+                gridX = 0,
+                gridY = 0,
+                gridW = 3,
+                gridH = 3,
+            )
 
         // Act
         val result = useCase.execute(command)
@@ -81,12 +85,16 @@ class AddRoomUseCaseTest {
         justRun { roomRepository.save(any()) }
         val partsSlot = slot<List<com.cleaningapp.floorplan.domain.Part>>()
         every { partRepository.saveAll(capture(partsSlot)) } returns Unit
-        val command = AddRoomCommand(
-            userId = userId,
-            name = "キッチン",
-            type = RoomType.KITCHEN,
-            gridX = 0, gridY = 0, gridW = 4, gridH = 4,
-        )
+        val command =
+            AddRoomCommand(
+                userId = userId,
+                name = "キッチン",
+                type = RoomType.KITCHEN,
+                gridX = 0,
+                gridY = 0,
+                gridW = 4,
+                gridH = 4,
+            )
 
         // Act
         useCase.execute(command)
@@ -102,12 +110,16 @@ class AddRoomUseCaseTest {
         every { roomRepository.save(capture(roomSlot)) } returns Unit
         val partsSlot = slot<List<com.cleaningapp.floorplan.domain.Part>>()
         every { partRepository.saveAll(capture(partsSlot)) } returns Unit
-        val command = AddRoomCommand(
-            userId = userId,
-            name = "浴室",
-            type = RoomType.BATHROOM,
-            gridX = 0, gridY = 0, gridW = 3, gridH = 3,
-        )
+        val command =
+            AddRoomCommand(
+                userId = userId,
+                name = "浴室",
+                type = RoomType.BATHROOM,
+                gridX = 0,
+                gridY = 0,
+                gridW = 3,
+                gridH = 3,
+            )
 
         // Act
         useCase.execute(command)
@@ -124,12 +136,16 @@ class AddRoomUseCaseTest {
         justRun { roomRepository.save(any()) }
         val partsSlot = slot<List<com.cleaningapp.floorplan.domain.Part>>()
         every { partRepository.saveAll(capture(partsSlot)) } returns Unit
-        val command = AddRoomCommand(
-            userId = userId,
-            name = "トイレ",
-            type = RoomType.TOILET,
-            gridX = 0, gridY = 0, gridW = 2, gridH = 2,
-        )
+        val command =
+            AddRoomCommand(
+                userId = userId,
+                name = "トイレ",
+                type = RoomType.TOILET,
+                gridX = 0,
+                gridY = 0,
+                gridW = 2,
+                gridH = 2,
+            )
 
         // Act
         useCase.execute(command)
@@ -143,12 +159,16 @@ class AddRoomUseCaseTest {
         // Arrange
         justRun { roomRepository.save(any()) }
         justRun { partRepository.saveAll(any()) }
-        val command = AddRoomCommand(
-            userId = userId,
-            name = "リビング",
-            type = RoomType.LIVING,
-            gridX = 0, gridY = 0, gridW = 5, gridH = 5,
-        )
+        val command =
+            AddRoomCommand(
+                userId = userId,
+                name = "リビング",
+                type = RoomType.LIVING,
+                gridX = 0,
+                gridY = 0,
+                gridW = 5,
+                gridH = 5,
+            )
 
         // Act
         useCase.execute(command)
