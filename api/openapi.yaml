@@ -95,6 +95,7 @@ components:
     RoomUpdate:
       type: object
       description: 指定したフィールドのみ更新する。すべて省略可能だが、少なくとも1つ指定すること
+      minProperties: 1
       properties:
         name:
           type: string
@@ -162,7 +163,7 @@ components:
           anyOf:
             - type: string
             - type: 'null'
-          description: プリセット由来なら識別キー。自由名称の場合は省略
+          description: プリセット由来なら識別キー。自由名称の場合は省略またはnull
         gridX:
           type: integer
         gridY:
@@ -176,6 +177,7 @@ components:
     FurnitureUpdate:
       type: object
       description: 指定したフィールドのみ更新する。すべて省略可能だが、少なくとも1つ指定すること
+      minProperties: 1
       properties:
         name:
           type: string
