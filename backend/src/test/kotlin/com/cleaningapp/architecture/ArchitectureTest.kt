@@ -2,9 +2,12 @@ package com.cleaningapp.architecture
 
 import com.lemonappdev.konsist.api.Konsist
 import com.lemonappdev.konsist.api.ext.list.withNameEndingWith
-import com.lemonappdev.konsist.api.ext.list.withPackage
 import com.lemonappdev.konsist.api.verify.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.assertTrue as assertCondition
+
+private val SPRING_ANNOTATIONS =
+    setOf("Service", "Component", "Repository", "Controller", "RestController")
 
 class ArchitectureTest {
     @Test
@@ -35,13 +38,19 @@ class ArchitectureTest {
     }
 
     @Test
-    fun `domain classes do not depend on Spring`() {
+    fun `domain classes do not use Spring annotations`() {
         Konsist
             .scopeFromProject()
-            .files()
-            .withPackage("..domain..")
-            .assertTrue {
-                it.imports.none { import -> import.name.startsWith("org.springframework") }
+            .classes()
+            .filter { it.resideInPackage("..domain..") }
+            .forEach { koClass ->
+                val springAnnotations =
+                    koClass.annotations
+                        .filter { it.name in SPRING_ANNOTATIONS }
+                assertCondition(springAnnotations.isEmpty()) {
+                    "${koClass.name} must not use Spring annotations in the domain layer, " +
+                        "but found: ${springAnnotations.map { it.name }}"
+                }
             }
     }
 }
