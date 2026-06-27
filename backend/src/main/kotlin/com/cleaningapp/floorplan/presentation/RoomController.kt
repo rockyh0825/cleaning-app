@@ -2,10 +2,17 @@ package com.cleaningapp.floorplan.presentation
 
 import com.cleaningapp.floorplan.application.AddRoomCommand
 import com.cleaningapp.floorplan.application.AddRoomUseCase
+import com.cleaningapp.floorplan.application.DeleteRoomCommand
+import com.cleaningapp.floorplan.application.DeleteRoomUseCase
 import com.cleaningapp.floorplan.application.ListRoomsUseCase
+import com.cleaningapp.floorplan.application.UpdateRoomCommand
+import com.cleaningapp.floorplan.application.UpdateRoomUseCase
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
@@ -23,6 +30,8 @@ import java.util.UUID
 class RoomController(
     private val addRoomUseCase: AddRoomUseCase,
     private val listRoomsUseCase: ListRoomsUseCase,
+    private val updateRoomUseCase: UpdateRoomUseCase,
+    private val deleteRoomUseCase: DeleteRoomUseCase,
 ) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -49,4 +58,33 @@ class RoomController(
     fun list(
         @RequestHeader("X-User-Id") userId: UUID,
     ): List<RoomResponse> = listRoomsUseCase.execute(userId).map(RoomResponse::from)
+
+    @PatchMapping("/{roomId}")
+    fun update(
+        @RequestHeader("X-User-Id") userId: UUID,
+        @PathVariable roomId: UUID,
+        @Valid @RequestBody request: RoomUpdateRequest,
+    ): RoomResponse =
+        RoomResponse.from(
+            updateRoomUseCase.execute(
+                UpdateRoomCommand(
+                    userId = userId,
+                    roomId = roomId,
+                    name = request.name,
+                    gridX = request.gridX,
+                    gridY = request.gridY,
+                    gridW = request.gridW,
+                    gridH = request.gridH,
+                ),
+            ),
+        )
+
+    @DeleteMapping("/{roomId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun delete(
+        @RequestHeader("X-User-Id") userId: UUID,
+        @PathVariable roomId: UUID,
+    ) {
+        deleteRoomUseCase.execute(DeleteRoomCommand(userId, roomId))
+    }
 }

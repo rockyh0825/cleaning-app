@@ -1,9 +1,13 @@
 package com.cleaningapp.floorplan.application
 
+import com.cleaningapp.floorplan.domain.OwnerType
+import com.cleaningapp.floorplan.domain.Part
+import com.cleaningapp.floorplan.domain.PartRepository
 import com.cleaningapp.floorplan.domain.Room
 import com.cleaningapp.floorplan.domain.RoomRepository
 import com.cleaningapp.floorplan.domain.RoomType
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
@@ -27,7 +31,9 @@ data class AddRoomCommand(
 @Service
 class AddRoomUseCase(
     private val roomRepository: RoomRepository,
+    private val partRepository: PartRepository,
 ) {
+    @Transactional
     fun execute(command: AddRoomCommand): Room {
         val now = Instant.now()
         val room =
@@ -44,6 +50,22 @@ class AddRoomUseCase(
                 updatedAt = now,
             )
         roomRepository.save(room)
+
+        val presetParts =
+            command.type.presetParts().map { preset ->
+                Part(
+                    id = UUID.randomUUID(),
+                    ownerType = OwnerType.ROOM,
+                    ownerId = room.id,
+                    name = preset.name,
+                    recommendedCycleDays = preset.recommendedCycleDays,
+                    lastCleanedAt = null,
+                    createdAt = now,
+                    updatedAt = now,
+                )
+            }
+        partRepository.saveAll(presetParts)
+
         return room
     }
 }
