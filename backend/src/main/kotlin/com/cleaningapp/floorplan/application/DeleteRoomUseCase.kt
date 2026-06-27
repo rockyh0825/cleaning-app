@@ -25,7 +25,8 @@ class DeleteRoomUseCase(
             ?: throw NotFoundException("Room not found: ${command.roomId}")
 
         // part には FK がないため、application 層で明示削除する
-        furnitureRepository.findByRoomId(command.roomId)
+        furnitureRepository
+            .findByRoomId(command.roomId)
             .forEach { partRepository.deleteByOwnerId(it.id) }
         partRepository.deleteByOwnerId(command.roomId)
 

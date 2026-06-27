@@ -22,8 +22,9 @@ class UpdateRoomUseCase(
     private val roomRepository: RoomRepository,
 ) {
     fun execute(command: UpdateRoomCommand): Room {
-        val room = roomRepository.findById(command.roomId)?.takeIf { it.userId == command.userId }
-            ?: throw NotFoundException("Room not found: ${command.roomId}")
+        val room =
+            roomRepository.findById(command.roomId)?.takeIf { it.userId == command.userId }
+                ?: throw NotFoundException("Room not found: ${command.roomId}")
 
         val updated =
             room.copy(
