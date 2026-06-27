@@ -1,10 +1,12 @@
 package com.cleaningapp.floorplan.infrastructure
 
 import com.cleaningapp.floorplan.domain.Room
+import org.apache.ibatis.annotations.Delete
 import org.apache.ibatis.annotations.Insert
 import org.apache.ibatis.annotations.Mapper
 import org.apache.ibatis.annotations.Param
 import org.apache.ibatis.annotations.Select
+import org.apache.ibatis.annotations.Update
 import java.util.UUID
 
 /**
@@ -38,4 +40,30 @@ interface RoomMapper {
     fun selectByUserId(
         @Param("userId") userId: UUID,
     ): List<Room>
+
+    @Select(
+        """
+        SELECT id, user_id, name, type, grid_x, grid_y, grid_w, grid_h, created_at, updated_at
+        FROM room
+        WHERE id = #{id}
+        """,
+    )
+    fun selectById(
+        @Param("id") id: UUID,
+    ): Room?
+
+    @Update(
+        """
+        UPDATE room
+        SET name = #{name}, grid_x = #{gridX}, grid_y = #{gridY},
+            grid_w = #{gridW}, grid_h = #{gridH}, updated_at = #{updatedAt}
+        WHERE id = #{id}
+        """,
+    )
+    fun update(room: Room)
+
+    @Delete("DELETE FROM room WHERE id = #{id}")
+    fun deleteById(
+        @Param("id") id: UUID,
+    )
 }

@@ -16,4 +16,10 @@ class RoomRepositoryImpl(
     override fun save(room: Room) = roomMapper.insert(room)
 
     override fun findByUserId(userId: UUID): List<Room> = roomMapper.selectByUserId(userId)
+
+    override fun findById(id: UUID): Room? = roomMapper.selectById(id)
+
+    override fun update(room: Room) = roomMapper.update(room)
+
+    override fun deleteById(id: UUID) = roomMapper.deleteById(id)
 }
