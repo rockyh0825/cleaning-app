@@ -34,6 +34,7 @@ dependencies {
     testImplementation("org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("com.lemonappdev:konsist:0.17.3")
+    testImplementation("io.mockk:mockk:1.13.12")
 }
 
 kotlin {
