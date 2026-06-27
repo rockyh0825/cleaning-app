@@ -52,6 +52,14 @@ npx prettier --write src/    # フォーマット
 ./gradlew ktlintFormat       # フォーマット
 ```
 
+### Git フック（初回セットアップ）
+
+```bash
+git config core.hooksPath .githooks   # pre-push フックを有効化
+```
+
+`.githooks/pre-push` により、`backend/**` に変更がある場合のみ ktlint・detekt・テスト（PostgreSQL 起動中の場合）を自動実行してプッシュをブロックする。
+
 ### APIクライアント生成
 
 ```bash
