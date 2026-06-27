@@ -6,10 +6,12 @@ import com.lemonappdev.konsist.api.verify.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertTrue as assertCondition
 
-private val SPRING_ANNOTATIONS =
-    setOf("Service", "Component", "Repository", "Controller", "RestController")
-
 class ArchitectureTest {
+    companion object {
+        private val springStereotypeAnnotations =
+            setOf("Service", "Component", "Repository", "Controller", "RestController")
+    }
+
     @Test
     fun `UseCase suffix classes reside in application package`() {
         Konsist
@@ -38,18 +40,19 @@ class ArchitectureTest {
     }
 
     @Test
-    fun `domain classes do not use Spring annotations`() {
+    fun `domain classes do not use Spring stereotype annotations`() {
         Konsist
             .scopeFromProject()
             .classes()
             .filter { it.resideInPackage("..domain..") }
             .forEach { koClass ->
-                val springAnnotations =
+                val violations =
                     koClass.annotations
-                        .filter { it.name in SPRING_ANNOTATIONS }
-                assertCondition(springAnnotations.isEmpty()) {
-                    "${koClass.name} must not use Spring annotations in the domain layer, " +
-                        "but found: ${springAnnotations.map { it.name }}"
+                        .filter { it.name in springStereotypeAnnotations }
+                assertCondition(violations.isEmpty()) {
+                    "${koClass.name} must not use Spring stereotype annotations " +
+                        "(@Service/@Component/etc) in the domain layer, " +
+                        "but found: ${violations.map { it.name }}"
                 }
             }
     }
