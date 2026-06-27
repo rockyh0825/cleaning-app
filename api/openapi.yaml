@@ -10,6 +10,9 @@ servers:
   - url: http://localhost:8080
     description: ローカル開発
 
+# MVPは認証なし（X-User-Idヘッダで識別）。V2でKeycloak/JWTに移行予定
+security: []
+
 # ───────────────────────────────────────────────
 # 再利用する部品（スキーマ・パラメータ）は components に置き、$ref で参照する
 # ───────────────────────────────────────────────
@@ -31,6 +34,11 @@ components:
       type: string
       description: 部屋の種別。プリセットパーツのseedに使う
       enum: [KITCHEN, BATHROOM, BEDROOM, LIVING, TOILET, OTHER]
+
+    OwnerType:
+      type: string
+      description: パーツの所属対象種別
+      enum: [ROOM, FURNITURE]
 
     # サーバーが「返す」部屋。id・タイムスタンプ込み（＝サーバーが確定させる値）
     Room:
@@ -83,11 +91,190 @@ components:
         gridH:
           type: integer
 
+    # 部屋の「更新入力」。省略したフィールドは変更しない（部分更新）
+    RoomUpdate:
+      type: object
+      description: 指定したフィールドのみ更新する。すべて省略可能だが、少なくとも1つ指定すること
+      minProperties: 1
+      properties:
+        name:
+          type: string
+        gridX:
+          type: integer
+          description: 左上セルX（グリッド座標）
+        gridY:
+          type: integer
+          description: 左上セルY（グリッド座標）
+        gridW:
+          type: integer
+          description: 幅（セル数）
+        gridH:
+          type: integer
+          description: 高さ（セル数）
+
+    # サーバーが「返す」家具
+    Furniture:
+      type: object
+      required: [id, roomId, name, gridX, gridY, gridW, gridH, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        roomId:
+          type: string
+          format: uuid
+          description: 所属する部屋のID
+        name:
+          type: string
+          example: ソファ
+        presetKey:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: プリセット由来なら識別キー。自由名称で追加した場合はnull
+          example: sofa
+        gridX:
+          type: integer
+          description: 部屋内の相対セルX（部屋左上が原点）
+        gridY:
+          type: integer
+          description: 部屋内の相対セルY
+        gridW:
+          type: integer
+          description: 幅（セル数）
+        gridH:
+          type: integer
+          description: 高さ（セル数）
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # 家具の「作成入力」
+    FurnitureCreate:
+      type: object
+      required: [name, gridX, gridY, gridW, gridH]
+      properties:
+        name:
+          type: string
+        presetKey:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: プリセット由来なら識別キー。自由名称の場合は省略またはnull
+        gridX:
+          type: integer
+        gridY:
+          type: integer
+        gridW:
+          type: integer
+        gridH:
+          type: integer
+
+    # 家具の「更新入力」。省略したフィールドは変更しない（部分更新）
+    FurnitureUpdate:
+      type: object
+      description: 指定したフィールドのみ更新する。すべて省略可能だが、少なくとも1つ指定すること
+      minProperties: 1
+      properties:
+        name:
+          type: string
+        gridX:
+          type: integer
+          description: 部屋内の相対セルX
+        gridY:
+          type: integer
+          description: 部屋内の相対セルY
+        gridW:
+          type: integer
+          description: 幅（セル数）
+        gridH:
+          type: integer
+          description: 高さ（セル数）
+
+    # 掃除単位。cleaning-record featureと共有するエンティティ
+    # 間取りエディタが生成し（部屋種別によりseed）、cleaning-recordが掃除状態を更新する
+    Part:
+      type: object
+      required: [id, ownerType, ownerId, name, recommendedCycleDays, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerType:
+          $ref: '#/components/schemas/OwnerType'
+        ownerId:
+          type: string
+          format: uuid
+          description: Room.id または Furniture.id
+        name:
+          type: string
+          example: 床
+        recommendedCycleDays:
+          type: integer
+          description: 推奨掃除周期（日）
+          example: 7
+        lastCleanedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          description: 最終掃除日時。未掃除の場合はnull
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # 家具を埋め込んだ部屋。GET /floor-plan のレスポンスで使用
+    RoomWithFurniture:
+      allOf:
+        - $ref: '#/components/schemas/Room'
+        - type: object
+          required: [furniture]
+          properties:
+            furniture:
+              type: array
+              items:
+                $ref: '#/components/schemas/Furniture'
+
+    # GET /floor-plan のレスポンス。ユーザーの間取り全体（部屋＋家具）
+    FloorPlan:
+      type: object
+      required: [rooms]
+      properties:
+        rooms:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomWithFurniture'
+
 
 # ───────────────────────────────────────────────
 # エンドポイント定義
 # ───────────────────────────────────────────────
 paths:
+  /floor-plan:
+    get:
+      summary: 間取り全体を取得する
+      description: |
+        ユーザーの間取り全体（部屋と各部屋に所属する家具）を一括取得する。
+        間取り画面の初期ロードやTanStack Queryのキャッシュキーとして使用する。
+      operationId: getFloorPlan
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      responses:
+        '200':
+          description: 間取り全体
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FloorPlan'
+        '400':
+          description: X-User-Idヘッダが不正
+
   /rooms:
     post:
       summary: 部屋を追加する
@@ -128,3 +315,144 @@ paths:
                   $ref: '#/components/schemas/Room'
         '400':
           description: 入力が不正
+
+  /rooms/{roomId}:
+    patch:
+      summary: 部屋を更新する
+      description: |
+        部屋の名称・グリッド座標・サイズを部分更新する。
+        指定しなかったフィールドは変更されない。
+        座標変更時は内包する家具が部屋境界内に収まっていることをクライアントで事前検証する。
+      operationId: updateRoom
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomUpdate'
+      responses:
+        '200':
+          description: 更新後の部屋
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '400':
+          description: 入力が不正
+        '404':
+          description: 部屋が存在しない、または他ユーザーの部屋
+
+    delete:
+      summary: 部屋を削除する
+      description: |
+        部屋と、配下の家具・パーツをすべて削除する。
+        連鎖削除はDBのON DELETE CASCADEで行う。
+      operationId: deleteRoom
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 削除成功
+        '404':
+          description: 部屋が存在しない、または他ユーザーの部屋
+
+  /rooms/{roomId}/furniture:
+    post:
+      summary: 部屋に家具を追加する
+      description: |
+        指定した部屋内にグリッド座標を指定して家具を追加する。
+        プリセットキーを指定するとプリセット由来の家具として記録される。
+        座標はroomId の部屋内の相対セル位置で指定する。
+      operationId: createFurniture
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FurnitureCreate'
+      responses:
+        '201':
+          description: 作成された家具
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Furniture'
+        '400':
+          description: 入力が不正
+        '404':
+          description: 部屋が存在しない、または他ユーザーの部屋
+
+  /furniture/{furnitureId}:
+    patch:
+      summary: 家具を更新する
+      description: |
+        家具の名称・グリッド座標・サイズを部分更新する。
+        指定しなかったフィールドは変更されない。
+      operationId: updateFurniture
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: furnitureId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FurnitureUpdate'
+      responses:
+        '200':
+          description: 更新後の家具
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Furniture'
+        '400':
+          description: 入力が不正
+        '404':
+          description: 家具が存在しない、または他ユーザーの家具
+
+    delete:
+      summary: 家具を削除する
+      description: |
+        家具と、配下のパーツをすべて削除する。
+        連鎖削除はDBのON DELETE CASCADEで行う。
+      operationId: deleteFurniture
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: furnitureId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 削除成功
+        '404':
+          description: 家具が存在しない、または他ユーザーの家具
