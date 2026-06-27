@@ -1,0 +1,18 @@
+# ローカル開発用の PostgreSQL。
+# 起動: docker compose up -d
+# 停止: docker compose down   （データを消すなら down -v）
+services:
+  postgres:
+    image: postgres:16
+    container_name: cleaning-app-db
+    environment:
+      POSTGRES_DB: cleaning_app
+      POSTGRES_USER: cleaning
+      POSTGRES_PASSWORD: cleaning   # ローカル開発専用。本番では使わない
+    ports:
+      - "5432:5432"
+    volumes:
+      - cleaning-app-pgdata:/var/lib/postgresql/data
+
+volumes:
+  cleaning-app-pgdata:

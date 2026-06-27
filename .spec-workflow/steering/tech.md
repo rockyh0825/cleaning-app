@@ -19,6 +19,9 @@
 - **Expo (React Native)**: クロスプラットフォームモバイル開発。iOS/Android両対応、OTAアップデート対応
 - **Spring Boot 3.x**: バックエンドAPIフレームワーク。Java 21 LTS上で動作
 - **PostgreSQL**: プライマリデータストア。UUIDを主キーに使用
+- **MyBatis**: O/Rマッパー。SQLをMapperで明示的に記述し、DB操作を細かく制御する
+- **TanStack Query（v5）**: モバイル側のサーバー状態管理。キャッシュ・再フェッチ・楽観的更新・リトライを担当。UIローカル状態はuseStateで管理し、グローバルなUIState管理ライブラリは当面導入しない
+- **Keycloak**: 認証・認可基盤。JWT発行・ユーザー管理を担当。V2以降で導入。Spring Boot側はJWT検証のみ行い、認証プロバイダーに依存しない
 - **OpenAPI Generator**: APIスキーマからクライアントコード・サーバースタブを自動生成
 
 ### アプリケーションアーキテクチャ
@@ -39,13 +42,14 @@
 
 - **主DB**: PostgreSQL（UUID主キー、住所情報は一切格納しない）
 - **キャッシュ**: 当面なし（将来的にRedisを検討）
-- **モバイルローカル**: AsyncStorage（オフライン対応・設定保存用途のみ）
+- **モバイルローカル**: AsyncStorage（ユーザーUUID・設定値のみ。ユーザーデータはすべてサーバー側で管理）
 
 ### セキュリティ方針
 
 - 住所・位置情報（GPS）は**一切保存しない**
 - 全テーブルの主キーは`UUID v4`を使用（連番IDは使用しない）
-- ユーザー認証: JWT（将来実装。現時点は単一ユーザー前提でローカル保存のトークン）
+- ユーザー認証: MVP=単一ユーザー前提・認証なし（初回起動時発行のUUIDで識別）。V2=Keycloak導入（JWT発行・ユーザー管理）。V3=KeycloakにGoogle IdPを追加（ソーシャルログイン）
+- Spring Boot側はKeycloakが発行するJWTを検証するのみ。認証プロバイダー変更の影響を受けない
 - HTTPS必須。平文HTTP通信は禁止
 
 ## 開発環境
@@ -100,10 +104,32 @@ main
 - CIが通ったことを確認してからレビュー依頼する
 - レビューコメントはConventional Comments形式を推奨
 
+### CI/CD方針
+
+**プラットフォーム**: GitHub Actions
+
+**CI（PR作成・更新時に自動実行）**:
+
+| 対象 | 実行内容 |
+|---|---|
+| モバイル | ESLint（`eslint-plugin-boundaries`含む）・TypeScript型チェック・Jest |
+| バックエンド | Detekt・ktlint・JUnit 5（Konsistによるアーキテクチャテスト含む） |
+
+**アーキテクチャテスト**:
+- **モバイル** `eslint-plugin-boundaries`: `features/<A>` から `features/<B>` への直接importを禁止。structure.mdのCapabilityパターン違反をCIで検出する
+- **バックエンド** `Konsist`: Kotlin専用のアーキテクチャテストライブラリ。`presentation → application → domain` の一方向依存・feature間パッケージの直接参照禁止・命名規則（`UseCase`・`Port`サフィックス等）をJUnit 5テストとして記述する
+
+**CD**: 当面手動。MVPリリース優先のため自動デプロイは導入しない。
+- バックエンド: ローカルでDockerビルド → 手動デプロイ
+- モバイル: EAS CLIで手動ビルド → App Store Connect / Google Play Console に手動提出
+
+MVP後にバックエンドCDの自動化を検討する。
+
 ## デプロイ・配布
 
 - **モバイル**: Expo Application Services (EAS) でビルド → App Store / Google Play
 - **バックエンド**: コンテナ（Docker）でデプロイ。ターゲット環境はクラウド（VPS or PaaS）
+- **Keycloak**: Dockerコンテナで運用。ローカル開発はdocker-composeでSpring Boot・PostgreSQL・Keycloakを一括起動
 - **DBマイグレーション**: Flyway（バックエンドと同じGradleプロジェクト内で管理）
 
 ## 技術的制約・要件
@@ -146,7 +172,7 @@ main
 - Kotlinのnull安全性とデータクラスにより、APIモデルを安全かつ簡潔に記述できる
 - Spring Boot 3.xとJava 21のVirtual Threadsにより、非同期処理の複雑さなしに高スループットを実現
 - springdocによりOpenAPI 3.1スキーマを自動生成でき、契約ファースト開発と親和性が高い
-- PostgreSQL + Spring Data JPAの組み合わせで型安全なDB操作が可能
+- PostgreSQL + MyBatisの組み合わせで、SQLを明示的に制御しながらDB操作ができる
 
 **トレードオフ**: JVMの起動時間がNode.jsより遅い。ただし常駐型サービスのため問題なし
 
@@ -181,3 +207,37 @@ main
 - プライバシーポリシーとして「住所情報不保存」を掲げており、IDも推測可能な形にしない設計方針に合致
 
 **トレードオフ**: UUID v4はランダムなため、B-treeインデックスの断片化が発生しやすい。データ量が増えた場合はUUID v7（タイムスタンプ付き）への移行を検討する
+
+---
+
+### ADR-005: Keycloakを認証基盤に採用した理由
+
+**決定**: V2以降の認証基盤にKeycloakを採用する
+
+**背景**: 認証方式としてSpring Security単独実装、Firebase Auth、Keycloakを検討した。
+
+**理由**:
+- Spring Boot + Kotlinとの親和性が高く、エンタープライズ標準の構成として学習・実績価値がある
+- JWT発行・ユーザー管理・ソーシャルIdP連携をKeycloak側に集約することで、Spring Boot側はJWT検証のみに専念できる
+- V3でGoogleソーシャルログインを追加する際もKeycloak側の設定変更のみで対応でき、アプリ側コードへの影響がない
+- セルフホスト型のためユーザーデータを外部SaaSに預けない（プライバシーファースト方針と一致）
+
+**トレードオフ**: Keycloakは別コンテナとして運用するため、ローカル開発環境がdocker-compose前提になる。MVP（V1）では不要なため、V2導入時にセットアップする
+
+---
+
+### ADR-006: TanStack QueryをサーバーStateの管理ライブラリに採用した理由
+
+**決定**: モバイル側のサーバー状態管理にTanStack Query（v5）を採用する
+
+**背景**: サーバーファーストアーキテクチャのため、APIデータのキャッシュ・フェッチ管理が必要。SWR・Zustand・TanStack Queryを検討した。
+
+**理由**:
+- `useQuery` / `useMutation` のパターンがstructure.mdの`hooks/`レイヤーに自然に収まる
+- キャッシュ・再フェッチ・楽観的更新・リトライが内蔵されており、サーバーファースト構成で必要な機能が揃っている
+- SWRはMutationサポートが弱く、掃除記録の書き込みが多いこのアプリには不十分
+- Zustandで自前実装するとTanStack Queryが解決している問題を再実装することになる
+
+**UIローカル状態の方針**: モーダル開閉・フォーム入力値などのUI状態はuseStateで管理。グローバルなUI状態管理ライブラリ（Zustand等）は必要になってから追加する
+
+**トレードオフ**: TanStack Queryのキャッシュ設計（staleTime・gcTimeの調整）に学習コストがかかるが、長期的な保守性で上回る
