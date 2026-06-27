@@ -2,6 +2,8 @@
 
 実装順序は契約ファースト（OpenAPIスキーマ → バックエンド → モバイル）に従う。Part テーブルは layout-editor で作成済みである前提で、本featureは CleaningRecord テーブルとパーツ管理APIを追加する。各タスクは structure.md のレイヤー構成・命名規則・コードサイズ上限に準拠する。
 
+**TDDポリシー（CLAUDE.md準拠）**: 実装コードより先にテストを書く（Red）。テストを通す最小限の実装をする（Green）。全テストグリーンの状態でリファクタリングする（Refactor）。各実装タスクにテストを含めること。テストだけを書くタスクは設けない。
+
 ## フェーズ1: API契約定義
 
 - [ ] 1. OpenAPIスキーマに掃除記録・パーツ管理のエンドポイント／スキーマを定義
@@ -9,125 +11,189 @@
   - POST /cleaning-records（partIds[]一括）・GET /cleaning-records（areaId/partId絞り込み・ページング）・PATCH /cleaning-records/{recordId}・DELETE /cleaning-records/{recordId}・POST /parts・PATCH /parts/{partId}・DELETE /parts/{partId} を定義
   - Purpose: クライアント・サーバー間の契約を確立
   - _Requirements: 1, 2, 3, 4_
-  - _Prompt: Role: API設計者（OpenAPI 3.1） | Task: design.mdのAPI表とData Modelsに基づき、CleaningRecord/Part/OverdueAreaスキーマと7エンドポイントを定義する。一括記録はpartIds配列を受け取る | Restrictions: UUID・最大2階層ネスト・複数形kebab-case命名、全エンドポイントにsummary/description | Success: lintが通り、クライアント・スタブ生成が成功する_
 
 - [ ] 2. APIクライアント・サーバースタブを生成
   - File: scripts/generate-api-client.sh の実行
   - Purpose: 型安全な契約コードを得る
   - _Leverage: scripts/generate-api-client.sh_
   - _Requirements: 1, 2, 3, 4_
-  - _Prompt: Role: ビルドエンジニア | Task: generate-api-client.shを実行しクライアント・スタブを生成、各プロジェクトでビルドできることを確認 | Restrictions: 生成物はコミット対象外、手書きしない | Success: 生成クライアントがimport可能、スタブがコンパイルできる_
 
 ## フェーズ2: バックエンド（Spring Boot + Kotlin + MyBatis）
 
 - [ ] 3. Flywayマイグレーションで cleaning_record テーブルを作成
-  - File: backend/src/main/resources/db/migration/V2__cleaning_record_initial.sql
+  - File: backend/src/main/resources/db/migration/V3__cleaning_record_initial.sql
   - UUID主キー、part_id外部キー（part への ON DELETE CASCADE）、cleaned_at・user_idインデックス
   - Purpose: 掃除履歴の永続化基盤
   - _Requirements: 1, 3_
-  - _Prompt: Role: データベースエンジニア（PostgreSQL/Flyway） | Task: cleaning_recordテーブルを作るマイグレーションを書く。part_idはpartへのFKでON DELETE CASCADE、cleaned_at降順・user_idのインデックスを張る | Restrictions: 連番ID禁止、Flyway命名規則（V2__）に従う、partテーブルはV1で作成済み前提 | Success: マイグレーション適用でき、part削除で記録が連鎖削除される_
 
 - [ ] 4. domain層: CleaningRecord ドメインモデルと期限超過判定ロジック
-  - File: backend/.../cleaningrecord/domain/{CleaningRecord,CleaningStatus}.kt
+  - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/domain/{CleaningRecord,CleaningStatus}.kt
   - 推奨周期に対する経過割合（elapsedRatio）の算出、期限超過（> 1.0）判定を純粋Kotlinで
   - Purpose: Springに非依存なビジネスルール
+  - **TDDサイクル**:
+    - Red: `cleaningrecord/domain/CleaningStatusTest.kt` を先に作成し `./gradlew test --tests "*.CleaningStatusTest"` で失敗を確認
+    - Green: テストを通す最小限の実装を行う
+    - Refactor: 全テストグリーンの状態でコードを整える
+  - **テスト対象** (`backend/src/test/.../cleaningrecord/domain/CleaningStatusTest.kt`):
+    - 正常系: lastCleanedAt が7日前・周期7日 → elapsedRatio = 1.0（期限ちょうど）
+    - 境界値: elapsedRatio が 0.8 → GREEN、1.0 → YELLOW（境界は仕様通り）
+    - 境界値: elapsedRatio が 1.0 超 → RED（期限超過）
+    - 境界値: lastCleanedAt が null → elapsedRatio を最大値として扱う
   - _Requirements: 1, 5_
-  - _Prompt: Role: Kotlinドメイン設計者 | Task: CleaningRecordデータクラスと、lastCleanedAt・recommendedCycleDaysから経過割合・期限超過を判定するドメインロジックを純粋Kotlinで実装 | Restrictions: Springアノテーション禁止、純粋関数、1ファイル300行以内 | Success: フレームワーク非依存でコンパイルでき、境界値（ちょうど100%等）が正しい_
 
 - [ ] 5. infrastructure層: MyBatis Mapper（CleaningRecord / Part）
-  - File: backend/.../cleaningrecord/infrastructure/{CleaningRecordMapper.kt, CleaningRecordMapper.xml, CleaningRecordRepositoryImpl.kt}
-  - 記録のCRUD、履歴の絞り込み・ページング、`SELECT MAX(cleaned_at)`での最終掃除日時取得、パーツのlastCleanedAt更新
+  - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/infrastructure/{CleaningRecordMapper,CleaningRecordRepositoryImpl}.kt
+  - 記録のCRUD、履歴の絞り込み・ページング、`SELECT MAX(cleaned_at)` での最終掃除日時取得
   - Purpose: データアクセス実装
+  - **TDDサイクル**:
+    - Red: `cleaningrecord/infrastructure/CleaningRecordMapperTest.kt` を先に作成し `./gradlew test --tests "*.CleaningRecordMapperTest"` で失敗を確認（`@MybatisTest` を使用）
+    - Green: Mapper と SQL を実装してテストを通す
+    - Refactor: 全テストグリーンの状態でコードを整える
+  - **テスト対象** (`@MybatisTest` + Flyway + PostgreSQL):
+    - 正常系: 記録を保存し、partIdで絞り込んで取得できる
+    - 正常系: MAX(cleaned_at) が正しく返る
+    - 正常系: ページングで件数が制限される
+    - 正常系: part削除で記録が連鎖削除される（FK CASCADE）
   - _Requirements: 1, 2, 3_
-  - _Prompt: Role: バックエンド開発者（MyBatis） | Task: CleaningRecordとPartのMapperを実装。記録CRUD、areaId/partId絞り込みとページング、MAX(cleaned_at)取得、Part.last_cleaned_at更新のSQLを書く | Restrictions: domainにMyBatis依存を漏らさない、動的SQLは<if>等で記述、UUID使用 | Success: CRUD・絞り込み・再計算用クエリがMapper経由で動作する_
 
 - [ ] 6. application層: RecomputeLastCleanedService と各ユースケース
-  - File: backend/.../cleaningrecord/application/{RecomputeLastCleanedService,LogCleaningUseCase,EditRecordUseCase,DeleteRecordUseCase,ManagePartUseCase}.kt
+  - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/application/{RecomputeLastCleanedService,LogCleaningUseCase,EditRecordUseCase,DeleteRecordUseCase,ManagePartUseCase}.kt
   - RecomputeLastCleanedServiceに再計算を一元化。LogCleaningは複数partを1トランザクションで記録、各操作後に再計算
   - Purpose: ビジネスロジックとトランザクション境界
+  - **TDDサイクル**:
+    - Red: `cleaningrecord/application/*UseCaseTest.kt` を先に作成し `./gradlew test --tests "*.cleaningrecord.application.*"` で失敗を確認（MockK を使用）
+    - Green: テストを通す最小限の実装を行う
+    - Refactor: 全テストグリーンの状態でコードを整える
+  - **テスト対象** (MockK + JUnit 5):
+    - 正常系: `LogCleaningUseCase` → 複数 partId を1トランザクションで記録し、再計算が呼ばれる
+    - 異常系: 1件でも保存失敗したらロールバックされる（`@Transactional` の動作を確認）
+    - 正常系: `DeleteRecordUseCase` → 削除後に再計算が呼ばれ、最終記録が null になる
+    - 正常系: `RecomputeLastCleanedService` → MAX(cleaned_at) を取得してpartのlastCleanedAtを更新する
   - _Requirements: 1, 2, 3, 4_
-  - _Prompt: Role: バックエンド開発者（サービス層） | Task: lastCleanedAt再計算をRecomputeLastCleanedServiceに集約。LogCleaningUseCaseは複数partの一括記録を1トランザクションで行い記録後に再計算、Edit/Deleteも再計算、ManagePartUseCaseでパーツ追加/編集/削除を実装 | Restrictions: 1ユースケース1責務・100行以内、記録更新と再計算を同一トランザクションに、presentation非依存 | Success: 一括記録の原子性・修正/削除後の再計算（全削除でnull化）が正しい_
 
 - [ ] 7. application層: CleaningStatusPort と実装（他feature公開）
-  - File: backend/.../capabilities/CleaningStatusPort.kt, backend/.../cleaningrecord/application/CleaningStatusPortImpl.kt
+  - File: backend/src/main/kotlin/com/cleaningapp/capabilities/CleaningStatusPort.kt, backend/src/main/kotlin/com/cleaningapp/cleaningrecord/application/CleaningStatusPortImpl.kt
   - getLastCleanedAt(areaId) / getOverdueAreas() を提供
   - Purpose: heatmap・notificationへの掃除状態公開
+  - **TDDサイクル**:
+    - Red: `CleaningStatusPortImplTest.kt` を先に作成し失敗を確認（MockK を使用）
+    - Green: Port インターフェースと実装を最小限で定義する
+    - Refactor: 全テストグリーンの状態でコードを整える
+  - **テスト対象**:
+    - 正常系: `getOverdueAreas()` → elapsedRatio > 1.0 のパーツのみが返る
+    - 正常系: `getLastCleanedAt(areaId)` → 対象エリアの最新 cleaned_at が返る
+    - 境界値: 記録が一件もない場合 → null を返す
   - _Requirements: 5_
-  - _Prompt: Role: ソフトウェアアーキテクト | Task: 使う側（heatmap/notification）視点でCleaningStatusPortを定義し、cleaningrecordのapplicationで実装。期限超過エリアと最終掃除日時を返す | Restrictions: Portは依存される側でなく依存する側のニーズで設計、内部実装を漏らさない | Success: 期限超過エリア・最終掃除日時がPort経由で取得できる_
 
 - [ ] 8. presentation層: CleaningRecordController と PartController
-  - File: backend/.../cleaningrecord/presentation/{CleaningRecordController,PartController}.kt
+  - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/presentation/{CleaningRecordController,PartController}.kt
   - 生成スタブ実装、UUIDヘッダでスコープ限定、バリデーション
   - Purpose: HTTP入出力
+  - **TDDサイクル**:
+    - Red: `cleaningrecord/presentation/CleaningRecordControllerTest.kt` を先に作成し失敗を確認（`@WebMvcTest` + `@MockkBean` を使用）
+    - Green: Controller を実装してテストを通す
+    - Refactor: 全テストグリーンの状態でコードを整える
+  - **テスト対象** (`@WebMvcTest` + MockK):
+    - 正常系: POST /cleaning-records → 201 と記録リストを返す
+    - 正常系: GET /cleaning-records?partId=xxx → 200 と絞り込み結果を返す
+    - 正常系: DELETE /cleaning-records/{id} → 204
+    - 異常系: 存在しない recordId → 404
+    - 正常系: X-User-Id ヘッダなし → 400 Bad Request
   - _Leverage: shared/web, shared/exception_
   - _Requirements: 1, 2, 3, 4_
-  - _Prompt: Role: バックエンド開発者（REST API） | Task: 生成スタブを実装し各ユースケースに委譲。UUIDヘッダでスコープ限定、入力バリデーション | Restrictions: Controllerにビジネスロジックを書かない、共通例外ハンドラ使用 | Success: 全エンドポイント動作、他UUIDのデータにアクセスできない_
-
-- [ ] 9. バックエンドのテスト（JUnit 5 + RestAssured + Konsist）
-  - File: backend/src/test/.../cleaningrecord/*Test.kt
-  - Recomputeの再計算・一括記録の原子性・期限超過判定の単体テスト、APIのCRUD/絞り込み/トランザクションロールバック/UUIDスコープの統合テスト、Konsistでレイヤー依存検証
-  - Purpose: 信頼性とアーキ遵守
-  - _Requirements: 1, 2, 3, 4, 5_
-  - _Prompt: Role: QAエンジニア（JUnit 5/RestAssured/Konsist） | Task: 再計算ロジック・期限超過判定の単体テスト、一括記録のロールバック・履歴絞り込み・lastCleanedAt整合のAPI統合テスト、Konsistでlayer依存とfeature間直接参照禁止を検証 | Restrictions: 成功/失敗両シナリオ、テスト独立性 | Success: 全テストパス、再計算と記録の整合が保証される_
 
 ## フェーズ3: モバイル（Expo / React Native）
 
-- [ ] 10. features/cleaning-record: types.ts と CleaningRecordRepository
+- [ ] 9. features/cleaning-record: types.ts と CleaningRecordRepository
   - File: mobile/src/features/cleaning-record/{types.ts, repositories/CleaningRecordRepository.ts}
   - 生成クライアントをラップした記録CRUD・パーツ管理の実装
   - Purpose: データアクセス層
+  - **TDDサイクル**:
+    - Red: `repositories/__tests__/CleaningRecordRepository.test.ts` を先に作成し `npx jest src/features/cleaning-record/repositories` で失敗を確認（APIクライアントをモック）
+    - Green: types.ts と Repository を実装してテストを通す
+    - Refactor: 全テストグリーンの状態でコードを整える
+  - **テスト対象**:
+    - 正常系: `createRecords(partIds)` → APIクライアントの `createCleaningRecords` が正しい引数で呼ばれる
+    - 正常系: `listRecords({ partId })` → 絞り込みパラメータがAPIに渡る
+    - 正常系: `deleteRecord(id)` → APIクライアントの `deleteCleaningRecord` が呼ばれる
   - _Leverage: mobile/src/shared/api_
   - _Requirements: 1, 2, 3, 4_
-  - _Prompt: Role: React Native開発者（データ層） | Task: 掃除記録の型定義と、生成クライアントを使うCleaningRecordRepositoryを実装 | Restrictions: shared/apiのみに依存、UIロジックを含めない | Success: 記録CRUD・履歴取得・パーツ管理がAPIに対し動作する_
 
-- [ ] 11. features/cleaning-record/usecases
+- [ ] 10. features/cleaning-record/usecases
   - File: mobile/src/features/cleaning-record/usecases/{LogCleaningUseCase,EditRecordUseCase,DeleteRecordUseCase,ManagePartUseCase}.ts
   - Purpose: React非依存のビジネスロジック
+  - **TDDサイクル**:
+    - Red: `usecases/__tests__/*.test.ts` を先に作成し `npx jest src/features/cleaning-record/usecases` で失敗を確認
+    - Green: テストを通す最小限の実装を行う
+    - Refactor: 全テストグリーンの状態でコードを整える
+  - **テスト対象**:
+    - 正常系: `LogCleaningUseCase` → repository.createRecords が partIds で呼ばれ、記録リストを返す
+    - 正常系: `DeleteRecordUseCase` → repository.deleteRecord が recordId で呼ばれる
+    - 正常系: `ManagePartUseCase.addPart` → repository.createPart が呼ばれ Part を返す
   - _Requirements: 1, 3, 4_
-  - _Prompt: Role: TypeScript開発者（ユースケース） | Task: 一括記録・修正・削除・パーツ管理のユースケースを実装しRepositoryを呼ぶ | Restrictions: React非依存、1ユースケース1責務 | Success: 各ユースケースが単体テスト可能で動作_
 
-- [ ] 12. features/cleaning-record/hooks: useLogCleaning / useCleaningHistory
+- [ ] 11. features/cleaning-record/hooks: useLogCleaning / useCleaningHistory
   - File: mobile/src/features/cleaning-record/hooks/{useLogCleaning,useCleaningHistory}.ts
   - TanStack Queryで履歴取得、useMutationで記録/修正/削除の楽観的更新とロールバック
   - Purpose: UIとユースケースの橋渡し
+  - **TDDサイクル**:
+    - Red: `hooks/__tests__/useCleaningHistory.test.ts` を先に作成し `npx jest src/features/cleaning-record/hooks` で失敗を確認
+    - Green: hooks を実装してテストを通す
+    - Refactor: 全テストグリーンの状態でコードを整える
+  - **テスト対象** (`@tanstack/react-query` の `QueryClient` をテスト用に生成):
+    - 正常系: `useCleaningHistory` → 取得した履歴リストを返す
+    - 正常系: `useLogCleaning.mutate(partIds)` → 記録後に cleaning-records クエリが invalidate される
+    - 異常系: 記録失敗時に楽観的更新がロールバックされる
   - _Leverage: TanStack Query_
   - _Requirements: 1, 2, 3_
-  - _Prompt: Role: React開発者（TanStack Query） | Task: useLogCleaning（一括記録）とuseCleaningHistory（取得・修正・削除）を実装。楽観的更新とonErrorロールバック、記録後の関連クエリ無効化 | Restrictions: hooksはusecases/capabilitiesのみ依存、描画ロジックを持たない | Success: 記録・履歴表示・修正/削除・楽観的更新が動作_
 
-- [ ] 13. features/cleaning-record/components: PartChecklist と CleaningTimeline
+- [ ] 12. features/cleaning-record/components: PartChecklist と CleaningTimeline
   - File: mobile/src/features/cleaning-record/components/{PartChecklist,CleaningTimeline,RecordButton}.tsx
   - 複数パーツの一括チェックUI（3タップ目標）、新しい順タイムライン・絞り込み・修正/削除操作
   - Purpose: 視覚操作によるUI
+  - **TDDサイクル**:
+    - Red: `components/__tests__/*.test.tsx` を先に作成し `npx jest src/features/cleaning-record/components` で失敗を確認
+    - Green: コンポーネントを実装してテストを通す
+    - Refactor: 全テストグリーンの状態でコードを整える
+  - **テスト対象** (`@testing-library/react-native`):
+    - 正常系: `PartChecklist` → パーツ名が表示され、チェックすると選択済みリストに追加される
+    - 正常系: `PartChecklist` → 「記録」ボタン押下で useLogCleaning.mutate が選択済みpartIds で呼ばれる
+    - 正常系: `CleaningTimeline` → 記録が新しい順に表示される
+    - 正常系: `CleaningTimeline` → 削除ボタン押下で useCleaningHistory.deleteRecord が呼ばれる
   - _Leverage: mobile/src/shared/components_
   - _Requirements: 1, 2, 3_
-  - _Prompt: Role: フロントエンド開発者（React Native） | Task: 複数パーツを一括チェックして記録するPartChecklistと、時系列表示・絞り込み・修正/削除できるCleaningTimelineを実装 | Restrictions: ビジネスロジックを持たない、200行/コンポーネント以内、ダークモード対応、記録は3タップ以内 | Success: 一括記録・履歴閲覧・修正/削除がスムーズに動作_
 
-- [ ] 14. app/(tabs)/history と エリア詳細画面の組み込み
-  - File: mobile/app/(tabs)/history.tsx ほか
+- [ ] 13. app/(tabs)/history と エリア詳細画面の組み込み
+  - File: mobile/app/(tabs)/history.tsx, mobile/app/area/[areaId].tsx
   - 履歴タブ、エリアタップ→パーツ一覧→記録の導線
   - Purpose: 画面の組み立て
+  - **TDDサイクル**:
+    - Red: `app/(tabs)/__tests__/history.test.tsx` を先に作成し失敗を確認
+    - Green: 画面ルートを実装してテストを通す
+    - Refactor: 全テストグリーンの状態でコードを整える
+  - **テスト対象**:
+    - 正常系: 履歴タブに CleaningTimeline が表示される
+    - 正常系: エリア詳細画面に PartChecklist が表示される
   - _Requirements: 1, 2_
-  - _Prompt: Role: React Native開発者（Expo Router） | Task: 履歴タブとエリア詳細からの記録導線を画面ルートとして組み立てる | Restrictions: 画面定義のみ（ロジックはfeaturesへ）、Expo Router規約 | Success: エリア選択→記録、履歴閲覧の導線が通る_
 
-- [ ] 15. CleaningStatusCapability と DI配線
+- [ ] 14. CleaningStatusCapability と DI配線
   - File: mobile/src/capabilities/CleaningStatusCapability.ts, mobile/src/features/cleaning-record/repositories/CleaningStatusCapabilityImpl.ts, mobile/src/shared/app-root/providers/di.ts
   - heatmap・notificationが掃除状態を読むための境界インターフェースと実装の配線
   - Purpose: feature間依存の逆転
+  - **TDDサイクル**:
+    - Red: `capabilities/__tests__/CleaningStatusCapability.test.ts` を先に作成し失敗を確認
+    - Green: インターフェースと実装を最小限で定義する
+    - Refactor: 全テストグリーンの状態でコードを整える
+  - **テスト対象**:
+    - 正常系: `CleaningStatusCapabilityImpl.getOverdueAreas()` → Repository を経由して期限超過エリアリストを返す
+    - 正常系: `CleaningStatusCapabilityImpl.getLastCleanedAt(areaId)` → 最終掃除日時を返す
+    - 境界値: 記録がない場合 → null を返す
   - _Requirements: 5_
-  - _Prompt: Role: ソフトウェアアーキテクト | Task: 使う側視点でCleaningStatusCapability（getLastCleanedAt/getOverdueAreas）を定義し、cleaning-recordで実装、di.tsで配線する | Restrictions: di.ts以外でfeature間を直接importしない | Success: heatmap・notificationがCapability経由で掃除状態を参照できる_
-
-- [ ] 16. モバイルのテスト（Jest + eslint-plugin-boundaries）
-  - File: mobile/src/features/cleaning-record/**/*.test.ts
-  - usecasesの単体テスト、boundariesでfeature間直接import禁止を検証
-  - Purpose: 信頼性とアーキ遵守
-  - _Requirements: 1, 2, 3, 4_
-  - _Prompt: Role: QAエンジニア（Jest/ESLint） | Task: usecasesの単体テストを書き、eslint-plugin-boundariesでfeatures間の直接importを検出する設定を確認 | Restrictions: テスト独立性、楽観的更新のロールバックも検証 | Success: テストがパスし、boundaries違反がCIで検出される_
 
 ## フェーズ4: 統合
 
-- [ ] 17. E2E統合とCI組み込み
+- [ ] 15. E2E統合とCI組み込み
   - File: .github/workflows/ci.yml（既存に追記）
-  - エリア選択→一括チェック→記録→履歴確認→1件修正→最終掃除日時更新 のE2E、CIにテスト/アーキテストを組み込む
+  - エリア選択→一括チェック→記録→履歴確認→1件修正→最終掃除日時更新 のE2E、CIにテスト・アーキテストを組み込む
   - Purpose: 一連の体験とCI自動化
   - _Requirements: All_
-  - _Prompt: Role: QA自動化エンジニア（CI/CD） | Task: 記録から修正・再計算までのE2Eを検証し、GitHub ActionsのCIにcleaning-recordのテスト・アーキテストを組み込む | Restrictions: 実ユーザーフローをテスト、実装詳細に依存しない | Success: E2Eがパスし、PRごとにCIで自動実行される_
