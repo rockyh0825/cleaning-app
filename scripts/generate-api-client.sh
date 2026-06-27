@@ -5,6 +5,7 @@
 # 何を生成するか:
 #   1. TypeScript クライアント (typescript-fetch)
 #      → mobile/src/shared/api/ へ出力（モバイルアプリ向け）
+#      ※ mobile/ ディレクトリが存在しない場合はスキップ（Expo セットアップ後に再実行）
 #   2. Kotlin Spring Boot サーバースタブ (kotlin-spring, interfaceOnly)
 #      → backend/build/generated/ へ出力（バックエンド向け）
 #
@@ -21,9 +22,11 @@
 
 set -euo pipefail
 
-# スクリプトの場所からリポジトリルートを求める
+# スクリプトの場所からリポジトリルートを絶対パスで求め、そこを作業ディレクトリにする
+# → openapitools.json の読み込みや相対パス解決が実行場所に依存しなくなる
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$SCRIPT_DIR/.."
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT"
 
 OPENAPI_SPEC="$REPO_ROOT/api/openapi.yaml"
 
@@ -38,19 +41,24 @@ echo "[INFO] 生成元スキーマ: $OPENAPI_SPEC"
 # ─── ① TypeScript クライアント生成（モバイル向け） ─────────
 TS_OUT="$REPO_ROOT/mobile/src/shared/api"
 
-echo "[INFO] TypeScript クライアントを生成します → $TS_OUT"
+if [[ ! -d "$REPO_ROOT/mobile" ]]; then
+  echo "[WARN] mobile/ ディレクトリが存在しないため TypeScript クライアント生成をスキップします"
+  echo "       Expo プロジェクトをセットアップ後に再実行してください"
+else
+  echo "[INFO] TypeScript クライアントを生成します → $TS_OUT"
 
-# クリーンな状態にしてから生成
-rm -rf "$TS_OUT"
-mkdir -p "$TS_OUT"
+  # クリーンな状態にしてから生成
+  rm -rf "$TS_OUT"
+  mkdir -p "$TS_OUT"
 
-npx --yes @openapitools/openapi-generator-cli generate \
-  --input-spec "$OPENAPI_SPEC" \
-  --generator-name typescript-fetch \
-  --output "$TS_OUT" \
-  --additional-properties=typescriptThreePlus=true
+  npx --yes @openapitools/openapi-generator-cli generate \
+    --input-spec "$OPENAPI_SPEC" \
+    --generator-name typescript-fetch \
+    --output "$TS_OUT" \
+    --additional-properties=typescriptThreePlus=true
 
-echo "[SUCCESS] TypeScript クライアント生成完了: $TS_OUT"
+  echo "[SUCCESS] TypeScript クライアント生成完了: $TS_OUT"
+fi
 
 # ─── ② Kotlin Spring Boot サーバースタブ生成（バックエンド向け） ───
 KT_OUT="$REPO_ROOT/backend/build/generated"
@@ -70,5 +78,4 @@ npx --yes @openapitools/openapi-generator-cli generate \
 echo "[SUCCESS] Kotlin Spring Boot サーバースタブ生成完了: $KT_OUT"
 
 echo ""
-echo "[DONE] すべての生成が完了しました。"
-echo "       OpenAPI スキーマ変更時は再度このスクリプトを実行してください。"
+echo "[DONE] 完了しました。OpenAPI スキーマ変更時は再度このスクリプトを実行してください。"
