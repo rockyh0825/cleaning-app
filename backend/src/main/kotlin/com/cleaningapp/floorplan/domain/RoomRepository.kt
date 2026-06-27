@@ -11,4 +11,10 @@ interface RoomRepository {
     fun save(room: Room)
 
     fun findByUserId(userId: UUID): List<Room>
+
+    fun findById(id: UUID): Room?
+
+    fun update(room: Room)
+
+    fun deleteById(id: UUID)
 }
