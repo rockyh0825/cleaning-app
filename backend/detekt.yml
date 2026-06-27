@@ -1,0 +1,18 @@
+build:
+  maxIssues: 0
+
+style:
+  MagicNumber:
+    active: false
+  ForbiddenComment:
+    active: false
+  MaxLineLength:
+    active: false  # ktlint で管理する
+
+empty-blocks:
+  EmptyFunctionBlock:
+    active: false  # contextLoads() など意図的な空メソッドを許可
+
+performance:
+  SpreadOperator:
+    active: false  # Spring Boot の runApplication(*args) など慣用コードを許可
