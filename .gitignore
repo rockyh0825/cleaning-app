@@ -1,2 +1,6 @@
 .claude/
 .idea/
+
+# OpenAPI 生成物（api/openapi.yaml から自動生成。コミットしない）
+mobile/src/shared/api/
+backend/build/generated/
