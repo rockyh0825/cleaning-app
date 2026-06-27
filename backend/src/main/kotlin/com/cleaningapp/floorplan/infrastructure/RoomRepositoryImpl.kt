@@ -1,7 +1,7 @@
-package com.cleaningapp.layout.infrastructure
+package com.cleaningapp.floorplan.infrastructure
 
-import com.cleaningapp.layout.domain.Room
-import com.cleaningapp.layout.domain.RoomRepository
+import com.cleaningapp.floorplan.domain.Room
+import com.cleaningapp.floorplan.domain.RoomRepository
 import org.springframework.stereotype.Repository
 import java.util.UUID
 

@@ -1,4 +1,4 @@
-package com.cleaningapp.layout.domain
+package com.cleaningapp.floorplan.domain
 
 /**
  * 部屋の種別。openapi の RoomType と一致させる。

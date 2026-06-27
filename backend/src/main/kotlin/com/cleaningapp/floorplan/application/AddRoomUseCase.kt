@@ -1,8 +1,8 @@
-package com.cleaningapp.layout.application
+package com.cleaningapp.floorplan.application
 
-import com.cleaningapp.layout.domain.Room
-import com.cleaningapp.layout.domain.RoomRepository
-import com.cleaningapp.layout.domain.RoomType
+import com.cleaningapp.floorplan.domain.Room
+import com.cleaningapp.floorplan.domain.RoomRepository
+import com.cleaningapp.floorplan.domain.RoomType
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.UUID

@@ -1,4 +1,4 @@
-package com.cleaningapp.layout.domain
+package com.cleaningapp.floorplan.domain
 
 import java.util.UUID
 

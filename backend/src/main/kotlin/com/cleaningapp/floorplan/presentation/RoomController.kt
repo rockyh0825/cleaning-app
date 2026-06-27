@@ -1,8 +1,8 @@
-package com.cleaningapp.layout.presentation
+package com.cleaningapp.floorplan.presentation
 
-import com.cleaningapp.layout.application.AddRoomCommand
-import com.cleaningapp.layout.application.AddRoomUseCase
-import com.cleaningapp.layout.application.ListRoomsUseCase
+import com.cleaningapp.floorplan.application.AddRoomCommand
+import com.cleaningapp.floorplan.application.AddRoomUseCase
+import com.cleaningapp.floorplan.application.ListRoomsUseCase
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
