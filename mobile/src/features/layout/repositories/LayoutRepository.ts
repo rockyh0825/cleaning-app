@@ -1,3 +1,8 @@
+import type {
+    Room as ApiRoom,
+    Furniture as ApiFurniture,
+    RoomWithFurniture as ApiRoomWithFurniture,
+} from '@/shared/api/models';
 import { DefaultApi } from '@/shared/api/apis/DefaultApi';
 import type {
     CreateFurnitureInput,
@@ -5,6 +10,7 @@ import type {
     FloorPlan,
     Furniture,
     Room,
+    RoomWithFurniture,
     UpdateFurnitureInput,
     UpdateRoomInput,
 } from '../types';
@@ -18,19 +24,23 @@ export class LayoutRepository {
     constructor(private readonly api: DefaultApi) {}
 
     async getFloorPlan(userId: string): Promise<FloorPlan> {
-        return this.api.getFloorPlan({ xUserId: userId });
+        const data = await this.api.getFloorPlan({ xUserId: userId });
+        return { rooms: data.rooms.map((r) => this.toRoomWithFurniture(r)) };
     }
 
     async listRooms(userId: string): Promise<Room[]> {
-        return this.api.listRooms({ xUserId: userId });
+        const data = await this.api.listRooms({ xUserId: userId });
+        return data.map((r) => this.toRoom(r));
     }
 
     async createRoom(userId: string, input: CreateRoomInput): Promise<Room> {
-        return this.api.createRoom({ xUserId: userId, roomCreate: input });
+        const data = await this.api.createRoom({ xUserId: userId, roomCreate: input });
+        return this.toRoom(data);
     }
 
     async updateRoom(userId: string, roomId: string, input: UpdateRoomInput): Promise<Room> {
-        return this.api.updateRoom({ xUserId: userId, roomId, roomUpdate: input });
+        const data = await this.api.updateRoom({ xUserId: userId, roomId, roomUpdate: input });
+        return this.toRoom(data);
     }
 
     async deleteRoom(userId: string, roomId: string): Promise<void> {
@@ -42,7 +52,12 @@ export class LayoutRepository {
         roomId: string,
         input: CreateFurnitureInput,
     ): Promise<Furniture> {
-        return this.api.createFurniture({ xUserId: userId, roomId, furnitureCreate: input });
+        const data = await this.api.createFurniture({
+            xUserId: userId,
+            roomId,
+            furnitureCreate: input,
+        });
+        return this.toFurniture(data);
     }
 
     async updateFurniture(
@@ -50,14 +65,51 @@ export class LayoutRepository {
         furnitureId: string,
         input: UpdateFurnitureInput,
     ): Promise<Furniture> {
-        return this.api.updateFurniture({
+        const data = await this.api.updateFurniture({
             xUserId: userId,
             furnitureId,
             furnitureUpdate: input,
         });
+        return this.toFurniture(data);
     }
 
     async deleteFurniture(userId: string, furnitureId: string): Promise<void> {
         return this.api.deleteFurniture({ xUserId: userId, furnitureId });
+    }
+
+    private toRoom(api: ApiRoom): Room {
+        return {
+            id: api.id,
+            name: api.name,
+            type: api.type,
+            gridX: api.gridX,
+            gridY: api.gridY,
+            gridW: api.gridW,
+            gridH: api.gridH,
+            createdAt: api.createdAt,
+            updatedAt: api.updatedAt,
+        };
+    }
+
+    private toFurniture(api: ApiFurniture): Furniture {
+        return {
+            id: api.id,
+            roomId: api.roomId,
+            name: api.name,
+            presetKey: api.presetKey,
+            gridX: api.gridX,
+            gridY: api.gridY,
+            gridW: api.gridW,
+            gridH: api.gridH,
+            createdAt: api.createdAt,
+            updatedAt: api.updatedAt,
+        };
+    }
+
+    private toRoomWithFurniture(api: ApiRoomWithFurniture): RoomWithFurniture {
+        return {
+            ...this.toRoom(api),
+            furniture: api.furniture.map((f) => this.toFurniture(f)),
+        };
     }
 }

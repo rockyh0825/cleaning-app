@@ -2,6 +2,11 @@ import type { RoomType } from '@/shared/api/models/RoomType';
 
 export type { RoomType };
 
+// OpenAPI の minProperties: 1 を型レベルで強制するユーティリティ型
+type RequireAtLeastOne<T> = {
+    [K in keyof T]-?: Required<Pick<T, K>> & Partial<Omit<T, K>>;
+}[keyof T];
+
 export type Room = {
     id: string;
     name: string;
@@ -40,13 +45,13 @@ export type CreateRoomInput = {
     gridH: number;
 };
 
-export type UpdateRoomInput = {
-    name?: string;
-    gridX?: number;
-    gridY?: number;
-    gridW?: number;
-    gridH?: number;
-};
+export type UpdateRoomInput = RequireAtLeastOne<{
+    name: string;
+    gridX: number;
+    gridY: number;
+    gridW: number;
+    gridH: number;
+}>;
 
 export type CreateFurnitureInput = {
     name: string;
@@ -57,10 +62,10 @@ export type CreateFurnitureInput = {
     gridH: number;
 };
 
-export type UpdateFurnitureInput = {
-    name?: string;
-    gridX?: number;
-    gridY?: number;
-    gridW?: number;
-    gridH?: number;
-};
+export type UpdateFurnitureInput = RequireAtLeastOne<{
+    name: string;
+    gridX: number;
+    gridY: number;
+    gridW: number;
+    gridH: number;
+}>;
