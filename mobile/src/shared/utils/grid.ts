@@ -3,9 +3,11 @@ export type Rect = { x: number; y: number; w: number; h: number };
 
 /**
  * 座標をグリッドセルにスナップする。
- * ドラッグ中に毎フレーム呼ばれる前提で、乗算・丸め・乗算のみで構成する。
+ * ドラッグ中に毎フレーム呼ばれる前提で、除算・丸め・乗算で構成する。
+ * cellSize が 0 または非有限値の場合は point をそのまま返す。
  */
 export function snapToGrid(point: Point, cellSize: number): Point {
+    if (!Number.isFinite(cellSize) || cellSize === 0) return point;
     return {
         x: Math.round(point.x / cellSize) * cellSize,
         y: Math.round(point.y / cellSize) * cellSize,
