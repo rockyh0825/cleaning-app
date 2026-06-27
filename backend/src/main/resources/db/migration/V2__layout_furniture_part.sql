@@ -32,8 +32,10 @@ CREATE TABLE part (
     -- 主キーは UUID。id はアプリ側で生成してから INSERT する（DBのデフォルトは設定しない）
     id                      UUID        PRIMARY KEY,
 
-    -- 所属対象の種別。"ROOM" または "FURNITURE"。妥当性はアプリ層(OwnerType)で担保する
-    owner_type              TEXT        NOT NULL,
+    -- 所属対象の種別。CHECK 制約で値域を "ROOM" / "FURNITURE" に限定する
+    owner_type              TEXT        NOT NULL
+                                CONSTRAINT part_owner_type_check
+                                CHECK (owner_type IN ('ROOM', 'FURNITURE')),
 
     -- 所属対象の ID（Room.id または Furniture.id）。
     -- owner_type が ROOM なら room(id)、FURNITURE なら furniture(id) を指す。
