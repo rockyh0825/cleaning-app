@@ -21,12 +21,12 @@
 
 ## フェーズ2: バックエンド（Spring Boot + Kotlin）
 
-- [ ] 3. Flywayマイグレーションで room / furniture / part テーブルを作成
-  - File: backend/src/main/resources/db/migration/V1__layout_initial.sql
-  - UUID主キー、外部キー（furniture.room_id → room、part.owner_id）、room削除時の連鎖削除（ON DELETE CASCADE）を定義
-  - Purpose: 間取りの永続化基盤を作る
+- [x] 3. Flywayマイグレーションで room テーブルを作成（スライス1）
+  - File: backend/src/main/resources/db/migration/V1__layout_initial.sql ✅ 適用済み
+  - UUID主キー・user_id インデックスを定義。furniture / part は後続スライスで V2 以降に追加する
+  - Purpose: 間取りの永続化基盤（room のみ）を作る
   - _Requirements: 3_
-  - _Prompt: Role: データベースエンジニア（PostgreSQL/Flyway） | Task: design.mdのData Modelsに沿ってroom/furniture/partテーブルを作成するFlywayマイグレーションを書く。UUID主キー、連鎖削除制約、user_idインデックスを含める | Restrictions: 連番ID禁止、住所カラムを作らない、Flyway命名規則（V1__layout_initial.sql）に従う | Success: マイグレーションが適用でき、連鎖削除がDBレベルで機能する_
+  - _Prompt: Role: データベースエンジニア（PostgreSQL/Flyway） | Task: design.mdのData Modelsに沿ってroom/furniture/partテーブルを作成するFlywayマイグレーションを書く。UUID主キー、連鎖削除制約、user_idインデックスを含める | Restrictions: 連番ID禁止、住所カラムを作らない、Flyway命名規則（V2__layout_furniture_part.sql 等）に従う | Success: マイグレーションが適用でき、連鎖削除がDBレベルで機能する_
 
 - [ ] 4. domain層: Layout / Room / Furniture / Part ドメインモデルとRoomType・プリセット定義
   - File: backend/.../layout/domain/{Room,Furniture,Part,RoomType}.kt

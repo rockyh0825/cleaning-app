@@ -35,7 +35,7 @@ components:
     # サーバーが「返す」部屋。id・タイムスタンプ込み（＝サーバーが確定させる値）
     Room:
       type: object
-      required: [id, name, type, gridX, gridY, gridW, gridH]
+      required: [id, name, type, gridX, gridY, gridW, gridH, createdAt, updatedAt]
       properties:
         id:
           type: string

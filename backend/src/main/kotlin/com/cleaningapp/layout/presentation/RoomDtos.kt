@@ -2,6 +2,7 @@ package com.cleaningapp.layout.presentation
 
 import com.cleaningapp.layout.domain.Room
 import com.cleaningapp.layout.domain.RoomType
+import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import java.time.Instant
 import java.util.UUID
@@ -15,10 +16,10 @@ data class RoomCreateRequest(
     @field:NotBlank
     val name: String,
     val type: RoomType,
-    val gridX: Int,
-    val gridY: Int,
-    val gridW: Int,
-    val gridH: Int,
+    @field:Min(0) val gridX: Int,
+    @field:Min(0) val gridY: Int,
+    @field:Min(1) val gridW: Int,
+    @field:Min(1) val gridH: Int,
 )
 
 /**

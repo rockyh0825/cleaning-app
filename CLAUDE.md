@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **コードを書く分担**
 - **実装はClaudeが書く（書き手）。オーナーはレビュー役**
 - Claudeはコードを書いたら、オーナーがレビューで理解できるよう設計意図を必ず説明する
-- 振り返りは study-notes（`/Users/rockyh/dev/study-notes`）にオーナーが書く。Claudeはそのための材料（要点）を残す
+- 振り返りは study-notes（別リポジトリ）にオーナーが書く。Claudeはそのための材料（要点）を残す
 
 **コードを書くときに必ず含めること（レビューと振り返りの材料）**
 - **設計意図の解説**: 「なぜこの設計・書き方にするか」をコードと一緒に説明する

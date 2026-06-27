@@ -2,11 +2,11 @@ spring:
   application:
     name: backend
 
-  # PostgreSQL への接続（docker-compose の設定と一致させる）
+  # PostgreSQL への接続。環境変数（SPRING_DATASOURCE_*）が優先され、未設定時はローカル開発用のデフォルト値が使われる
   datasource:
-    url: jdbc:postgresql://localhost:5432/cleaning_app
-    username: cleaning
-    password: cleaning
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cleaning_app}
+    username: ${SPRING_DATASOURCE_USERNAME:cleaning}
+    password: ${SPRING_DATASOURCE_PASSWORD:cleaning}
 
   # Flyway: 起動時に classpath:db/migration の V*.sql を順に適用する
   flyway:
