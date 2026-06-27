@@ -7,9 +7,9 @@ on:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
   pull_request:
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-ci.yml"
+    # paths フィルターを外す
+    # → PRでは常にジョブを起動してステータスを報告し、ブランチ保護ルールを満たす
+    # → バックエンド変更がないPRは内部の paths-filter でステップをスキップして高速に通過する
 
 jobs:
   ci:
@@ -34,24 +34,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Detect backend changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/backend-ci.yml'
+
       - name: Set up JDK 21
+        if: steps.filter.outputs.backend == 'true'
         uses: actions/setup-java@v4
         with:
           java-version: "21"
           distribution: "temurin"
 
       - name: Setup Gradle
+        if: steps.filter.outputs.backend == 'true'
         uses: gradle/actions/setup-gradle@v4
 
       - name: ktlint check
+        if: steps.filter.outputs.backend == 'true'
         working-directory: backend
         run: ./gradlew ktlintCheck
 
       - name: Detekt
+        if: steps.filter.outputs.backend == 'true'
         working-directory: backend
         run: ./gradlew detekt
 
       - name: Test (JUnit 5 + Konsist)
+        if: steps.filter.outputs.backend == 'true'
         working-directory: backend
         run: ./gradlew test
         env:
