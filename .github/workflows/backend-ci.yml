@@ -11,6 +11,10 @@ on:
     # → PRでは常にジョブを起動してステータスを報告し、ブランチ保護ルールを満たす
     # → バックエンド変更がないPRは内部の paths-filter でステップをスキップして高速に通過する
 
+permissions:
+  contents: read
+  pull-requests: read  # dorny/paths-filter が PR の差分を GitHub API 経由で取得するために必要
+
 jobs:
   ci:
     name: ktlint / Detekt / Test (Konsist)
