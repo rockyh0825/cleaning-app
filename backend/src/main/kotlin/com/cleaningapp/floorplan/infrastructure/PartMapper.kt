@@ -1,5 +1,6 @@
 package com.cleaningapp.floorplan.infrastructure
 
+import com.cleaningapp.floorplan.domain.OwnerType
 import com.cleaningapp.floorplan.domain.Part
 import org.apache.ibatis.annotations.Delete
 import org.apache.ibatis.annotations.Insert
@@ -30,11 +31,12 @@ interface PartMapper {
         """
         SELECT id, owner_type, owner_id, name, recommended_cycle_days, last_cleaned_at, created_at, updated_at
         FROM part
-        WHERE owner_id = #{ownerId}
+        WHERE owner_type = #{ownerType} AND owner_id = #{ownerId}
         ORDER BY created_at
         """,
     )
     fun selectByOwnerId(
+        @Param("ownerType") ownerType: OwnerType,
         @Param("ownerId") ownerId: UUID,
     ): List<Part>
 
@@ -48,8 +50,9 @@ interface PartMapper {
     )
     fun update(part: Part)
 
-    @Delete("DELETE FROM part WHERE owner_id = #{ownerId}")
+    @Delete("DELETE FROM part WHERE owner_type = #{ownerType} AND owner_id = #{ownerId}")
     fun deleteByOwnerId(
+        @Param("ownerType") ownerType: OwnerType,
         @Param("ownerId") ownerId: UUID,
     )
 }
