@@ -27,8 +27,9 @@ class UpdateRoomUseCaseTest {
     private val userId: UUID = UUID.randomUUID()
     private val roomId: UUID = UUID.randomUUID()
 
-    private fun buildRoom() =
-        Room(
+    private fun buildRoom(): Room {
+        val past = Instant.now().minusSeconds(60)
+        return Room(
             id = roomId,
             userId = userId,
             name = "元の名前",
@@ -37,9 +38,10 @@ class UpdateRoomUseCaseTest {
             gridY = 0,
             gridW = 3,
             gridH = 3,
-            createdAt = Instant.now(),
-            updatedAt = Instant.now(),
+            createdAt = past,
+            updatedAt = past,
         )
+    }
 
     @Test
     fun `updates_all_provided_fields`() {
@@ -167,7 +169,7 @@ class UpdateRoomUseCaseTest {
         val result = useCase.execute(command)
 
         // Assert
-        assertThat(result.updatedAt).isAfterOrEqualTo(originalRoom.updatedAt)
+        assertThat(result.updatedAt).isAfter(originalRoom.updatedAt)
     }
 
     @Test

@@ -47,8 +47,9 @@ class UpdateFurnitureUseCaseTest {
             updatedAt = Instant.now(),
         )
 
-    private fun buildFurniture() =
-        Furniture(
+    private fun buildFurniture(): Furniture {
+        val past = Instant.now().minusSeconds(60)
+        return Furniture(
             id = furnitureId,
             roomId = roomId,
             name = "元の名前",
@@ -57,9 +58,10 @@ class UpdateFurnitureUseCaseTest {
             gridY = 0,
             gridW = 2,
             gridH = 2,
-            createdAt = Instant.now(),
-            updatedAt = Instant.now(),
+            createdAt = past,
+            updatedAt = past,
         )
+    }
 
     @Test
     fun `updates_all_provided_fields`() {
@@ -192,7 +194,7 @@ class UpdateFurnitureUseCaseTest {
         val result = useCase.execute(command)
 
         // Assert
-        assertThat(result.updatedAt).isAfterOrEqualTo(original.updatedAt)
+        assertThat(result.updatedAt).isAfter(original.updatedAt)
     }
 
     @Test

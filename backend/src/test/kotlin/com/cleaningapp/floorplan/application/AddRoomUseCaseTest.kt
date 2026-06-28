@@ -102,7 +102,7 @@ class AddRoomUseCaseTest {
         useCase.execute(command)
 
         // Assert
-        assertThat(partsSlot.captured).hasSize(RoomType.KITCHEN.presetParts().size)
+        assertThat(partsSlot.captured).hasSize(4) // KITCHEN のプリセットパーツ数
     }
 
     @Test
