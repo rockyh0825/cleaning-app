@@ -1,0 +1,65 @@
+name: OpenAPI CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "api/openapi.yaml"
+      - ".github/workflows/openapi-ci.yml"
+  pull_request:
+    # paths フィルターを外す
+    # → PRでは常にジョブを起動してステータスを報告し、ブランチ保護ルールを満たす
+    # → openapi変更がないPRは内部の paths-filter でステップをスキップして高速に通過する
+
+permissions:
+  contents: read
+  pull-requests: read  # dorny/paths-filter が PR の差分を GitHub API 経由で取得するために必要
+
+jobs:
+  validate-and-generate:
+    name: Validate / Generate (TypeScript + Kotlin)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect openapi changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            openapi:
+              - 'api/openapi.yaml'
+              - '.github/workflows/openapi-ci.yml'
+
+      - name: Set up Node.js
+        if: steps.filter.outputs.openapi == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # openapitools.json でバージョンが 7.23.0 に固定されているため、
+      # npx 経由で実行するだけで同一バージョンが使われる
+      - name: Validate OpenAPI spec
+        if: steps.filter.outputs.openapi == 'true'
+        run: |
+          npx --yes @openapitools/openapi-generator-cli validate \
+            --input-spec api/openapi.yaml
+
+      - name: Generate TypeScript client
+        if: steps.filter.outputs.openapi == 'true'
+        run: |
+          npx --yes @openapitools/openapi-generator-cli generate \
+            --input-spec api/openapi.yaml \
+            --generator-name typescript-fetch \
+            --output /tmp/generated-ts \
+            --additional-properties=typescriptThreePlus=true
+
+      - name: Generate Kotlin Spring stubs
+        if: steps.filter.outputs.openapi == 'true'
+        run: |
+          npx --yes @openapitools/openapi-generator-cli generate \
+            --input-spec api/openapi.yaml \
+            --generator-name kotlin-spring \
+            --output /tmp/generated-kt \
+            --additional-properties=interfaceOnly=true,useSpringBoot3=true,reactive=false
