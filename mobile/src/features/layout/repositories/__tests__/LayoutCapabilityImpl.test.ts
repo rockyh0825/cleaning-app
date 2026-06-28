@@ -3,9 +3,9 @@
  * LayoutRepository をモックし、getRooms() が正しく部屋一覧を返すことを検証する。
  */
 
-import { LayoutCapabilityImpl } from '../../features/layout/repositories/LayoutCapabilityImpl';
-import type { LayoutRepository } from '../../features/layout/repositories/LayoutRepository';
-import type { RoomWithFurniture } from '../../features/layout/types';
+import { LayoutCapabilityImpl } from '../LayoutCapabilityImpl';
+import type { LayoutRepository } from '../LayoutRepository';
+import type { RoomWithFurniture } from '../../types';
 
 // --- テスト用フィクスチャ ---
 
