@@ -1,6 +1,6 @@
 # Tasks Document — 掃除記録（cleaning-record）
 
-実装順序は契約ファースト（OpenAPIスキーマ → バックエンド → モバイル）に従う。Part テーブルは floorplan-editor で作成済みである前提で、本featureは CleaningRecord テーブルとパーツ管理APIを追加する。各タスクは structure.md のレイヤー構成・命名規則・コードサイズ上限に準拠する。
+実装順序は契約ファースト（OpenAPIスキーマ → バックエンド → モバイル）に従う。Part テーブルは floormap-editor で作成済みである前提で、本featureは CleaningRecord テーブルとパーツ管理APIを追加する。各タスクは structure.md のレイヤー構成・命名規則・コードサイズ上限に準拠する。
 
 **TDDポリシー**: 各実装タスクにテストを内包する（CLAUDE.md準拠）。
 
