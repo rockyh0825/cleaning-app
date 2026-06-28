@@ -18,7 +18,19 @@ interface CleaningRecordRepository {
         pageSize: Int,
     ): List<CleaningRecord>
 
+    fun findByUserId(
+        userId: UUID,
+        page: Int,
+        pageSize: Int,
+    ): List<CleaningRecord>
+
+    fun countByPartId(partId: UUID): Int
+
+    fun countByUserId(userId: UUID): Int
+
     fun findMaxCleanedAtByPartId(partId: UUID): Instant?
+
+    fun update(record: CleaningRecord): CleaningRecord
 
     fun delete(id: UUID)
 }

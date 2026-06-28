@@ -38,7 +38,7 @@
     - 境界値: lastCleanedAt が null → elapsedRatio を最大値として扱う
   - _Requirements: 1, 5_
 
-- [ ] 5. infrastructure層: MyBatis Mapper（CleaningRecord / Part）
+- [x] 5. infrastructure層: MyBatis Mapper（CleaningRecord / Part）
   - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/infrastructure/{CleaningRecordMapper,CleaningRecordRepositoryImpl}.kt
   - 記録のCRUD、履歴の絞り込み・ページング、`SELECT MAX(cleaned_at)` での最終掃除日時取得
   - Purpose: データアクセス実装
