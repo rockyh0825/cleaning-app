@@ -67,7 +67,7 @@ describe('UpdateFurnitureUseCase', () => {
         expect(calledWith.gridY).toBe(1);
     });
 
-    it('境界値: 家具が部屋をはみ出す座標は clampWithin で調整される', async () => {
+    it('境界値: 家具の座標が部屋境界を超える場合は部屋内に収まるよう調整される', async () => {
         const useCase = new UpdateFurnitureUseCase(mockRepository);
         // 部屋は 10x8、家具の w:2 h:2 を維持するので、右端は x=8、下端は y=6 まで
         const input: UpdateFurnitureInput = { gridX: 9, gridY: 7 };
@@ -75,11 +75,11 @@ describe('UpdateFurnitureUseCase', () => {
         await useCase.execute('user-1', 'f-1', input);
 
         const calledWith = (mockRepository.updateFurniture as jest.Mock).mock.calls[0][2];
-        expect(calledWith.gridX).toBeLessThanOrEqual(8);
-        expect(calledWith.gridY).toBeLessThanOrEqual(6);
+        expect(calledWith.gridX).toBe(8);
+        expect(calledWith.gridY).toBe(6);
     });
 
-    it('境界値: 部屋サイズを超える gridW/gridH は部屋サイズ以内にクランプされる', async () => {
+    it('境界値: 部屋サイズを超える gridW/gridH は部屋サイズにクランプされる', async () => {
         const useCase = new UpdateFurnitureUseCase(mockRepository);
         // 部屋は 10x8。gridW: 15, gridH: 10 は超過 → w: 10, h: 8 にクランプされるべき
         const input: UpdateFurnitureInput = { gridW: 15, gridH: 10 };
@@ -87,7 +87,7 @@ describe('UpdateFurnitureUseCase', () => {
         await useCase.execute('user-1', 'f-1', input);
 
         const calledWith = (mockRepository.updateFurniture as jest.Mock).mock.calls[0][2];
-        expect(calledWith.gridW).toBeLessThanOrEqual(10);
-        expect(calledWith.gridH).toBeLessThanOrEqual(8);
+        expect(calledWith.gridW).toBe(10);
+        expect(calledWith.gridH).toBe(8);
     });
 });

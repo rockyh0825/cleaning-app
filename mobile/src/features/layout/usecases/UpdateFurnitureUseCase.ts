@@ -25,14 +25,13 @@ export class UpdateFurnitureUseCase {
             return this.repository.updateFurniture(userId, furnitureId, input);
         }
 
+        const g = input as { gridX?: number; gridY?: number; gridW?: number; gridH?: number };
         const roomRect = { x: room.gridX, y: room.gridY, w: room.gridW, h: room.gridH };
-        const clampedW = Math.min((input as { gridW?: number }).gridW ?? current.gridW, roomRect.w);
-        const clampedH = Math.min((input as { gridH?: number }).gridH ?? current.gridH, roomRect.h);
         const furnitureRect = {
-            x: (input as { gridX?: number }).gridX ?? current.gridX,
-            y: (input as { gridY?: number }).gridY ?? current.gridY,
-            w: clampedW,
-            h: clampedH,
+            x: g.gridX ?? current.gridX,
+            y: g.gridY ?? current.gridY,
+            w: Math.min(g.gridW ?? current.gridW, roomRect.w),
+            h: Math.min(g.gridH ?? current.gridH, roomRect.h),
         };
         const clamped = clampWithin(furnitureRect, roomRect);
 
