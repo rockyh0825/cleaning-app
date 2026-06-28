@@ -65,9 +65,9 @@
 
 ### Code Architecture and Modularity
 
-- structure.md の Package by Feature 構成に従い、`features/layout/` 配下に components/hooks/usecases/repositories を分離する
+- structure.md の Package by Feature 構成に従い、`features/floorplan/` 配下に components/hooks/usecases/repositories を分離する
 - 描画（components）にビジネスロジックを持たせず、グリッドスナップ計算等は usecases または shared/utils の純粋関数に置く
-- 他featureがこの間取り情報を参照する場合は `LayoutCapability` 経由とし、直接importを禁止する
+- 他featureがこの間取り情報を参照する場合は `FloorplanCapability` 経由とし、直接importを禁止する
 
 ### Performance
 

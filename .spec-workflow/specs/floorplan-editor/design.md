@@ -18,9 +18,9 @@
 
 ### Project Structure (structure.md)
 
-- `features/layout/` 配下に components / hooks / usecases / repositories / types.ts を配置
-- 他featureからの参照は `capabilities/LayoutCapability.ts` 経由（heatmap が間取り情報を読むため）
-- バックエンドは `backend/.../layout/` に presentation / application / domain / infrastructure を配置
+- `features/floorplan/` 配下に components / hooks / usecases / repositories / types.ts を配置
+- 他featureからの参照は `capabilities/FloorplanCapability.ts` 経由（heatmap が間取り情報を読むため）
+- バックエンドは `backend/.../floorplan/` に presentation / application / domain / infrastructure を配置
 
 ## Code Reuse Analysis
 
@@ -44,33 +44,33 @@
 
 ### Modular Design Principles
 
-- **描画とロジックの分離**: LayoutCanvas は座標を受け取って描くだけ。スナップ計算・衝突判定は usecases / utils に隔離
+- **描画とロジックの分離**: FloorplanCanvas は座標を受け取って描くだけ。スナップ計算・衝突判定は usecases / utils に隔離
 - **レイヤー一方向依存**: components → hooks → usecases → repositories → shared/api
 - **1ユースケース1クラス**: AddRoom / ResizeRoom / PlaceFurniture などを個別ユースケースに分割
 
 ```mermaid
 graph TD
-    A[app/layout/index.tsx] --> B[LayoutCanvas]
-    B --> C[useLayout hook]
+    A[app/floorplan/index.tsx] --> B[FloorplanCanvas]
+    B --> C[useFloorplan hook]
     C --> D[AddRoomUseCase / PlaceFurnitureUseCase]
-    D --> E[LayoutRepository]
+    D --> E[FloorplanRepository]
     E --> F[shared/api - 生成クライアント]
-    F --> G[Spring Boot LayoutController]
-    G --> H[Layout Application Layer]
+    F --> G[Spring Boot FloorplanController]
+    G --> H[Floorplan Application Layer]
     H --> I[PostgreSQL: room / furniture / part]
-    C -.実装.-> J[LayoutCapability]
+    C -.実装.-> J[FloorplanCapability]
     J -.参照.-> K[heatmap feature]
 ```
 
 ## Components and Interfaces
 
-### LayoutCanvas (components)
+### FloorplanCanvas (components)
 - **Purpose:** グリッド・部屋矩形・家具を Skia で描画し、タッチイベントを hooks に渡す
 - **Interfaces:** `props: { rooms, furniture, onRoomDrag, onFurnitureDrag, selectedId }`
-- **Dependencies:** React Native Skia, useLayout
+- **Dependencies:** React Native Skia, useFloorplan
 - **Reuses:** —（描画専任、ロジックなし）
 
-### useLayout (hooks)
+### useFloorplan (hooks)
 - **Purpose:** 間取りの状態管理。TanStack Query で取得し、ドラッグ中のローカル状態と楽観的更新を仲介
 - **Interfaces:** `{ rooms, furniture, addRoom, moveRoom, resizeRoom, addFurniture, moveFurniture, remove }`
 - **Dependencies:** usecases, useQuery/useMutation
@@ -88,13 +88,13 @@ graph TD
 - **Dependencies:** LayoutRepository
 - **Reuses:** Grid utilities
 
-### LayoutRepository (repositories)
+### FloorplanRepository (repositories)
 - **Purpose:** 間取りCRUDのAPI呼び出し実装
 - **Interfaces:** `getLayout()` / `saveRoom(room)` / `saveFurniture(furniture)` / `deleteRoom(id)` ...
 - **Dependencies:** shared/api（生成クライアント）
 - **Reuses:** OpenAPI生成クライアント
 
-### LayoutController → AddRoomUseCase → LayoutRepositoryImpl (MyBatis) (backend)
+### FloorplanController → AddRoomUseCase → FloorplanRepositoryImpl (MyBatis) (backend)
 - **Purpose:** presentation/application/infrastructure の3層でCRUDを実装。infrastructureはMyBatis Mapperでデータアクセスを行う
 - **Interfaces:** REST: `/floor-plan`, `/rooms`, `/rooms/{roomId}/furniture`
 - **Dependencies:** domain（Layout/Room/Furniture/Part）
