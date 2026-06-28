@@ -56,7 +56,7 @@
 1. WHEN ユーザーがエリアにパーツを追加する THEN システムは 名前と推奨周期（日数）を持つパーツを作成する SHALL
 2. WHEN ユーザーがパーツの名前または推奨周期を編集する THEN システムは 変更を保存する SHALL
 3. WHEN ユーザーがパーツを削除する THEN システムは そのパーツと紐付く掃除記録をまとめて削除する SHALL
-4. WHEN layout-editor がエリア種別に応じてプリセットパーツをseedした THEN システムは それらを通常のパーツとして扱い、編集・削除できる SHALL
+4. WHEN floorplan-editor がエリア種別に応じてプリセットパーツをseedした THEN システムは それらを通常のパーツとして扱い、編集・削除できる SHALL
 
 ### Requirement 5: 掃除状態の他featureへの公開（Capability）
 
@@ -74,7 +74,7 @@
 
 - structure.md の構成に従い、`features/cleaning-record/` に components/hooks/usecases/repositories を分離する
 - `CleaningStatusCapability`（モバイル）/ `CleaningStatusPort`（バックエンド）を、使う側（heatmap・notification）の視点で定義し、実装を cleaning-record 側に置く
-- Part エンティティは layout-editor と共有する。掃除記録（CleaningRecord）は cleaning-record が所有する
+- Part エンティティは floorplan-editor と共有する。掃除記録（CleaningRecord）は cleaning-record が所有する
 
 ### Performance
 
