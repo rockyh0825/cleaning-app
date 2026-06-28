@@ -249,3 +249,5 @@ describe('CleaningRecordRepository', () => {
         });
     });
 });
+
+export {};
