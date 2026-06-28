@@ -2,7 +2,7 @@
 
 実装順序は契約ファースト（tech.md ADR-003）に従い、OpenAPIスキーマ → バックエンド → モバイルの順で進める。各タスクは structure.md のレイヤー構成・命名規則・コードサイズ上限に準拠する。
 
-**TDDポリシー（CLAUDE.md準拠）**: 実装コードより先にテストを書く（Red）。テストを通す最小限の実装をする（Green）。全テストグリーンの状態でリファクタリングする（Refactor）。テストのない実装PRはマージ不可。
+**TDDポリシー**: 各実装タスクにテストを内包する（CLAUDE.md準拠）。
 
 ## フェーズ1: API契約定義
 
@@ -74,12 +74,9 @@
 
 - [ ] 11. features/layout/usecases: AddRoom / DeleteRoom / AddFurniture / UpdateFurniture / DeleteFurniture ユースケース
   - File: mobile/src/features/layout/usecases/{AddRoomUseCase,DeleteRoomUseCase,AddFurnitureUseCase,UpdateFurnitureUseCase,DeleteFurnitureUseCase}.ts
-  - grid.ts の clampWithin でAddFurnituretime・UpdateFurnitrure 時に家具を部屋境界内に収める
+  - grid.ts の clampWithin で AddFurniture / UpdateFurniture 時に家具を部屋境界内に収める
   - Purpose: React非依存のビジネスロジック
-  - **TDDサイクル**:
-    - Red: `usecases/__tests__/*.test.ts` を先に作成し `npx jest src/features/layout/usecases` で失敗を確認
-    - Green: テストを通す最小限の実装を行う
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `usecases/__tests__/*.test.ts` を先に作成し `npx jest src/features/layout/usecases` で失敗を確認
   - **テスト対象** (`usecases/__tests__/`):
     - 正常系: `AddRoomUseCase` → repository.createRoom が userId・input で呼ばれ Room を返す
     - 正常系: `AddFurnitureUseCase` → 家具がクランプされてから repository.createFurniture が呼ばれる
@@ -93,10 +90,7 @@
   - File: mobile/src/features/layout/hooks/useLayout.ts
   - useQueryで取得、useMutationで楽観的更新、保存失敗時のロールバック
   - Purpose: UIとユースケースの橋渡し・サーバー状態管理
-  - **TDDサイクル**:
-    - Red: `hooks/__tests__/useLayout.test.ts` を先に作成し `npx jest src/features/layout/hooks` で失敗を確認
-    - Green: テストを通す最小限の実装を行う
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `hooks/__tests__/useLayout.test.ts` を先に作成し `npx jest src/features/layout/hooks` で失敗を確認
   - **テスト対象** (`hooks/__tests__/useLayout.test.ts`): `@tanstack/react-query` の `QueryClient` をテスト用に生成して使う
     - 正常系: フロアプランを取得して返す
     - 正常系: 部屋追加時にキャッシュが楽観的更新される
@@ -108,10 +102,7 @@
   - File: mobile/src/features/layout/components/{LayoutCanvas,RoomShape,FurnitureItem,AddRoomModal,AddFurnitureModal}.tsx
   - React Native Skiaでグリッド・部屋・家具を描画、タッチイベントをhooksへ
   - Purpose: 視覚操作によるUI
-  - **TDDサイクル**:
-    - Red: `components/__tests__/*.test.tsx` を先に作成し `npx jest src/features/layout/components` で失敗を確認
-    - Green: テストを通す最小限の実装を行う
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `components/__tests__/*.test.tsx` を先に作成し `npx jest src/features/layout/components` で失敗を確認
   - **テスト対象** (`components/__tests__/`): `@testing-library/react-native` を使う
     - 正常系: `AddRoomModal` → 部屋名を入力して送信するとuseLayoutのaddRoomが呼ばれる
     - 正常系: `AddFurnitureModal` → 家具名を入力して送信するとuseLayoutのaddFurnitureが呼ばれる
@@ -124,10 +115,7 @@
   - File: mobile/app/layout/index.tsx, mobile/app/layout/[roomId].tsx
   - 間取りが無い場合のempty state、初回起動時の誘導、初回UUID発行（AsyncStorage）
   - Purpose: 画面の組み立てとオンボーディング
-  - **TDDサイクル**:
-    - Red: `app/layout/__tests__/index.test.tsx` を先に作成し失敗を確認
-    - Green: テストを通す最小限の実装を行う
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `app/layout/__tests__/index.test.tsx` を先に作成し失敗を確認
   - **テスト対象**:
     - 正常系: フロアプランが空のとき empty state が表示される
     - 正常系: UUID未発行のとき AsyncStorage に新しい UUID が保存される
@@ -137,10 +125,7 @@
   - File: mobile/src/capabilities/LayoutCapability.ts, mobile/src/shared/app-root/providers/di.ts
   - heatmapが部屋・家具情報を読むための境界インターフェースと実装の配線
   - Purpose: feature間依存の逆転
-  - **TDDサイクル**:
-    - Red: `capabilities/__tests__/LayoutCapability.test.ts` を先に作成し失敗を確認
-    - Green: インターフェースと実装を最小限で定義する
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `capabilities/__tests__/LayoutCapability.test.ts` を先に作成し失敗を確認
   - **テスト対象**:
     - 正常系: `LayoutCapabilityImpl.getRooms()` が LayoutRepository を経由して部屋一覧を返す
     - 正常系: di.ts 経由でインスタンス化した capability が正しく動作する

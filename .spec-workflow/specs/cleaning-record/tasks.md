@@ -2,7 +2,7 @@
 
 実装順序は契約ファースト（OpenAPIスキーマ → バックエンド → モバイル）に従う。Part テーブルは layout-editor で作成済みである前提で、本featureは CleaningRecord テーブルとパーツ管理APIを追加する。各タスクは structure.md のレイヤー構成・命名規則・コードサイズ上限に準拠する。
 
-**TDDポリシー（CLAUDE.md準拠）**: 実装コードより先にテストを書く（Red）。テストを通す最小限の実装をする（Green）。全テストグリーンの状態でリファクタリングする（Refactor）。各実装タスクにテストを含めること。テストだけを書くタスクは設けない。
+**TDDポリシー**: 各実装タスクにテストを内包する（CLAUDE.md準拠）。
 
 ## フェーズ1: API契約定義
 
@@ -30,10 +30,7 @@
   - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/domain/{CleaningRecord,CleaningStatus}.kt
   - 推奨周期に対する経過割合（elapsedRatio）の算出、期限超過（> 1.0）判定を純粋Kotlinで
   - Purpose: Springに非依存なビジネスルール
-  - **TDDサイクル**:
-    - Red: `cleaningrecord/domain/CleaningStatusTest.kt` を先に作成し `./gradlew test --tests "*.CleaningStatusTest"` で失敗を確認
-    - Green: テストを通す最小限の実装を行う
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `CleaningStatusTest.kt` を先に作成し `./gradlew test --tests "*.CleaningStatusTest"` で失敗を確認
   - **テスト対象** (`backend/src/test/.../cleaningrecord/domain/CleaningStatusTest.kt`):
     - 正常系: lastCleanedAt が7日前・周期7日 → elapsedRatio = 1.0（期限ちょうど）
     - 境界値: elapsedRatio が 0.8 → GREEN、1.0 → YELLOW（境界は仕様通り）
@@ -45,10 +42,7 @@
   - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/infrastructure/{CleaningRecordMapper,CleaningRecordRepositoryImpl}.kt
   - 記録のCRUD、履歴の絞り込み・ページング、`SELECT MAX(cleaned_at)` での最終掃除日時取得
   - Purpose: データアクセス実装
-  - **TDDサイクル**:
-    - Red: `cleaningrecord/infrastructure/CleaningRecordMapperTest.kt` を先に作成し `./gradlew test --tests "*.CleaningRecordMapperTest"` で失敗を確認（`@MybatisTest` を使用）
-    - Green: Mapper と SQL を実装してテストを通す
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `CleaningRecordMapperTest.kt` を先に作成し `./gradlew test --tests "*.CleaningRecordMapperTest"` で失敗を確認（`@MybatisTest` を使用）
   - **テスト対象** (`@MybatisTest` + Flyway + PostgreSQL):
     - 正常系: 記録を保存し、partIdで絞り込んで取得できる
     - 正常系: MAX(cleaned_at) が正しく返る
@@ -60,10 +54,7 @@
   - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/application/{RecomputeLastCleanedService,LogCleaningUseCase,EditRecordUseCase,DeleteRecordUseCase,ManagePartUseCase}.kt
   - RecomputeLastCleanedServiceに再計算を一元化。LogCleaningは複数partを1トランザクションで記録、各操作後に再計算
   - Purpose: ビジネスロジックとトランザクション境界
-  - **TDDサイクル**:
-    - Red: `cleaningrecord/application/*UseCaseTest.kt` を先に作成し `./gradlew test --tests "*.cleaningrecord.application.*"` で失敗を確認（MockK を使用）
-    - Green: テストを通す最小限の実装を行う
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `*UseCaseTest.kt` を先に作成し `./gradlew test --tests "*.cleaningrecord.application.*"` で失敗を確認（MockK を使用）
   - **テスト対象** (MockK + JUnit 5):
     - 正常系: `LogCleaningUseCase` → 複数 partId を1トランザクションで記録し、再計算が呼ばれる
     - 異常系: 1件でも保存失敗したらロールバックされる（`@Transactional` の動作を確認）
@@ -75,10 +66,7 @@
   - File: backend/src/main/kotlin/com/cleaningapp/capabilities/CleaningStatusPort.kt, backend/src/main/kotlin/com/cleaningapp/cleaningrecord/application/CleaningStatusPortImpl.kt
   - getLastCleanedAt(areaId) / getOverdueAreas() を提供
   - Purpose: heatmap・notificationへの掃除状態公開
-  - **TDDサイクル**:
-    - Red: `CleaningStatusPortImplTest.kt` を先に作成し失敗を確認（MockK を使用）
-    - Green: Port インターフェースと実装を最小限で定義する
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `CleaningStatusPortImplTest.kt` を先に作成し失敗を確認（MockK を使用）
   - **テスト対象**:
     - 正常系: `getOverdueAreas()` → elapsedRatio > 1.0 のパーツのみが返る
     - 正常系: `getLastCleanedAt(areaId)` → 対象エリアの最新 cleaned_at が返る
@@ -89,10 +77,7 @@
   - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/presentation/{CleaningRecordController,PartController}.kt
   - 生成スタブ実装、UUIDヘッダでスコープ限定、バリデーション
   - Purpose: HTTP入出力
-  - **TDDサイクル**:
-    - Red: `cleaningrecord/presentation/CleaningRecordControllerTest.kt` を先に作成し失敗を確認（`@WebMvcTest` + `@MockkBean` を使用）
-    - Green: Controller を実装してテストを通す
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `CleaningRecordControllerTest.kt` を先に作成し失敗を確認（`@WebMvcTest` + `@MockkBean` を使用）
   - **テスト対象** (`@WebMvcTest` + MockK):
     - 正常系: POST /cleaning-records → 201 と記録リストを返す
     - 正常系: GET /cleaning-records?partId=xxx → 200 と絞り込み結果を返す
@@ -108,10 +93,7 @@
   - File: mobile/src/features/cleaning-record/{types.ts, repositories/CleaningRecordRepository.ts}
   - 生成クライアントをラップした記録CRUD・パーツ管理の実装
   - Purpose: データアクセス層
-  - **TDDサイクル**:
-    - Red: `repositories/__tests__/CleaningRecordRepository.test.ts` を先に作成し `npx jest src/features/cleaning-record/repositories` で失敗を確認（APIクライアントをモック）
-    - Green: types.ts と Repository を実装してテストを通す
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `repositories/__tests__/CleaningRecordRepository.test.ts` を先に作成し `npx jest src/features/cleaning-record/repositories` で失敗を確認（APIクライアントをモック）
   - **テスト対象**:
     - 正常系: `createRecords(partIds)` → APIクライアントの `createCleaningRecords` が正しい引数で呼ばれる
     - 正常系: `listRecords({ partId })` → 絞り込みパラメータがAPIに渡る
@@ -122,10 +104,7 @@
 - [ ] 10. features/cleaning-record/usecases
   - File: mobile/src/features/cleaning-record/usecases/{LogCleaningUseCase,EditRecordUseCase,DeleteRecordUseCase,ManagePartUseCase}.ts
   - Purpose: React非依存のビジネスロジック
-  - **TDDサイクル**:
-    - Red: `usecases/__tests__/*.test.ts` を先に作成し `npx jest src/features/cleaning-record/usecases` で失敗を確認
-    - Green: テストを通す最小限の実装を行う
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `usecases/__tests__/*.test.ts` を先に作成し `npx jest src/features/cleaning-record/usecases` で失敗を確認
   - **テスト対象**:
     - 正常系: `LogCleaningUseCase` → repository.createRecords が partIds で呼ばれ、記録リストを返す
     - 正常系: `DeleteRecordUseCase` → repository.deleteRecord が recordId で呼ばれる
@@ -136,10 +115,7 @@
   - File: mobile/src/features/cleaning-record/hooks/{useLogCleaning,useCleaningHistory}.ts
   - TanStack Queryで履歴取得、useMutationで記録/修正/削除の楽観的更新とロールバック
   - Purpose: UIとユースケースの橋渡し
-  - **TDDサイクル**:
-    - Red: `hooks/__tests__/useCleaningHistory.test.ts` を先に作成し `npx jest src/features/cleaning-record/hooks` で失敗を確認
-    - Green: hooks を実装してテストを通す
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `hooks/__tests__/useCleaningHistory.test.ts` を先に作成し `npx jest src/features/cleaning-record/hooks` で失敗を確認
   - **テスト対象** (`@tanstack/react-query` の `QueryClient` をテスト用に生成):
     - 正常系: `useCleaningHistory` → 取得した履歴リストを返す
     - 正常系: `useLogCleaning.mutate(partIds)` → 記録後に cleaning-records クエリが invalidate される
@@ -151,10 +127,7 @@
   - File: mobile/src/features/cleaning-record/components/{PartChecklist,CleaningTimeline,RecordButton}.tsx
   - 複数パーツの一括チェックUI（3タップ目標）、新しい順タイムライン・絞り込み・修正/削除操作
   - Purpose: 視覚操作によるUI
-  - **TDDサイクル**:
-    - Red: `components/__tests__/*.test.tsx` を先に作成し `npx jest src/features/cleaning-record/components` で失敗を確認
-    - Green: コンポーネントを実装してテストを通す
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `components/__tests__/*.test.tsx` を先に作成し `npx jest src/features/cleaning-record/components` で失敗を確認
   - **テスト対象** (`@testing-library/react-native`):
     - 正常系: `PartChecklist` → パーツ名が表示され、チェックすると選択済みリストに追加される
     - 正常系: `PartChecklist` → 「記録」ボタン押下で useLogCleaning.mutate が選択済みpartIds で呼ばれる
@@ -167,10 +140,7 @@
   - File: mobile/app/(tabs)/history.tsx, mobile/app/area/[areaId].tsx
   - 履歴タブ、エリアタップ→パーツ一覧→記録の導線
   - Purpose: 画面の組み立て
-  - **TDDサイクル**:
-    - Red: `app/(tabs)/__tests__/history.test.tsx` を先に作成し失敗を確認
-    - Green: 画面ルートを実装してテストを通す
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `app/(tabs)/__tests__/history.test.tsx` を先に作成し失敗を確認
   - **テスト対象**:
     - 正常系: 履歴タブに CleaningTimeline が表示される
     - 正常系: エリア詳細画面に PartChecklist が表示される
@@ -180,10 +150,7 @@
   - File: mobile/src/capabilities/CleaningStatusCapability.ts, mobile/src/features/cleaning-record/repositories/CleaningStatusCapabilityImpl.ts, mobile/src/shared/app-root/providers/di.ts
   - heatmap・notificationが掃除状態を読むための境界インターフェースと実装の配線
   - Purpose: feature間依存の逆転
-  - **TDDサイクル**:
-    - Red: `capabilities/__tests__/CleaningStatusCapability.test.ts` を先に作成し失敗を確認
-    - Green: インターフェースと実装を最小限で定義する
-    - Refactor: 全テストグリーンの状態でコードを整える
+  - **Red**: `capabilities/__tests__/CleaningStatusCapability.test.ts` を先に作成し失敗を確認
   - **テスト対象**:
     - 正常系: `CleaningStatusCapabilityImpl.getOverdueAreas()` → Repository を経由して期限超過エリアリストを返す
     - 正常系: `CleaningStatusCapabilityImpl.getLastCleanedAt(areaId)` → 最終掃除日時を返す
