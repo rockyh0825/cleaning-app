@@ -229,6 +229,155 @@ components:
           type: string
           format: date-time
 
+    # パーツの「作成入力」。ownerType/ownerId/nameは必須。recommendedCycleDaysのデフォルトは7日
+    PartCreate:
+      type: object
+      required: [ownerType, ownerId, name]
+      properties:
+        ownerType:
+          $ref: '#/components/schemas/OwnerType'
+        ownerId:
+          type: string
+          format: uuid
+          description: Room.id または Furniture.id
+        name:
+          type: string
+          example: 床
+        recommendedCycleDays:
+          type: integer
+          description: 推奨掃除周期（日）。省略時はサーバーが7日を設定
+          default: 7
+          example: 7
+
+    # パーツの「更新入力」。省略したフィールドは変更しない（部分更新）
+    PartUpdate:
+      type: object
+      description: 指定したフィールドのみ更新する。すべて省略可能だが、少なくとも1つ指定すること
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          example: 床
+        recommendedCycleDays:
+          type: integer
+          description: 推奨掃除周期（日）
+          example: 14
+
+    # サーバーが「返す」掃除記録
+    CleaningRecord:
+      type: object
+      required: [id, partId, cleanedAt, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+          description: 掃除したパーツのID
+        cleanedAt:
+          type: string
+          format: date-time
+          description: 掃除した日時
+        note:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: 掃除メモ。未設定の場合はnull
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # 掃除記録の「作成入力」。複数パーツを一括登録する
+    CleaningRecordCreate:
+      type: object
+      required: [partIds]
+      properties:
+        partIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          description: 一括記録するパーツIDのリスト（1件以上）
+        cleanedAt:
+          type: string
+          format: date-time
+          description: 掃除した日時。省略時はサーバーの現在時刻を使用
+        note:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: 掃除メモ（省略可）
+
+    # 掃除記録の「更新入力」。省略したフィールドは変更しない（部分更新）
+    CleaningRecordUpdate:
+      type: object
+      description: 指定したフィールドのみ更新する。すべて省略可能だが、少なくとも1つ指定すること
+      minProperties: 1
+      properties:
+        cleanedAt:
+          type: string
+          format: date-time
+          description: 掃除した日時
+        note:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: 掃除メモ
+
+    # 掃除記録の一覧（ページング付き）
+    CleaningRecordList:
+      type: object
+      required: [items, total, page, pageSize]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CleaningRecord'
+          description: 掃除記録の一覧
+        total:
+          type: integer
+          description: 絞り込み条件に合致する総件数
+        page:
+          type: integer
+          description: 現在のページ番号（1始まり）
+        pageSize:
+          type: integer
+          description: 1ページあたりの件数
+
+    # 期限超過パーツの情報。heatmap・notification 向け
+    OverdueArea:
+      type: object
+      required: [partId, partName, lastCleanedAt, recommendedCycleDays, elapsedRatio]
+      properties:
+        partId:
+          type: string
+          format: uuid
+          description: 期限超過しているパーツのID
+        partName:
+          type: string
+          description: パーツ名
+          example: 床
+        lastCleanedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          description: 最終掃除日時。未掃除の場合はnull
+        recommendedCycleDays:
+          type: integer
+          description: 推奨掃除周期（日）
+          example: 7
+        elapsedRatio:
+          type: number
+          format: double
+          description: 推奨周期に対する経過割合（elapsed days / recommendedCycleDays）。1.0超で期限超過
+          example: 1.5
+
     # 家具を埋め込んだ部屋。GET /floor-plan のレスポンスで使用
     RoomWithFurniture:
       allOf:
@@ -456,3 +605,209 @@ paths:
           description: 削除成功
         '404':
           description: 家具が存在しない、または他ユーザーの家具
+
+  /cleaning-records:
+    post:
+      summary: 複数パーツの掃除記録を一括登録
+      description: |
+        指定した複数パーツの掃除を1トランザクションで一括記録する。
+        各パーツの lastCleanedAt も同一トランザクション内で再計算する。
+        cleanedAt を省略した場合、サーバーの現在時刻を使用する。
+      operationId: createCleaningRecords
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CleaningRecordCreate'
+      responses:
+        '201':
+          description: 作成された掃除記録のリスト
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CleaningRecord'
+        '400':
+          description: 入力が不正（partIdsが空など）
+
+    get:
+      summary: 掃除記録の履歴を取得（絞り込み・ページング）
+      description: |
+        ユーザーの掃除記録履歴を取得する。
+        partId で絞り込み、page/pageSizeでページングできる。
+      operationId: listCleaningRecords
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: partId
+          in: query
+          required: false
+          description: 絞り込むパーツID（省略時は全パーツ）
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          description: ページ番号（1始まり）
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: pageSize
+          in: query
+          required: false
+          description: 1ページあたりの件数
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: 掃除記録の一覧（ページング付き）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleaningRecordList'
+        '400':
+          description: 入力が不正
+
+  /cleaning-records/{recordId}:
+    patch:
+      summary: 掃除記録を修正（日時・メモ）
+      description: |
+        掃除記録の日時またはメモを部分更新する。
+        cleanedAt を変更した場合、対象パーツの lastCleanedAt も同一トランザクション内で再計算する。
+      operationId: updateCleaningRecord
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: recordId
+          in: path
+          required: true
+          description: 更新する掃除記録のID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CleaningRecordUpdate'
+      responses:
+        '200':
+          description: 更新後の掃除記録
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleaningRecord'
+        '400':
+          description: 入力が不正
+        '404':
+          description: 掃除記録が存在しない、または他ユーザーの記録
+
+    delete:
+      summary: 掃除記録を削除
+      description: |
+        掃除記録を削除する。
+        削除後、対象パーツの lastCleanedAt を同一トランザクション内で再計算する。
+        記録がすべて消えた場合、lastCleanedAt は null になる。
+      operationId: deleteCleaningRecord
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: recordId
+          in: path
+          required: true
+          description: 削除する掃除記録のID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 削除成功
+        '404':
+          description: 掃除記録が存在しない、または他ユーザーの記録
+
+  /parts:
+    post:
+      summary: パーツを作成（間取りエディタが呼ぶ）
+      description: |
+        指定した部屋または家具に属するパーツを作成する。
+        ownerType と ownerId で所属先を指定する。
+      operationId: createPart
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartCreate'
+      responses:
+        '201':
+          description: 作成されたパーツ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Part'
+        '400':
+          description: 入力が不正
+
+  /parts/{partId}:
+    patch:
+      summary: パーツの名前・推奨周期を更新
+      description: |
+        パーツの名称または推奨掃除周期を部分更新する。
+        指定しなかったフィールドは変更されない。
+      operationId: updatePart
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: partId
+          in: path
+          required: true
+          description: 更新するパーツのID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartUpdate'
+      responses:
+        '200':
+          description: 更新後のパーツ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Part'
+        '400':
+          description: 入力が不正
+        '404':
+          description: パーツが存在しない、または他ユーザーのパーツ
+
+    delete:
+      summary: パーツを削除（関連掃除記録も連鎖削除）
+      description: |
+        パーツを削除する。
+        紐付く掃除記録はDBのON DELETE CASCADEで連鎖削除される。
+      operationId: deletePart
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: partId
+          in: path
+          required: true
+          description: 削除するパーツのID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 削除成功
+        '404':
+          description: パーツが存在しない、または他ユーザーのパーツ

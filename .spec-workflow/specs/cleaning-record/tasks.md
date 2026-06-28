@@ -6,7 +6,7 @@
 
 ## フェーズ1: API契約定義
 
-- [ ] 1. OpenAPIスキーマに掃除記録・パーツ管理のエンドポイント／スキーマを定義
+- [x] 1. OpenAPIスキーマに掃除記録・パーツ管理のエンドポイント／スキーマを定義
   - File: api/openapi.yaml, api/components/schemas/{CleaningRecord,Part,OverdueArea}.yaml
   - POST /cleaning-records（partIds[]一括）・GET /cleaning-records（areaId/partId絞り込み・ページング）・PATCH /cleaning-records/{recordId}・DELETE /cleaning-records/{recordId}・POST /parts・PATCH /parts/{partId}・DELETE /parts/{partId} を定義
   - Purpose: クライアント・サーバー間の契約を確立
