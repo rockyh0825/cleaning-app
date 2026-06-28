@@ -131,7 +131,7 @@
     - 正常系: di.ts 経由でインスタンス化した capability が正しく動作する
   - _Requirements: 1, 2_
 
-- [ ] 16. eslint-plugin-boundaries 設定（アーキテクチャガード）
+- [x] 16. eslint-plugin-boundaries 設定（アーキテクチャガード）
   - File: mobile/.eslintrc.js（または eslint.config.js）
   - `features/<A>` から `features/<B>` への直接 import を ESLint エラーにする
   - Purpose: feature間の直接依存をCIで自動検出する
