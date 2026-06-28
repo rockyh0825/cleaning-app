@@ -147,6 +147,54 @@ class UpdateRoomUseCaseTest {
     }
 
     @Test
+    fun `updated_at_is_refreshed_after_update`() {
+        // Arrange
+        val originalRoom = buildRoom()
+        every { roomRepository.findById(roomId) } returns originalRoom
+        justRun { roomRepository.update(any()) }
+        val command =
+            UpdateRoomCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "新名前",
+                gridX = null,
+                gridY = null,
+                gridW = null,
+                gridH = null,
+            )
+
+        // Act
+        val result = useCase.execute(command)
+
+        // Assert
+        assertThat(result.updatedAt).isAfterOrEqualTo(originalRoom.updatedAt)
+    }
+
+    @Test
+    fun `created_at_remains_unchanged_after_update`() {
+        // Arrange
+        val originalRoom = buildRoom()
+        every { roomRepository.findById(roomId) } returns originalRoom
+        justRun { roomRepository.update(any()) }
+        val command =
+            UpdateRoomCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "名前",
+                gridX = null,
+                gridY = null,
+                gridW = null,
+                gridH = null,
+            )
+
+        // Act
+        val result = useCase.execute(command)
+
+        // Assert
+        assertThat(result.createdAt).isEqualTo(originalRoom.createdAt)
+    }
+
+    @Test
     fun `throws_not_found_when_room_does_not_exist`() {
         // Arrange
         every { roomRepository.findById(roomId) } returns null

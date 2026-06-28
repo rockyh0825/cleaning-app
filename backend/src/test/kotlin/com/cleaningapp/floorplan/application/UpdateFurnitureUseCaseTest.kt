@@ -171,6 +171,56 @@ class UpdateFurnitureUseCaseTest {
     }
 
     @Test
+    fun `updated_at_is_refreshed_after_update`() {
+        // Arrange
+        val original = buildFurniture()
+        every { furnitureRepository.findById(furnitureId) } returns original
+        every { roomRepository.findById(roomId) } returns buildRoom()
+        justRun { furnitureRepository.update(any()) }
+        val command =
+            UpdateFurnitureCommand(
+                userId = userId,
+                furnitureId = furnitureId,
+                name = "新名前",
+                gridX = null,
+                gridY = null,
+                gridW = null,
+                gridH = null,
+            )
+
+        // Act
+        val result = useCase.execute(command)
+
+        // Assert
+        assertThat(result.updatedAt).isAfterOrEqualTo(original.updatedAt)
+    }
+
+    @Test
+    fun `created_at_remains_unchanged_after_update`() {
+        // Arrange
+        val original = buildFurniture()
+        every { furnitureRepository.findById(furnitureId) } returns original
+        every { roomRepository.findById(roomId) } returns buildRoom()
+        justRun { furnitureRepository.update(any()) }
+        val command =
+            UpdateFurnitureCommand(
+                userId = userId,
+                furnitureId = furnitureId,
+                name = "名前",
+                gridX = null,
+                gridY = null,
+                gridW = null,
+                gridH = null,
+            )
+
+        // Act
+        val result = useCase.execute(command)
+
+        // Assert
+        assertThat(result.createdAt).isEqualTo(original.createdAt)
+    }
+
+    @Test
     fun `throws_not_found_when_furniture_does_not_exist`() {
         // Arrange
         every { furnitureRepository.findById(furnitureId) } returns null

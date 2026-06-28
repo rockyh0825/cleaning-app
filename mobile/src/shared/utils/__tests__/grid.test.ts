@@ -2,26 +2,37 @@ import { clampWithin, rectsOverlap, snapToGrid } from '../grid';
 import type { Point, Rect } from '../grid';
 
 describe('snapToGrid', () => {
-    it('snaps_point_to_nearest_grid_cell_when_within_half_cell', () => {
-        // Arrange
-        const point: Point = { x: 14, y: 6 };
+    it('snaps_down_to_lower_cell_when_below_half_cell_boundary', () => {
+        // Arrange: x=14 は境界 15 未満 → 10 にスナップ
+        const point: Point = { x: 14, y: 4 };
 
         // Act
         const result = snapToGrid(point, 10);
 
         // Assert
-        expect(result).toEqual({ x: 10, y: 10 });
+        expect(result).toEqual({ x: 10, y: 0 });
     });
 
-    it('snaps_to_next_cell_when_past_half_cell_boundary', () => {
-        // Arrange
-        const point: Point = { x: 16, y: 25 };
+    it('snaps_up_to_upper_cell_when_above_half_cell_boundary', () => {
+        // Arrange: x=16 は境界 15 超 → 20 にスナップ
+        const point: Point = { x: 16, y: 6 };
 
         // Act
         const result = snapToGrid(point, 10);
 
         // Assert
-        expect(result).toEqual({ x: 20, y: 30 });
+        expect(result).toEqual({ x: 20, y: 10 });
+    });
+
+    it('snaps_up_when_exactly_on_half_cell_boundary', () => {
+        // Arrange: x=5 は Math.round(0.5) = 1 なので 10 にスナップ (round half up)
+        const point: Point = { x: 5, y: 15 };
+
+        // Act
+        const result = snapToGrid(point, 10);
+
+        // Assert
+        expect(result).toEqual({ x: 10, y: 20 });
     });
 
     it('returns_same_point_when_already_on_grid_boundary', () => {

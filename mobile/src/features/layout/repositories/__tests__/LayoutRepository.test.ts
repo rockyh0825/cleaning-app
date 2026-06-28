@@ -84,7 +84,6 @@ const mockApi = () =>
     }) as Record<string, jest.Mock>;
 
 // LayoutRepository を直接 import する（shared/api の型を通じた検証は不要）
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { LayoutRepository } = require('../LayoutRepository') as {
     LayoutRepository: new (api: Record<string, jest.Mock>) => {
         getFloorPlan(userId: string): Promise<{ rooms: (ApiRoomWithFurniture & { furniture: ApiFurniture[] })[] }>;

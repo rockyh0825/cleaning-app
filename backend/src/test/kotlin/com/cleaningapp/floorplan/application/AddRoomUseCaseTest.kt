@@ -1,7 +1,9 @@
 package com.cleaningapp.floorplan.application
 
 import com.cleaningapp.floorplan.domain.OwnerType
+import com.cleaningapp.floorplan.domain.Part
 import com.cleaningapp.floorplan.domain.PartRepository
+import com.cleaningapp.floorplan.domain.Room
 import com.cleaningapp.floorplan.domain.RoomRepository
 import com.cleaningapp.floorplan.domain.RoomType
 import io.mockk.every
@@ -83,7 +85,7 @@ class AddRoomUseCaseTest {
     fun `saves_preset_parts_with_correct_count_for_kitchen`() {
         // Arrange
         justRun { roomRepository.save(any()) }
-        val partsSlot = slot<List<com.cleaningapp.floorplan.domain.Part>>()
+        val partsSlot = slot<List<Part>>()
         every { partRepository.saveAll(capture(partsSlot)) } returns Unit
         val command =
             AddRoomCommand(
@@ -106,9 +108,9 @@ class AddRoomUseCaseTest {
     @Test
     fun `saved_preset_parts_belong_to_created_room`() {
         // Arrange
-        val roomSlot = slot<com.cleaningapp.floorplan.domain.Room>()
+        val roomSlot = slot<Room>()
         every { roomRepository.save(capture(roomSlot)) } returns Unit
-        val partsSlot = slot<List<com.cleaningapp.floorplan.domain.Part>>()
+        val partsSlot = slot<List<Part>>()
         every { partRepository.saveAll(capture(partsSlot)) } returns Unit
         val command =
             AddRoomCommand(
@@ -134,7 +136,7 @@ class AddRoomUseCaseTest {
     fun `saved_preset_parts_have_null_last_cleaned_at`() {
         // Arrange
         justRun { roomRepository.save(any()) }
-        val partsSlot = slot<List<com.cleaningapp.floorplan.domain.Part>>()
+        val partsSlot = slot<List<Part>>()
         every { partRepository.saveAll(capture(partsSlot)) } returns Unit
         val command =
             AddRoomCommand(
