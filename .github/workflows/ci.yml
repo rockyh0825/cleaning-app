@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - "backend/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    # paths フィルターを外す
+    # → PRでは常にジョブを起動してステータスを報告し、ブランチ保護ルールを満たす
+    # → 変更がないPRは内部の paths-filter でステップをスキップして高速に通過する
+
+permissions:
+  contents: read
+  pull-requests: read  # dorny/paths-filter が PR の差分を GitHub API 経由で取得するために必要
+
+jobs:
+  mobile-lint-test:
+    name: Mobile – Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect mobile changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            mobile:
+              - 'mobile/**'
+              - '.github/workflows/ci.yml'
+
+      - name: Set up Node.js
+        if: steps.filter.outputs.mobile == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        if: steps.filter.outputs.mobile == 'true'
+        run: npm ci
+        working-directory: mobile
+
+      - name: Lint
+        if: steps.filter.outputs.mobile == 'true'
+        run: npx eslint src/ app/
+        working-directory: mobile
+
+      - name: Test
+        if: steps.filter.outputs.mobile == 'true'
+        run: npx jest --passWithNoTests
+        working-directory: mobile
+
+  backend-unit-test:
+    name: Backend – Detekt & Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect backend changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+
+      - name: Set up JDK 21
+        if: steps.filter.outputs.backend == 'true'
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Setup Gradle
+        if: steps.filter.outputs.backend == 'true'
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Detekt
+        if: steps.filter.outputs.backend == 'true'
+        working-directory: backend
+        run: ./gradlew detekt
+
+      - name: Test (unit only, no PostgreSQL required)
+        if: steps.filter.outputs.backend == 'true'
+        working-directory: backend
+        run: ./gradlew test -x integrationTest
