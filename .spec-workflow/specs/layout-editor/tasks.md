@@ -72,7 +72,7 @@
   - Purpose: データアクセス層の確立
   - _Requirements: 3_
 
-- [ ] 11. features/layout/usecases: AddRoom / DeleteRoom / AddFurniture / UpdateFurniture / DeleteFurniture ユースケース
+- [x] 11. features/layout/usecases: AddRoom / DeleteRoom / AddFurniture / UpdateFurniture / DeleteFurniture ユースケース
   - File: mobile/src/features/layout/usecases/{AddRoomUseCase,DeleteRoomUseCase,AddFurnitureUseCase,UpdateFurnitureUseCase,DeleteFurnitureUseCase}.ts
   - grid.ts の clampWithin で AddFurniture / UpdateFurniture 時に家具を部屋境界内に収める
   - Purpose: React非依存のビジネスロジック
@@ -86,7 +86,7 @@
   - _Leverage: mobile/src/shared/utils/grid.ts_
   - _Requirements: 1, 2_
 
-- [ ] 12. features/layout/hooks: useLayout（TanStack Query統合）
+- [x] 12. features/layout/hooks: useLayout（TanStack Query統合）
   - File: mobile/src/features/layout/hooks/useLayout.ts
   - useQueryで取得、useMutationで楽観的更新、保存失敗時のロールバック
   - Purpose: UIとユースケースの橋渡し・サーバー状態管理
@@ -98,7 +98,7 @@
   - _Leverage: TanStack Query_
   - _Requirements: 1, 2, 3_
 
-- [ ] 13. features/layout/components: LayoutCanvas と部屋種別・家具追加モーダル
+- [x] 13. features/layout/components: LayoutCanvas と部屋種別・家具追加モーダル
   - File: mobile/src/features/layout/components/{LayoutCanvas,RoomShape,FurnitureItem,AddRoomModal,AddFurnitureModal}.tsx
   - React Native Skiaでグリッド・部屋・家具を描画、タッチイベントをhooksへ
   - Purpose: 視覚操作によるUI
