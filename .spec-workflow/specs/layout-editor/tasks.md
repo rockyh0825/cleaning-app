@@ -121,7 +121,7 @@
     - 正常系: UUID未発行のとき AsyncStorage に新しい UUID が保存される
   - _Requirements: 4_
 
-- [ ] 15. capabilities/LayoutCapability と DI配線
+- [x] 15. capabilities/LayoutCapability と DI配線
   - File: mobile/src/capabilities/LayoutCapability.ts, mobile/src/shared/app-root/providers/di.ts
   - heatmapが部屋・家具情報を読むための境界インターフェースと実装の配線
   - Purpose: feature間依存の逆転
