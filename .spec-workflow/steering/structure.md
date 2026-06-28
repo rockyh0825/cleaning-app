@@ -47,17 +47,17 @@ cleaning-app/
 │   │   ├── (tabs)/
 │   │   │   ├── index.tsx              # ホーム → features/heatmap を使う
 │   │   │   └── history.tsx            # 履歴 → features/cleaning-record を使う
-│   │   ├── floorplan/
+│   │   ├── floormap/
 │   │   │   ├── index.tsx
 │   │   │   └── [roomId].tsx
 │   │   └── _layout.tsx
 │   └── src/
 │       ├── features/
-│       │   ├── layout/             # 間取り図機能
-│       │   │   ├── components/        # FloorplanCanvas, RoomShape, FurnitureItem ...
-│       │   │   ├── hooks/             # useFloorplan, useDragDrop ...
+│       │   ├── floormap/             # 間取り図機能
+│       │   │   ├── components/        # FloormapCanvas, RoomShape, FurnitureItem ...
+│       │   │   ├── hooks/             # useFloormap, useDragDrop ...
 │       │   │   ├── usecases/          # AddRoomUseCase, PlaceFurnitureUseCase ...
-│       │   │   ├── repositories/      # FloorplanRepository（API呼び出し実装）
+│       │   │   ├── repositories/      # FloormapRepository（API呼び出し実装）
 │       │   │   └── types.ts
 │       │   ├── heatmap/               # ヒートマップ機能
 │       │   │   ├── components/        # HeatmapOverlay, AreaColorBadge ...
@@ -78,7 +78,7 @@ cleaning-app/
 │       │       └── types.ts
 │       ├── capabilities/              # feature間境界インターフェース
 │       │   ├── CleaningStatusCapability.ts   # 掃除状態の照会（notification→cleaning-record）
-│       │   └── FloorplanCapability.ts        # 間取り情報の照会（heatmap→floorplan）
+│       │   └── FloormapCapability.ts        # 間取り情報の照会（heatmap→floormap）
 │       └── shared/                    # 機能横断の共通コード
 │           ├── api/                   # 生成されたAPIクライアント（コミット対象外）
 │           ├── components/            # 汎用UIパーツ（Button, Card, Icon ...）
@@ -89,11 +89,11 @@ cleaning-app/
 │                   └── di.ts          # Capability実装の配線（DI集中管理）
 ├── backend/
 │   └── src/main/kotlin/com/cleaningapp/
-│       ├── floorplan/                 # 間取り図機能
-│       │   ├── presentation/          # FloorplanController（APIスタブ実装）
+│       ├── floormap/                 # 間取り図機能
+│       │   ├── presentation/          # FloormapController（APIスタブ実装）
 │       │   ├── application/           # AddRoomUseCase, PlaceFurnitureUseCase ...
-│       │   ├── domain/                # Floorplan, Room, Furniture（ドメインモデル）
-│       │   └── infrastructure/        # FloorplanRepositoryImpl, FloorplanMapper（MyBatis）
+│       │   ├── domain/                # Floormap, Room, Furniture（ドメインモデル）
+│       │   └── infrastructure/        # FloormapRepositoryImpl, FloormapMapper（MyBatis）
 │       ├── cleaningrecord/            # 掃除記録機能
 │       │   ├── presentation/          # CleaningRecordController
 │       │   ├── application/           # LogCleaningUseCase, GetOverdueAreasUseCase
@@ -202,9 +202,9 @@ export interface CleaningStatusCapability {
 | capability（interface） | PascalCase + `Capability.ts` | `CleaningStatusCapability.ts` |
 | Kotlin ユースケース | PascalCase + `UseCase.kt` | `LogCleaningUseCase.kt` |
 | Kotlin Port（interface） | PascalCase + `Port.kt` | `CleaningStatusPort.kt` |
-| MyBatis Mapper（interface） | PascalCase + `Mapper.kt` | `FloorplanMapper.kt` |
-| MyBatis Mapper XML | PascalCase + `Mapper.xml` | `FloorplanMapper.xml` |
-| Flywayマイグレーション | `V{番号}__{機能}_{説明}.sql` | `V1__floorplan_initial.sql` |
+| MyBatis Mapper（interface） | PascalCase + `Mapper.kt` | `FloormapMapper.kt` |
+| MyBatis Mapper XML | PascalCase + `Mapper.xml` | `FloormapMapper.xml` |
+| Flywayマイグレーション | `V{番号}__{機能}_{説明}.sql` | `V1__floormap_initial.sql` |
 
 ### コード
 
@@ -222,7 +222,7 @@ export interface CleaningStatusCapability {
 
 ### APIエンドポイント
 
-- リソース名は複数形・kebab-case: `/cleaning-records`, `/floor-plans`
+- リソース名は複数形・kebab-case: `/cleaning-records`, `/floor-maps`
 - IDはUUID: `/rooms/{roomId}`
 - ネストは最大2階層: `/rooms/{roomId}/areas/{areaId}`
 
