@@ -6,7 +6,6 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 class CleaningStatusTest {
-
     @Test
     fun `elapsed_ratio_is_1_0_when_last_cleaned_exactly_at_cycle_boundary`() {
         // Arrange

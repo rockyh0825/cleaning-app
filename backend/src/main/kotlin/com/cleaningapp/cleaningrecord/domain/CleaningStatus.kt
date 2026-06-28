@@ -37,11 +37,12 @@ data class CleaningStatus(
             }
             val elapsedDays = Duration.between(lastCleanedAt, now).toDays().toDouble()
             val ratio = elapsedDays / recommendedCycleDays
-            val level = when {
-                ratio >= 1.0 -> CleaningStatusLevel.RED
-                ratio >= YELLOW_THRESHOLD -> CleaningStatusLevel.YELLOW
-                else -> CleaningStatusLevel.GREEN
-            }
+            val level =
+                when {
+                    ratio >= 1.0 -> CleaningStatusLevel.RED
+                    ratio >= YELLOW_THRESHOLD -> CleaningStatusLevel.YELLOW
+                    else -> CleaningStatusLevel.GREEN
+                }
             return CleaningStatus(elapsedRatio = ratio, level = level)
         }
     }
