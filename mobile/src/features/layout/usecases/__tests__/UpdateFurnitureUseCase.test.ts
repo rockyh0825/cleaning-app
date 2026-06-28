@@ -78,4 +78,16 @@ describe('UpdateFurnitureUseCase', () => {
         expect(calledWith.gridX).toBeLessThanOrEqual(8);
         expect(calledWith.gridY).toBeLessThanOrEqual(6);
     });
+
+    it('境界値: 部屋サイズを超える gridW/gridH は部屋サイズ以内にクランプされる', async () => {
+        const useCase = new UpdateFurnitureUseCase(mockRepository);
+        // 部屋は 10x8。gridW: 15, gridH: 10 は超過 → w: 10, h: 8 にクランプされるべき
+        const input: UpdateFurnitureInput = { gridW: 15, gridH: 10 };
+
+        await useCase.execute('user-1', 'f-1', input);
+
+        const calledWith = (mockRepository.updateFurniture as jest.Mock).mock.calls[0][2];
+        expect(calledWith.gridW).toBeLessThanOrEqual(10);
+        expect(calledWith.gridH).toBeLessThanOrEqual(8);
+    });
 });
