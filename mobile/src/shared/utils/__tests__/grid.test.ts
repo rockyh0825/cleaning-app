@@ -263,8 +263,8 @@ describe('clampWithin', () => {
         expect(result.y).toBe(parent.y);
     });
 
-    it('works_with_non_zero_parent_origin', () => {
-        // Arrange
+    it('clamps_child_to_parent_origin_when_child_is_outside_non_zero_parent', () => {
+        // Arrange: child が parent 左上より外に出ている → parent.x/y に揃える
         const child: Rect = { x: 0, y: 0, w: 3, h: 3 };
         const parent: Rect = { x: 5, y: 5, w: 10, h: 10 };
 
@@ -272,7 +272,7 @@ describe('clampWithin', () => {
         const result = clampWithin(child, parent);
 
         // Assert
-        expect(result.x).toBeGreaterThanOrEqual(parent.x);
-        expect(result.y).toBeGreaterThanOrEqual(parent.y);
+        expect(result.x).toBe(parent.x);
+        expect(result.y).toBe(parent.y);
     });
 });

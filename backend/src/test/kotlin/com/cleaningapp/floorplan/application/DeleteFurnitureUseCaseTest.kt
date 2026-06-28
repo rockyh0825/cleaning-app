@@ -138,7 +138,7 @@ class DeleteFurnitureUseCaseTest {
     }
 
     @Test
-    fun `does_not_delete_furniture_when_not_found`() {
+    fun `does_not_delete_furniture_or_parts_when_furniture_not_found`() {
         // Arrange
         every { furnitureRepository.findById(furnitureId) } returns null
 
@@ -147,5 +147,6 @@ class DeleteFurnitureUseCaseTest {
             useCase.execute(DeleteFurnitureCommand(userId, furnitureId))
         }
         verify(exactly = 0) { furnitureRepository.deleteById(any()) }
+        verify(exactly = 0) { partRepository.deleteByOwnerId(any(), any()) }
     }
 }

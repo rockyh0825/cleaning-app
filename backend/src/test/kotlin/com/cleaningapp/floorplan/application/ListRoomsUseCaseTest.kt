@@ -6,6 +6,7 @@ import com.cleaningapp.floorplan.domain.RoomType
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -62,16 +63,14 @@ class ListRoomsUseCaseTest {
     }
 
     @Test
-    fun `delegates_to_room_repository_with_correct_user_id`() {
+    fun `calls_room_repository_with_exactly_the_given_user_id`() {
         // Arrange
-        val otherUserId = UUID.randomUUID()
         every { roomRepository.findByUserId(userId) } returns listOf(buildRoom())
-        every { roomRepository.findByUserId(otherUserId) } returns emptyList()
 
         // Act
-        val result = useCase.execute(userId)
+        useCase.execute(userId)
 
         // Assert
-        assertThat(result).hasSize(1)
+        verify(exactly = 1) { roomRepository.findByUserId(userId) }
     }
 }

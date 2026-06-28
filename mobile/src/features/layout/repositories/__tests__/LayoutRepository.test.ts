@@ -117,6 +117,7 @@ describe('LayoutRepository', () => {
             // Assert
             expect(result.rooms).toHaveLength(1);
             expect(result.rooms[0].id).toBe('room-1');
+            expect(result.rooms[0].type).toBe('BEDROOM');
             expect(result.rooms[0].furniture).toHaveLength(1);
             expect(result.rooms[0].furniture[0].id).toBe('furniture-1');
         });

@@ -122,6 +122,25 @@ class DeleteRoomUseCaseTest {
     }
 
     @Test
+    fun `deletes_furniture_parts_before_room_parts`() {
+        // Arrange
+        val furnitureId = UUID.randomUUID()
+        every { roomRepository.findById(roomId) } returns buildRoom()
+        every { furnitureRepository.findByRoomId(roomId) } returns listOf(buildFurniture(furnitureId))
+        justRun { partRepository.deleteByOwnerId(any(), any()) }
+        justRun { roomRepository.deleteById(roomId) }
+
+        // Act
+        useCase.execute(DeleteRoomCommand(userId, roomId))
+
+        // Assert
+        verifyOrder {
+            partRepository.deleteByOwnerId(OwnerType.FURNITURE, furnitureId)
+            partRepository.deleteByOwnerId(OwnerType.ROOM, roomId)
+        }
+    }
+
+    @Test
     fun `deletes_room_parts_before_room_itself`() {
         // Arrange
         every { roomRepository.findById(roomId) } returns buildRoom()
