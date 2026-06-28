@@ -11,15 +11,21 @@ import java.util.UUID
 class PartRepositoryImpl(
     private val partMapper: PartMapper,
 ) : PartRepository {
+    override fun findById(id: UUID): Part? = partMapper.selectById(id)
+
     override fun findByOwnerId(
         ownerType: OwnerType,
         ownerId: UUID,
     ): List<Part> = partMapper.selectByOwnerId(ownerType, ownerId)
 
+    override fun save(part: Part) = partMapper.insert(part)
+
     @Transactional
     override fun saveAll(parts: List<Part>) = parts.forEach(partMapper::insert)
 
     override fun update(part: Part) = partMapper.update(part)
+
+    override fun delete(id: UUID) = partMapper.deleteById(id)
 
     override fun deleteByOwnerId(
         ownerType: OwnerType,

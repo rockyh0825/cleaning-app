@@ -18,6 +18,17 @@ import java.util.UUID
  */
 @Mapper
 interface PartMapper {
+    @Select(
+        """
+        SELECT id, owner_type, owner_id, name, recommended_cycle_days, last_cleaned_at, created_at, updated_at
+        FROM part
+        WHERE id = #{id}
+        """,
+    )
+    fun selectById(
+        @Param("id") id: UUID,
+    ): Part?
+
     @Insert(
         """
         INSERT INTO part (id, owner_type, owner_id, name, recommended_cycle_days, last_cleaned_at, created_at, updated_at)
@@ -49,6 +60,11 @@ interface PartMapper {
         """,
     )
     fun update(part: Part)
+
+    @Delete("DELETE FROM part WHERE id = #{id}")
+    fun deleteById(
+        @Param("id") id: UUID,
+    )
 
     @Delete("DELETE FROM part WHERE owner_type = #{ownerType} AND owner_id = #{ownerId}")
     fun deleteByOwnerId(

@@ -10,6 +10,8 @@ import java.util.UUID
 interface CleaningRecordRepository {
     fun save(record: CleaningRecord): CleaningRecord
 
+    fun update(record: CleaningRecord): CleaningRecord
+
     fun findById(id: UUID): CleaningRecord?
 
     fun findByPartId(

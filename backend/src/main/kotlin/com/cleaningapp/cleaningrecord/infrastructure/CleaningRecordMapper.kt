@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Insert
 import org.apache.ibatis.annotations.Mapper
 import org.apache.ibatis.annotations.Param
 import org.apache.ibatis.annotations.Select
+import org.apache.ibatis.annotations.Update
 import java.time.Instant
 import java.util.UUID
 
@@ -69,6 +70,15 @@ interface CleaningRecordMapper {
     fun selectMaxCleanedAtByPartId(
         @Param("partId") partId: UUID,
     ): Instant?
+
+    @Update(
+        """
+        UPDATE cleaning_record
+        SET cleaned_at = #{cleanedAt}, note = #{note,jdbcType=VARCHAR}, updated_at = #{updatedAt}
+        WHERE id = #{id}
+        """,
+    )
+    fun update(record: CleaningRecord)
 
     @Delete("DELETE FROM cleaning_record WHERE id = #{id}")
     fun deleteById(

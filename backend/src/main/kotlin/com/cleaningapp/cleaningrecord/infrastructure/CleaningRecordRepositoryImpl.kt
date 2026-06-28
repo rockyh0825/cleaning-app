@@ -22,6 +22,11 @@ class CleaningRecordRepositoryImpl(
         return record
     }
 
+    override fun update(record: CleaningRecord): CleaningRecord {
+        cleaningRecordMapper.update(record)
+        return record
+    }
+
     override fun findById(id: UUID): CleaningRecord? = cleaningRecordMapper.selectById(id)
 
     override fun findByPartId(
