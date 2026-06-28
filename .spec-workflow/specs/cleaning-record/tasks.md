@@ -12,7 +12,7 @@
   - Purpose: クライアント・サーバー間の契約を確立
   - _Requirements: 1, 2, 3, 4_
 
-- [ ] 2. APIクライアント・サーバースタブを生成
+- [x] 2. APIクライアント・サーバースタブを生成
   - File: scripts/generate-api-client.sh の実行
   - Purpose: 型安全な契約コードを得る
   - _Leverage: scripts/generate-api-client.sh_
