@@ -5,30 +5,28 @@ import com.cleaningapp.floorplan.domain.OwnerType
 import com.cleaningapp.floorplan.domain.Part
 import com.cleaningapp.floorplan.infrastructure.PartMapper
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
-import org.springframework.boot.autoconfigure.jdbc.JdbcTemplateAutoConfiguration
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
 import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.JdbcTemplate
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import javax.sql.DataSource
 
 /**
  * CleaningRecordMapper の MyBatis 統合テスト。
  * @MybatisTest + Flyway + PostgreSQL を使用するため、DB 接続が必要。
  *
  * NOTE: このテストは PostgreSQL が起動している環境でのみ実行可能。
- *       ローカル DB が起動している場合は @Disabled を外して実行すること。
+ *       DB が停止している場合は @Disabled を追加して実行を無効化すること。
  */
-@Disabled("Requires PostgreSQL: start local DB before enabling")
 @MybatisTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(FlywayAutoConfiguration::class, JdbcTemplateAutoConfiguration::class)
+@Import(FlywayAutoConfiguration::class)
 class CleaningRecordMapperTest {
     @Autowired
     private lateinit var cleaningRecordMapper: CleaningRecordMapper
@@ -37,7 +35,9 @@ class CleaningRecordMapperTest {
     private lateinit var partMapper: PartMapper
 
     @Autowired
-    private lateinit var jdbcTemplate: JdbcTemplate
+    private lateinit var dataSource: DataSource
+
+    private val jdbcTemplate by lazy { JdbcTemplate(dataSource) }
 
     // --------------- ヘルパー ---------------
 
@@ -143,8 +143,13 @@ class CleaningRecordMapperTest {
         // Act: part を削除 → cleaning_record が ON DELETE CASCADE で連鎖削除される
         jdbcTemplate.update("DELETE FROM part WHERE id = ?", part.id)
 
-        // Assert
-        val results = cleaningRecordMapper.selectByPartId(part.id, 10, 0)
-        assertThat(results).isEmpty()
+        // Assert: MyBatis の L1 キャッシュを回避するため JdbcTemplate で DB を直接カウント
+        val count =
+            jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM cleaning_record WHERE part_id = ?",
+                Int::class.java,
+                part.id,
+            ) ?: 0
+        assertThat(count).isZero()
     }
 }
