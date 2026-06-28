@@ -20,13 +20,13 @@
 
 ## フェーズ2: バックエンド（Spring Boot + Kotlin + MyBatis）
 
-- [ ] 3. Flywayマイグレーションで cleaning_record テーブルを作成
+- [x] 3. Flywayマイグレーションで cleaning_record テーブルを作成
   - File: backend/src/main/resources/db/migration/V3__cleaning_record_initial.sql
   - UUID主キー、part_id外部キー（part への ON DELETE CASCADE）、cleaned_at・user_idインデックス
   - Purpose: 掃除履歴の永続化基盤
   - _Requirements: 1, 3_
 
-- [ ] 4. domain層: CleaningRecord ドメインモデルと期限超過判定ロジック
+- [x] 4. domain層: CleaningRecord ドメインモデルと期限超過判定ロジック
   - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/domain/{CleaningRecord,CleaningStatus}.kt
   - 推奨周期に対する経過割合（elapsedRatio）の算出、期限超過（> 1.0）判定を純粋Kotlinで
   - Purpose: Springに非依存なビジネスルール
