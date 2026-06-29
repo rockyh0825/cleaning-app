@@ -66,8 +66,8 @@
   - Purpose: 描画から分離した軽量な座標計算ロジック
   - _Requirements: 1, 2_
 
-- [x] 10. features/floorplan: types.ts と FloorPlanRepository ✅ 実装済み
-  - File: mobile/src/features/floorplan/{types.ts, repositories/FloorPlanRepository.ts}
+- [x] 10. features/floorplan: types.ts と FloorplanRepository ✅ 実装済み
+  - File: mobile/src/features/floorplan/{types.ts, repositories/FloorplanRepository.ts}
   - ⚠️ TDDルール適用前に実装済み
   - Purpose: データアクセス層の確立
   - _Requirements: 3_
@@ -98,16 +98,16 @@
   - _Leverage: TanStack Query_
   - _Requirements: 1, 2, 3_
 
-- [x] 13. features/floorplan/components: FloorPlanCanvas と部屋種別・家具追加モーダル
-  - File: mobile/src/features/floorplan/components/{FloorPlanCanvas,RoomShape,FurnitureItem,AddRoomModal,AddFurnitureModal}.tsx
+- [x] 13. features/floorplan/components: FloorplanCanvas と部屋種別・家具追加モーダル
+  - File: mobile/src/features/floorplan/components/{FloorplanCanvas,RoomShape,FurnitureItem,AddRoomModal,AddFurnitureModal}.tsx
   - React Native Skiaでグリッド・部屋・家具を描画、タッチイベントをhooksへ
   - Purpose: 視覚操作によるUI
   - **Red**: `components/__tests__/*.test.tsx` を先に作成し `npx jest src/features/floorplan/components` で失敗を確認
   - **テスト対象** (`components/__tests__/`): `@testing-library/react-native` を使う
-    - 正常系: `AddRoomModal` → 部屋名を入力して送信するとuseFloorPlanのaddRoomが呼ばれる
-    - 正常系: `AddFurnitureModal` → 家具名を入力して送信するとuseFloorPlanのaddFurnitureが呼ばれる
+    - 正常系: `AddRoomModal` → 部屋名を入力して送信するとuseFloorplanのaddRoomが呼ばれる
+    - 正常系: `AddFurnitureModal` → 家具名を入力して送信するとuseFloorplanのaddFurnitureが呼ばれる
     - 正常系: `RoomShape` → タップイベントが onPress に渡る
-    - ※ Skia描画（FloorPlanCanvas本体）はスナップショットテストで最低限カバーする
+    - ※ Skia描画（FloorplanCanvas本体）はスナップショットテストで最低限カバーする
   - _Leverage: React Native Skia, mobile/src/shared/components_
   - _Requirements: 1, 2_
 
@@ -121,13 +121,13 @@
     - 正常系: UUID未発行のとき AsyncStorage に新しい UUID が保存される
   - _Requirements: 4_
 
-- [x] 15. capabilities/FloorPlanCapability と DI配線
-  - File: mobile/src/capabilities/FloorPlanCapability.ts, mobile/src/shared/app-root/providers/di.ts
+- [x] 15. capabilities/FloorplanCapability と DI配線
+  - File: mobile/src/capabilities/FloorplanCapability.ts, mobile/src/shared/app-root/providers/di.ts
   - heatmapが部屋・家具情報を読むための境界インターフェースと実装の配線
   - Purpose: feature間依存の逆転
-  - **Red**: `capabilities/__tests__/FloorPlanCapability.test.ts` を先に作成し失敗を確認
+  - **Red**: `capabilities/__tests__/FloorplanCapability.test.ts` を先に作成し失敗を確認
   - **テスト対象**:
-    - 正常系: `FloorPlanCapabilityImpl.getRooms()` が FloorPlanRepository を経由して部屋一覧を返す
+    - 正常系: `FloorplanCapabilityImpl.getRooms()` が FloorplanRepository を経由して部屋一覧を返す
     - 正常系: di.ts 経由でインスタンス化した capability が正しく動作する
   - _Requirements: 1, 2_
 

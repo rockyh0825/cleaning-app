@@ -1,5 +1,5 @@
 /**
- * FloorPlanRepository のテスト。
+ * FloorplanRepository のテスト。
  * shared/api は gitignore 対象の生成コードのため、テスト内にスタブ型を定義して依存を切る。
  */
 
@@ -36,7 +36,7 @@ interface ApiRoomWithFurniture extends ApiRoom {
     furniture: ApiFurniture[];
 }
 
-interface ApiFloorPlan {
+interface ApiFloorplan {
     rooms: ApiRoomWithFurniture[];
 }
 
@@ -73,7 +73,7 @@ const makeApiFurniture = (overrides: Partial<ApiFurniture> = {}): ApiFurniture =
 
 const mockApi = () =>
     ({
-        getFloorPlan: jest.fn(),
+        getFloorplan: jest.fn(),
         listRooms: jest.fn(),
         createRoom: jest.fn(),
         updateRoom: jest.fn(),
@@ -83,10 +83,10 @@ const mockApi = () =>
         deleteFurniture: jest.fn(),
     }) as Record<string, jest.Mock>;
 
-// FloorPlanRepository を直接 import する（shared/api の型を通じた検証は不要）
-const { FloorPlanRepository } = require('../FloorPlanRepository') as {
-    FloorPlanRepository: new (api: Record<string, jest.Mock>) => {
-        getFloorPlan(userId: string): Promise<{ rooms: (ApiRoomWithFurniture & { furniture: ApiFurniture[] })[] }>;
+// FloorplanRepository を直接 import する（shared/api の型を通じた検証は不要）
+const { FloorplanRepository } = require('../FloorplanRepository') as {
+    FloorplanRepository: new (api: Record<string, jest.Mock>) => {
+        getFloorplan(userId: string): Promise<{ rooms: (ApiRoomWithFurniture & { furniture: ApiFurniture[] })[] }>;
         listRooms(userId: string): Promise<ApiRoom[]>;
         createRoom(userId: string, input: object): Promise<ApiRoom>;
         updateRoom(userId: string, roomId: string, input: object): Promise<ApiRoom>;
@@ -97,22 +97,22 @@ const { FloorPlanRepository } = require('../FloorPlanRepository') as {
     };
 };
 
-describe('FloorPlanRepository', () => {
+describe('FloorplanRepository', () => {
     const userId = 'user-uuid-1';
 
-    describe('getFloorPlan', () => {
+    describe('getFloorplan', () => {
         it('returns_floor_plan_with_rooms_and_furniture', async () => {
             // Arrange
             const api = mockApi();
             const furniture = makeApiFurniture();
-            const floorPlan: ApiFloorPlan = {
+            const floorplan: ApiFloorplan = {
                 rooms: [{ ...makeApiRoom(), furniture: [furniture] }],
             };
-            api.getFloorPlan.mockResolvedValue(floorPlan);
-            const repo = new FloorPlanRepository(api);
+            api.getFloorplan.mockResolvedValue(floorplan);
+            const repo = new FloorplanRepository(api);
 
             // Act
-            const result = await repo.getFloorPlan(userId);
+            const result = await repo.getFloorplan(userId);
 
             // Assert
             expect(result.rooms).toHaveLength(1);
@@ -125,24 +125,24 @@ describe('FloorPlanRepository', () => {
         it('calls_api_with_correct_user_id', async () => {
             // Arrange
             const api = mockApi();
-            api.getFloorPlan.mockResolvedValue({ rooms: [] });
-            const repo = new FloorPlanRepository(api);
+            api.getFloorplan.mockResolvedValue({ rooms: [] });
+            const repo = new FloorplanRepository(api);
 
             // Act
-            await repo.getFloorPlan(userId);
+            await repo.getFloorplan(userId);
 
             // Assert
-            expect(api.getFloorPlan).toHaveBeenCalledWith({ xUserId: userId });
+            expect(api.getFloorplan).toHaveBeenCalledWith({ xUserId: userId });
         });
 
         it('returns_empty_rooms_when_floor_plan_has_no_rooms', async () => {
             // Arrange
             const api = mockApi();
-            api.getFloorPlan.mockResolvedValue({ rooms: [] });
-            const repo = new FloorPlanRepository(api);
+            api.getFloorplan.mockResolvedValue({ rooms: [] });
+            const repo = new FloorplanRepository(api);
 
             // Act
-            const result = await repo.getFloorPlan(userId);
+            const result = await repo.getFloorplan(userId);
 
             // Assert
             expect(result.rooms).toHaveLength(0);
@@ -157,7 +157,7 @@ describe('FloorPlanRepository', () => {
                 makeApiRoom({ id: 'r1', name: '部屋A' }),
                 makeApiRoom({ id: 'r2', name: '部屋B' }),
             ]);
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
 
             // Act
             const result = await repo.listRooms(userId);
@@ -172,7 +172,7 @@ describe('FloorPlanRepository', () => {
             // Arrange
             const api = mockApi();
             api.listRooms.mockResolvedValue([]);
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
 
             // Act
             const result = await repo.listRooms(userId);
@@ -185,7 +185,7 @@ describe('FloorPlanRepository', () => {
             // Arrange
             const api = mockApi();
             api.listRooms.mockResolvedValue([]);
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
 
             // Act
             await repo.listRooms(userId);
@@ -200,7 +200,7 @@ describe('FloorPlanRepository', () => {
             // Arrange
             const api = mockApi();
             api.createRoom.mockResolvedValue(makeApiRoom({ id: 'new-room', name: '新部屋' }));
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
             const input = { name: '新部屋', type: 'BEDROOM', gridX: 0, gridY: 0, gridW: 3, gridH: 3 };
 
             // Act
@@ -215,7 +215,7 @@ describe('FloorPlanRepository', () => {
             // Arrange
             const api = mockApi();
             api.createRoom.mockResolvedValue(makeApiRoom());
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
             const input = { name: 'キッチン', type: 'KITCHEN', gridX: 1, gridY: 2, gridW: 4, gridH: 5 };
 
             // Act
@@ -231,7 +231,7 @@ describe('FloorPlanRepository', () => {
             // Arrange
             const api = mockApi();
             api.updateRoom.mockResolvedValue(makeApiRoom({ name: '更新後' }));
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
 
             // Act
             const result = await repo.updateRoom(userId, 'room-1', { name: '更新後' });
@@ -244,7 +244,7 @@ describe('FloorPlanRepository', () => {
             // Arrange
             const api = mockApi();
             api.updateRoom.mockResolvedValue(makeApiRoom());
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
             const input = { gridX: 5 };
 
             // Act
@@ -264,7 +264,7 @@ describe('FloorPlanRepository', () => {
             // Arrange
             const api = mockApi();
             api.deleteRoom.mockResolvedValue(undefined);
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
 
             // Act
             await repo.deleteRoom(userId, 'room-1');
@@ -281,7 +281,7 @@ describe('FloorPlanRepository', () => {
             api.createFurniture.mockResolvedValue(
                 makeApiFurniture({ id: 'new-furniture', name: '新家具', roomId: 'room-1' }),
             );
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
 
             // Act
             const result = await repo.createFurniture(userId, 'room-1', { name: '新家具', gridX: 0, gridY: 0, gridW: 2, gridH: 2 });
@@ -296,7 +296,7 @@ describe('FloorPlanRepository', () => {
             // Arrange
             const api = mockApi();
             api.createFurniture.mockResolvedValue(makeApiFurniture());
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
             const input = { name: 'ソファ', presetKey: 'sofa', gridX: 1, gridY: 1, gridW: 3, gridH: 2 };
 
             // Act
@@ -314,7 +314,7 @@ describe('FloorPlanRepository', () => {
             // Arrange
             const api = mockApi();
             api.createFurniture.mockResolvedValue(makeApiFurniture({ presetKey: null }));
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
 
             // Act
             const result = await repo.createFurniture(userId, 'room-1', { name: 'カスタム', gridX: 0, gridY: 0, gridW: 1, gridH: 1 });
@@ -329,7 +329,7 @@ describe('FloorPlanRepository', () => {
             // Arrange
             const api = mockApi();
             api.updateFurniture.mockResolvedValue(makeApiFurniture({ name: '更新後' }));
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
 
             // Act
             const result = await repo.updateFurniture(userId, 'furniture-1', { name: '更新後' });
@@ -342,7 +342,7 @@ describe('FloorPlanRepository', () => {
             // Arrange
             const api = mockApi();
             api.updateFurniture.mockResolvedValue(makeApiFurniture());
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
             const input = { gridX: 3, gridY: 4 };
 
             // Act
@@ -362,7 +362,7 @@ describe('FloorPlanRepository', () => {
             // Arrange
             const api = mockApi();
             api.deleteFurniture.mockResolvedValue(undefined);
-            const repo = new FloorPlanRepository(api);
+            const repo = new FloorplanRepository(api);
 
             // Act
             await repo.deleteFurniture(userId, 'furniture-1');

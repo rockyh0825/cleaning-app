@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useFloorPlan } from '@/features/floorplan/hooks/useFloorPlan';
-import { FloorPlanCanvas } from '@/features/floorplan/components/FloorPlanCanvas';
+import { useFloorplan } from '@/features/floorplan/hooks/useFloorplan';
+import { FloorplanCanvas } from '@/features/floorplan/components/FloorplanCanvas';
 import { AddFurnitureModal } from '@/features/floorplan/components/AddFurnitureModal';
-import { FloorPlanRepository } from '@/features/floorplan/repositories/FloorPlanRepository';
-import type { FloorPlan } from '@/features/floorplan/types';
+import { FloorplanRepository } from '@/features/floorplan/repositories/FloorplanRepository';
+import type { Floorplan } from '@/features/floorplan/types';
 
 type Props = {
     roomId: string;
@@ -13,21 +13,21 @@ type Props = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const apiStub: any = {};
-const repository = new FloorPlanRepository(apiStub);
+const repository = new FloorplanRepository(apiStub);
 
-const EMPTY_FLOOR_PLAN: FloorPlan = { rooms: [] };
+const EMPTY_FLOORPLAN: Floorplan = { rooms: [] };
 
 export default function RoomDetailScreen({ roomId, userId }: Props) {
     const [isModalVisible, setIsModalVisible] = useState(false);
 
-    const { floorPlan, addRoom: _addRoom } = useFloorPlan(userId, repository);
+    const { floorplan, addRoom: _addRoom } = useFloorplan(userId, repository);
 
-    const floorPlanData = floorPlan.data ?? EMPTY_FLOOR_PLAN;
-    const room = floorPlanData.rooms.find((r) => r.id === roomId);
+    const floorplanData = floorplan.data ?? EMPTY_FLOORPLAN;
+    const room = floorplanData.rooms.find((r) => r.id === roomId);
 
-    const singleRoomPlan: FloorPlan = room
+    const singleRoomPlan: Floorplan = room
         ? { rooms: [room] }
-        : EMPTY_FLOOR_PLAN;
+        : EMPTY_FLOORPLAN;
 
     function handleAddFurniture(input: { name: string }) {
         // TODO: addFurniture usecase を実装後に接続
@@ -37,7 +37,7 @@ export default function RoomDetailScreen({ roomId, userId }: Props) {
 
     return (
         <View style={styles.container}>
-            <FloorPlanCanvas floorPlan={singleRoomPlan} />
+            <FloorplanCanvas floorplan={singleRoomPlan} />
 
             <TouchableOpacity
                 style={styles.addButton}

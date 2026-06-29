@@ -1,13 +1,13 @@
-import type { FloorPlanRepository } from '../repositories/FloorPlanRepository';
+import type { FloorplanRepository } from '../repositories/FloorplanRepository';
 import type { Furniture, CreateFurnitureInput } from '../types';
 import { clampWithin } from '@/shared/utils/grid';
 
 export class AddFurnitureUseCase {
-    constructor(private readonly repository: FloorPlanRepository) {}
+    constructor(private readonly repository: FloorplanRepository) {}
 
     async execute(userId: string, roomId: string, input: CreateFurnitureInput): Promise<Furniture> {
-        const floorPlan = await this.repository.getFloorPlan(userId);
-        const room = floorPlan.rooms.find((r) => r.id === roomId);
+        const floorplan = await this.repository.getFloorplan(userId);
+        const room = floorplan.rooms.find((r) => r.id === roomId);
 
         if (!room) {
             return this.repository.createFurniture(userId, roomId, input);

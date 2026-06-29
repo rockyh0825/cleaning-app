@@ -32,7 +32,7 @@
 ### Integration Points
 
 - **Part テーブル**: floorplan-editor が作成済み。本featureは CleaningRecord テーブルを追加し、part_id で外部キー参照
-- **FloorPlanCapability**: タイムライン表示で「パーツの所属エリア名」を解決するため、間取り情報を参照
+- **FloorplanCapability**: タイムライン表示で「パーツの所属エリア名」を解決するため、間取り情報を参照
 - **heatmap / notification**: CleaningStatusCapability / Port を通じて掃除状態を消費する側
 
 ## Architecture

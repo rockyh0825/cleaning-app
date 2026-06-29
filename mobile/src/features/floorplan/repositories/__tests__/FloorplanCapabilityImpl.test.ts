@@ -1,10 +1,10 @@
 /**
- * FloorPlanCapabilityImpl のテスト。
- * FloorPlanRepository をモックし、getRooms() が正しく部屋一覧を返すことを検証する。
+ * FloorplanCapabilityImpl のテスト。
+ * FloorplanRepository をモックし、getRooms() が正しく部屋一覧を返すことを検証する。
  */
 
-import { FloorPlanCapabilityImpl } from '../FloorPlanCapabilityImpl';
-import type { FloorPlanRepository } from '../FloorPlanRepository';
+import { FloorplanCapabilityImpl } from '../FloorplanCapabilityImpl';
+import type { FloorplanRepository } from '../FloorplanRepository';
 import type { RoomWithFurniture } from '../../types';
 
 // --- テスト用フィクスチャ ---
@@ -23,10 +23,10 @@ const makeRoomWithFurniture = (overrides: Partial<RoomWithFurniture> = {}): Room
     ...overrides,
 });
 
-// --- モック FloorPlanRepository ---
+// --- モック FloorplanRepository ---
 
 const mockRepository = {
-    getFloorPlan: jest.fn(),
+    getFloorplan: jest.fn(),
     listRooms: jest.fn(),
     createRoom: jest.fn(),
     updateRoom: jest.fn(),
@@ -34,9 +34,9 @@ const mockRepository = {
     createFurniture: jest.fn(),
     updateFurniture: jest.fn(),
     deleteFurniture: jest.fn(),
-} as unknown as FloorPlanRepository;
+} as unknown as FloorplanRepository;
 
-describe('FloorPlanCapabilityImpl', () => {
+describe('FloorplanCapabilityImpl', () => {
     const userId = 'user-uuid-1';
 
     beforeEach(() => {
@@ -44,14 +44,14 @@ describe('FloorPlanCapabilityImpl', () => {
     });
 
     describe('getRooms', () => {
-        it('正常系: getFloorPlan を経由して部屋一覧を返す', async () => {
+        it('正常系: getFloorplan を経由して部屋一覧を返す', async () => {
             // Arrange
             const rooms: RoomWithFurniture[] = [
                 makeRoomWithFurniture({ id: 'room-1', name: 'リビング' }),
                 makeRoomWithFurniture({ id: 'room-2', name: 'キッチン', type: 'KITCHEN' }),
             ];
-            (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({ rooms });
-            const capability = new FloorPlanCapabilityImpl(mockRepository);
+            (mockRepository.getFloorplan as jest.Mock).mockResolvedValue({ rooms });
+            const capability = new FloorplanCapabilityImpl(mockRepository);
 
             // Act
             const result = await capability.getRooms(userId);
@@ -62,22 +62,22 @@ describe('FloorPlanCapabilityImpl', () => {
             expect(result[1].id).toBe('room-2');
         });
 
-        it('正常系: getFloorPlan に userId が正しく渡される', async () => {
+        it('正常系: getFloorplan に userId が正しく渡される', async () => {
             // Arrange
-            (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({ rooms: [] });
-            const capability = new FloorPlanCapabilityImpl(mockRepository);
+            (mockRepository.getFloorplan as jest.Mock).mockResolvedValue({ rooms: [] });
+            const capability = new FloorplanCapabilityImpl(mockRepository);
 
             // Act
             await capability.getRooms(userId);
 
             // Assert
-            expect(mockRepository.getFloorPlan).toHaveBeenCalledWith(userId);
+            expect(mockRepository.getFloorplan).toHaveBeenCalledWith(userId);
         });
 
         it('正常系: 部屋が存在しないとき空配列を返す', async () => {
             // Arrange
-            (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({ rooms: [] });
-            const capability = new FloorPlanCapabilityImpl(mockRepository);
+            (mockRepository.getFloorplan as jest.Mock).mockResolvedValue({ rooms: [] });
+            const capability = new FloorplanCapabilityImpl(mockRepository);
 
             // Act
             const result = await capability.getRooms(userId);
@@ -104,8 +104,8 @@ describe('FloorPlanCapabilityImpl', () => {
                     },
                 ],
             });
-            (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({ rooms: [roomWithFurniture] });
-            const capability = new FloorPlanCapabilityImpl(mockRepository);
+            (mockRepository.getFloorplan as jest.Mock).mockResolvedValue({ rooms: [roomWithFurniture] });
+            const capability = new FloorplanCapabilityImpl(mockRepository);
 
             // Act
             const result = await capability.getRooms(userId);

@@ -19,7 +19,7 @@
 ### Project Structure (structure.md)
 
 - `features/floorplan/` 配下に components / hooks / usecases / repositories / types.ts を配置
-- 他featureからの参照は `capabilities/FloorPlanCapability.ts` 経由（heatmap が間取り情報を読むため）
+- 他featureからの参照は `capabilities/FloorplanCapability.ts` 経由（heatmap が間取り情報を読むため）
 - バックエンドは `backend/.../floorplan/` に presentation / application / domain / infrastructure を配置
 
 ## Code Reuse Analysis
@@ -34,7 +34,7 @@
 
 ### Integration Points
 
-- **FloorPlanCapability**: heatmap featureが「部屋・家具の一覧と座標」を取得するための境界インターフェース
+- **FloorplanCapability**: heatmap featureが「部屋・家具の一覧と座標」を取得するための境界インターフェース
 - **PostgreSQL**: room / furniture / part テーブルを新規作成（Flyway V1マイグレーション）
 - **掃除記録 (cleaning-record)**: part エンティティを共有。間取りエディタが part を生成し、cleaning-record がその掃除状態を更新する
 
@@ -44,27 +44,27 @@
 
 ### Modular Design Principles
 
-- **描画とロジックの分離**: FloorPlanCanvas は座標を受け取って描くだけ。スナップ計算・衝突判定は usecases / utils に隔離
+- **描画とロジックの分離**: FloorplanCanvas は座標を受け取って描くだけ。スナップ計算・衝突判定は usecases / utils に隔離
 - **レイヤー一方向依存**: components → hooks → usecases → repositories → shared/api
 - **1ユースケース1クラス**: AddRoom / ResizeRoom / PlaceFurniture などを個別ユースケースに分割
 
 ```mermaid
 graph TD
-    A[app/floorplan/index.tsx] --> B[FloorPlanCanvas]
+    A[app/floorplan/index.tsx] --> B[FloorplanCanvas]
     B --> C[useFloormap hook]
     C --> D[AddRoomUseCase / PlaceFurnitureUseCase]
-    D --> E[FloorPlanRepository]
+    D --> E[FloorplanRepository]
     E --> F[shared/api - 生成クライアント]
     F --> G[Spring Boot FloormapController]
     G --> H[Floormap Application Layer]
     H --> I[PostgreSQL: room / furniture / part]
-    C -.実装.-> J[FloorPlanCapability]
+    C -.実装.-> J[FloorplanCapability]
     J -.参照.-> K[heatmap feature]
 ```
 
 ## Components and Interfaces
 
-### FloorPlanCanvas (components)
+### FloorplanCanvas (components)
 - **Purpose:** グリッド・部屋矩形・家具を Skia で描画し、タッチイベントを hooks に渡す
 - **Interfaces:** `props: { rooms, furniture, onRoomDrag, onFurnitureDrag, selectedId }`
 - **Dependencies:** React Native Skia, useFloormap
@@ -85,16 +85,16 @@ graph TD
 ### AddRoomUseCase / ResizeRoomUseCase / PlaceFurnitureUseCase (usecases)
 - **Purpose:** 部屋追加・リサイズ・家具配置のビジネスロジック。種別→プリセットパーツのseedもここで行う
 - **Interfaces:** `execute(input): Result`
-- **Dependencies:** FloorPlanRepository
+- **Dependencies:** FloorplanRepository
 - **Reuses:** Grid utilities
 
-### FloorPlanRepository (repositories)
+### FloorplanRepository (repositories)
 - **Purpose:** 間取りCRUDのAPI呼び出し実装
 - **Interfaces:** `getFloormap()` / `saveRoom(room)` / `saveFurniture(furniture)` / `deleteRoom(id)` ...
 - **Dependencies:** shared/api（生成クライアント）
 - **Reuses:** OpenAPI生成クライアント
 
-### FloormapController → AddRoomUseCase → FloorPlanRepositoryImpl (MyBatis) (backend)
+### FloormapController → AddRoomUseCase → FloorplanRepositoryImpl (MyBatis) (backend)
 - **Purpose:** presentation/application/infrastructure の3層でCRUDを実装。infrastructureはMyBatis Mapperでデータアクセスを行う
 - **Interfaces:** REST: `/floor-map`, `/rooms`, `/rooms/{roomId}/furniture`
 - **Dependencies:** domain（Floormap/Room/Furniture/Part）

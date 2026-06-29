@@ -1,9 +1,9 @@
-import type { FloorPlanRepository } from '../repositories/FloorPlanRepository';
+import type { FloorplanRepository } from '../repositories/FloorplanRepository';
 import type { Furniture, UpdateFurnitureInput } from '../types';
 import { clampWithin } from '@/shared/utils/grid';
 
 export class UpdateFurnitureUseCase {
-    constructor(private readonly repository: FloorPlanRepository) {}
+    constructor(private readonly repository: FloorplanRepository) {}
 
     async execute(userId: string, furnitureId: string, input: UpdateFurnitureInput): Promise<Furniture> {
         const hasGridUpdate = 'gridX' in input || 'gridY' in input || 'gridW' in input || 'gridH' in input;
@@ -12,14 +12,14 @@ export class UpdateFurnitureUseCase {
             return this.repository.updateFurniture(userId, furnitureId, input);
         }
 
-        const floorPlan = await this.repository.getFloorPlan(userId);
-        const current = floorPlan.rooms.flatMap((r) => r.furniture).find((f) => f.id === furnitureId);
+        const floorplan = await this.repository.getFloorplan(userId);
+        const current = floorplan.rooms.flatMap((r) => r.furniture).find((f) => f.id === furnitureId);
 
         if (!current) {
             return this.repository.updateFurniture(userId, furnitureId, input);
         }
 
-        const room = floorPlan.rooms.find((r) => r.id === current.roomId);
+        const room = floorplan.rooms.find((r) => r.id === current.roomId);
 
         if (!room) {
             return this.repository.updateFurniture(userId, furnitureId, input);
