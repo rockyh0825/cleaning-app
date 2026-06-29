@@ -4,7 +4,7 @@
 
 掃除記録機能は、パーツ単位の掃除イベント（CleaningRecord）を記録・閲覧・修正し、パーツの最終掃除日時（lastCleanedAt）を最新に保つ。lastCleanedAt は CleaningRecord から導出されるキャッシュであり、記録の追加・修正・削除のたびに対象パーツ分を再計算する。
 
-この最終掃除日時と推奨周期は、`CleaningStatusCapability`（モバイル）/ `CleaningStatusPort`（バックエンド）を通じて heatmap・notification に公開する。Part エンティティは floormap-editor と共有し、掃除記録（CleaningRecord）は本featureが所有する。
+この最終掃除日時と推奨周期は、`CleaningStatusCapability`（モバイル）/ `CleaningStatusPort`（バックエンド）を通じて heatmap・notification に公開する。Part エンティティは floorplan-editor と共有し、掃除記録（CleaningRecord）は本featureが所有する。
 
 ## Steering Document Alignment
 
@@ -25,14 +25,14 @@
 
 ### Existing Components to Leverage
 
-- **Part エンティティ（floormap-editor）**: パーツの定義を共有。本featureはパーツの名前・推奨周期の編集と lastCleanedAt 更新を担当
+- **Part エンティティ（floorplan-editor）**: パーツの定義を共有。本featureはパーツの名前・推奨周期の編集と lastCleanedAt 更新を担当
 - **shared/components**: Checkbox・Card・Button を一括チェックUI・タイムラインで利用
 - **shared/api**: OpenAPI Generator が生成する CleaningRecord APIクライアント
 
 ### Integration Points
 
-- **Part テーブル**: floormap-editor が作成済み。本featureは CleaningRecord テーブルを追加し、part_id で外部キー参照
-- **LayoutCapability**: タイムライン表示で「パーツの所属エリア名」を解決するため、間取り情報を参照
+- **Part テーブル**: floorplan-editor が作成済み。本featureは CleaningRecord テーブルを追加し、part_id で外部キー参照
+- **FloorPlanCapability**: タイムライン表示で「パーツの所属エリア名」を解決するため、間取り情報を参照
 - **heatmap / notification**: CleaningStatusCapability / Port を通じて掃除状態を消費する側
 
 ## Architecture
@@ -115,7 +115,7 @@ graph TD
 - createdAt: Timestamp    # レコード作成時刻（監査用、cleanedAtとは別）
 ```
 
-### Part（floormap-editor と共有 / 本featureが name・recommendedCycleDays・lastCleanedAt を更新）
+### Part（floorplan-editor と共有 / 本featureが name・recommendedCycleDays・lastCleanedAt を更新）
 ```
 - id, ownerType, ownerId, name, recommendedCycleDays
 - lastCleanedAt: Timestamp?   # CleaningRecord から導出されるキャッシュ。MAX(cleaned_at) または null
@@ -167,7 +167,7 @@ graph TD
    - **Handling:** 記録更新と再計算を同一トランザクションに含め、原子性を担保
    - **User Impact:** ヒートマップ・履歴が常に一致
 
-4. **削除済みパーツへの記録（floormapでパーツ削除）**
+4. **削除済みパーツへの記録（floorplanでパーツ削除）**
    - **Handling:** part 削除時に cleaning_record を ON DELETE CASCADE で連鎖削除
    - **User Impact:** 該当パーツの記録も消える
 

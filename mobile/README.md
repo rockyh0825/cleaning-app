@@ -37,13 +37,13 @@ mobile/
 cd mobile && npx jest
 
 # コンポーネントテストのみ
-cd mobile && npx jest --testPathPattern="src/features/layout/components"
+cd mobile && npx jest --testPathPattern="src/features/floorplan/components"
 
 # ユニットテストのみ（unit project）
 cd mobile && npx jest --selectProjects unit
 
 # 単一テストファイル
-cd mobile && npx jest src/features/layout/components/__tests__/AddRoomModal.test.tsx
+cd mobile && npx jest src/features/floorplan/components/__tests__/AddRoomModal.test.tsx
 ```
 
 ### 既存のユニットテスト（hooks/usecases）との共存方法
