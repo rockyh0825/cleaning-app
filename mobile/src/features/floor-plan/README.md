@@ -50,7 +50,7 @@ features/floor-plan/
 │   ├── AddFurnitureUseCase.ts
 │   ├── UpdateFurnitureUseCase.ts
 │   └── DeleteFurnitureUseCase.ts
-└── types.ts             # ドメイン型（Room, Furniture, FloorMap, RoomType）
+└── types.ts             # ドメイン型（Room, Furniture, FloorPlan, RoomType）
 ```
 
 ## アーキテクチャ制約
