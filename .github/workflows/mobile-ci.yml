@@ -45,6 +45,15 @@ jobs:
         working-directory: mobile
         run: npm ci --legacy-peer-deps
 
+      - name: Generate API client (TypeScript)
+        if: steps.filter.outputs.mobile == 'true'
+        run: |
+          npx --yes @openapitools/openapi-generator-cli generate \
+            --input-spec api/openapi.yaml \
+            --generator-name typescript-fetch \
+            --output mobile/src/shared/api \
+            --additional-properties=typescriptThreePlus=true
+
       - name: ESLint
         if: steps.filter.outputs.mobile == 'true'
         working-directory: mobile
