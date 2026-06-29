@@ -1,5 +1,5 @@
 import { UpdateFurnitureUseCase } from '../UpdateFurnitureUseCase';
-import type { FloorPlanRepository } from '../../repositories/FloorPlanRepository';
+import type { FloorplanRepository } from '../../repositories/FloorplanRepository';
 import type { Furniture, RoomWithFurniture, UpdateFurnitureInput } from '../../types';
 
 const mockFurniture: Furniture = {
@@ -29,7 +29,7 @@ const mockRoom: RoomWithFurniture = {
 };
 
 const mockRepository = {
-    getFloorPlan: jest.fn(),
+    getFloorplan: jest.fn(),
     listRooms: jest.fn(),
     createRoom: jest.fn(),
     updateRoom: jest.fn(),
@@ -37,12 +37,12 @@ const mockRepository = {
     createFurniture: jest.fn(),
     updateFurniture: jest.fn(),
     deleteFurniture: jest.fn(),
-} as unknown as FloorPlanRepository;
+} as unknown as FloorplanRepository;
 
 describe('UpdateFurnitureUseCase', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({ rooms: [mockRoom] });
+        (mockRepository.getFloorplan as jest.Mock).mockResolvedValue({ rooms: [mockRoom] });
         (mockRepository.updateFurniture as jest.Mock).mockResolvedValue(mockFurniture);
     });
 
@@ -52,7 +52,7 @@ describe('UpdateFurnitureUseCase', () => {
 
         await useCase.execute('user-1', 'f-1', input);
 
-        expect(mockRepository.getFloorPlan).not.toHaveBeenCalled();
+        expect(mockRepository.getFloorplan).not.toHaveBeenCalled();
         expect(mockRepository.updateFurniture).toHaveBeenCalledWith('user-1', 'f-1', input);
     });
 

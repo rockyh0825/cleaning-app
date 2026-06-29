@@ -2,15 +2,15 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import FloorPlanIndexScreen from '../index';
+import FloorplanIndexScreen from '../index';
 
-// useFloorPlan をモック
-jest.mock('@/features/floorplan/hooks/useFloorPlan', () => ({
-    useFloorPlan: jest.fn(),
+// useFloorplan をモック
+jest.mock('@/features/floorplan/hooks/useFloorplan', () => ({
+    useFloorplan: jest.fn(),
 }));
 
-import { useFloorPlan } from '@/features/floorplan/hooks/useFloorPlan';
-const mockUseLayout = useFloorPlan as jest.Mock;
+import { useFloorplan } from '@/features/floorplan/hooks/useFloorplan';
+const mockUseLayout = useFloorplan as jest.Mock;
 
 function createWrapper() {
     const queryClient = new QueryClient({
@@ -28,7 +28,7 @@ function createWrapper() {
     };
 }
 
-describe('FloorPlanIndexScreen', () => {
+describe('FloorplanIndexScreen', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
@@ -38,14 +38,14 @@ describe('FloorPlanIndexScreen', () => {
     it('shows_empty_state_when_floor_plan_has_no_rooms', async () => {
         // Arrange
         mockUseLayout.mockReturnValue({
-            floorPlan: { data: { rooms: [] }, isLoading: false, isError: false },
+            floorplan: { data: { rooms: [] }, isLoading: false, isError: false },
             addRoom: { mutate: jest.fn() },
             deleteRoom: { mutate: jest.fn() },
         });
         (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
 
         // Act
-        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        render(<FloorplanIndexScreen />, { wrapper: createWrapper() });
 
         // Assert
         await waitFor(() => {
@@ -56,14 +56,14 @@ describe('FloorPlanIndexScreen', () => {
     it('saves_new_uuid_to_async_storage_when_no_uuid_exists', async () => {
         // Arrange
         mockUseLayout.mockReturnValue({
-            floorPlan: { data: { rooms: [] }, isLoading: false, isError: false },
+            floorplan: { data: { rooms: [] }, isLoading: false, isError: false },
             addRoom: { mutate: jest.fn() },
             deleteRoom: { mutate: jest.fn() },
         });
         (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
 
         // Act
-        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        render(<FloorplanIndexScreen />, { wrapper: createWrapper() });
 
         // Assert
         await waitFor(() => {

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFloorPlan } from '@/features/floorplan/hooks/useFloorPlan';
-import { FloorPlanCanvas } from '@/features/floorplan/components/FloorPlanCanvas';
+import { useFloorplan } from '@/features/floorplan/hooks/useFloorplan';
+import { FloorplanCanvas } from '@/features/floorplan/components/FloorplanCanvas';
 import { AddRoomModal } from '@/features/floorplan/components/AddRoomModal';
-import { FloorPlanRepository } from '@/features/floorplan/repositories/FloorPlanRepository';
+import { FloorplanRepository } from '@/features/floorplan/repositories/FloorplanRepository';
 import type { CreateRoomInput } from '@/features/floorplan/types';
 
 const USER_UUID_KEY = 'user-uuid';
@@ -19,9 +19,9 @@ function generateUUID(): string {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const apiStub: any = {};
-const repository = new FloorPlanRepository(apiStub);
+const repository = new FloorplanRepository(apiStub);
 
-export default function FloorPlanIndexScreen() {
+export default function FloorplanIndexScreen() {
     const [userId, setUserId] = useState<string | null>(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -39,9 +39,9 @@ export default function FloorPlanIndexScreen() {
         initUserId();
     }, []);
 
-    const { floorPlan, addRoom } = useFloorPlan(userId ?? '', repository);
+    const { floorplan, addRoom } = useFloorplan(userId ?? '', repository);
 
-    const rooms = floorPlan.data?.rooms ?? [];
+    const rooms = floorplan.data?.rooms ?? [];
 
     function handleAddRoom(input: { name: string; type: CreateRoomInput['type'] }) {
         addRoom.mutate({
@@ -63,7 +63,7 @@ export default function FloorPlanIndexScreen() {
                     <Text style={styles.emptySubText}>「部屋を追加」ボタンで始めましょう</Text>
                 </View>
             ) : (
-                <FloorPlanCanvas floorPlan={floorPlan.data!} />
+                <FloorplanCanvas floorplan={floorplan.data!} />
             )}
 
             <TouchableOpacity

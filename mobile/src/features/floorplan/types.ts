@@ -34,7 +34,7 @@ export type Furniture = {
 
 export type RoomWithFurniture = Room & { furniture: Furniture[] };
 
-export type FloorPlan = { rooms: RoomWithFurniture[] };
+export type Floorplan = { rooms: RoomWithFurniture[] };
 
 export type CreateRoomInput = {
     name: string;

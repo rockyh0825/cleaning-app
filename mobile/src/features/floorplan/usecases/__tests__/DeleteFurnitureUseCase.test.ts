@@ -1,8 +1,8 @@
 import { DeleteFurnitureUseCase } from '../DeleteFurnitureUseCase';
-import type { FloorPlanRepository } from '../../repositories/FloorPlanRepository';
+import type { FloorplanRepository } from '../../repositories/FloorplanRepository';
 
 const mockRepository = {
-    getFloorPlan: jest.fn(),
+    getFloorplan: jest.fn(),
     listRooms: jest.fn(),
     createRoom: jest.fn(),
     updateRoom: jest.fn(),
@@ -10,7 +10,7 @@ const mockRepository = {
     createFurniture: jest.fn(),
     updateFurniture: jest.fn(),
     deleteFurniture: jest.fn(),
-} as unknown as FloorPlanRepository;
+} as unknown as FloorplanRepository;
 
 describe('DeleteFurnitureUseCase', () => {
     beforeEach(() => {

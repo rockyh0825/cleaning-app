@@ -12,16 +12,16 @@ data class RoomWithFurnitureResult(
     val furniture: List<Furniture>,
 )
 
-data class FloorPlanResult(
+data class FloorplanResult(
     val rooms: List<RoomWithFurnitureResult>,
 )
 
 @Service
-class GetFloorPlanUseCase(
+class GetFloorplanUseCase(
     private val roomRepository: RoomRepository,
     private val furnitureRepository: FurnitureRepository,
 ) {
-    fun execute(userId: UUID): FloorPlanResult {
+    fun execute(userId: UUID): FloorplanResult {
         val rooms = roomRepository.findByUserId(userId)
         val roomsWithFurniture =
             rooms.map { room ->
@@ -30,6 +30,6 @@ class GetFloorPlanUseCase(
                     furniture = furnitureRepository.findByRoomId(room.id),
                 )
             }
-        return FloorPlanResult(roomsWithFurniture)
+        return FloorplanResult(roomsWithFurniture)
     }
 }

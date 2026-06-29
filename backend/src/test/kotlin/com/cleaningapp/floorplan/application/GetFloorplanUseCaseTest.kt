@@ -15,14 +15,14 @@ import java.time.Instant
 import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
-class GetFloorPlanUseCaseTest {
+class GetFloorplanUseCaseTest {
     @MockK
     private lateinit var roomRepository: RoomRepository
 
     @MockK
     private lateinit var furnitureRepository: FurnitureRepository
 
-    private val useCase by lazy { GetFloorPlanUseCase(roomRepository, furnitureRepository) }
+    private val useCase by lazy { GetFloorplanUseCase(roomRepository, furnitureRepository) }
 
     private val userId: UUID = UUID.randomUUID()
 

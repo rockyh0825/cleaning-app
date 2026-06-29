@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import type { FloorPlan } from '../types';
+import type { Floorplan } from '../types';
 import { FurnitureItem } from './FurnitureItem';
 import { RoomShape } from './RoomShape';
 
@@ -28,14 +28,14 @@ const GRID_COLS = 20;
 const GRID_ROWS = 20;
 
 type Props = {
-    floorPlan: FloorPlan;
+    floorplan: Floorplan;
     cellSize?: number;
     onRoomPress?: (roomId: string) => void;
     onFurniturePress?: (furnitureId: string) => void;
 };
 
-export function FloorPlanCanvas({
-    floorPlan,
+export function FloorplanCanvas({
+    floorplan,
     cellSize = DEFAULT_CELL_SIZE,
     onRoomPress,
     onFurniturePress,
@@ -64,7 +64,7 @@ export function FloorPlanCanvas({
         >
             {renderGrid(canvasWidth, canvasHeight, cellSize)}
 
-            {floorPlan.rooms.map((room) => (
+            {floorplan.rooms.map((room) => (
                 <React.Fragment key={room.id}>
                     <RoomShape
                         room={room}

@@ -54,10 +54,10 @@ cleaning-app/
 │   └── src/
 │       ├── features/
 │       │   ├── floorplan/             # 間取り図機能
-│       │   │   ├── components/        # FloorPlanCanvas, RoomShape, FurnitureItem ...
+│       │   │   ├── components/        # FloorplanCanvas, RoomShape, FurnitureItem ...
 │       │   │   ├── hooks/             # useFloormap, useDragDrop ...
 │       │   │   ├── usecases/          # AddRoomUseCase, PlaceFurnitureUseCase ...
-│       │   │   ├── repositories/      # FloorPlanRepository（API呼び出し実装）
+│       │   │   ├── repositories/      # FloorplanRepository（API呼び出し実装）
 │       │   │   └── types.ts
 │       │   ├── heatmap/               # ヒートマップ機能
 │       │   │   ├── components/        # HeatmapOverlay, AreaColorBadge ...
@@ -78,7 +78,7 @@ cleaning-app/
 │       │       └── types.ts
 │       ├── capabilities/              # feature間境界インターフェース
 │       │   ├── CleaningStatusCapability.ts   # 掃除状態の照会（notification→cleaning-record）
-│       │   └── FloorPlanCapability.ts        # 間取り情報の照会（heatmap→floorplan）
+│       │   └── FloorplanCapability.ts        # 間取り情報の照会（heatmap→floorplan）
 │       └── shared/                    # 機能横断の共通コード
 │           ├── api/                   # 生成されたAPIクライアント（コミット対象外）
 │           ├── components/            # 汎用UIパーツ（Button, Card, Icon ...）
@@ -93,7 +93,7 @@ cleaning-app/
 │       │   ├── presentation/          # FloormapController（APIスタブ実装）
 │       │   ├── application/           # AddRoomUseCase, PlaceFurnitureUseCase ...
 │       │   ├── domain/                # Floormap, Room, Furniture（ドメインモデル）
-│       │   └── infrastructure/        # FloorPlanRepositoryImpl, FloormapMapper（MyBatis）
+│       │   └── infrastructure/        # FloorplanRepositoryImpl, FloormapMapper（MyBatis）
 │       ├── cleaningrecord/            # 掃除記録機能
 │       │   ├── presentation/          # CleaningRecordController
 │       │   ├── application/           # LogCleaningUseCase, GetOverdueAreasUseCase

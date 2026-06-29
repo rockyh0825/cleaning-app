@@ -7,7 +7,7 @@ import { DefaultApi } from '@/shared/api/apis/DefaultApi';
 import type {
     CreateFurnitureInput,
     CreateRoomInput,
-    FloorPlan,
+    Floorplan,
     Furniture,
     Room,
     RoomWithFurniture,
@@ -20,11 +20,11 @@ import type {
  * 生成された DefaultApi を薄くラップし、feature 内の型に変換する。
  * userId は呼び出し元が渡す（MVP では端末保存 UUID）。
  */
-export class FloorPlanRepository {
+export class FloorplanRepository {
     constructor(private readonly api: DefaultApi) {}
 
-    async getFloorPlan(userId: string): Promise<FloorPlan> {
-        const data = await this.api.getFloorPlan({ xUserId: userId });
+    async getFloorplan(userId: string): Promise<Floorplan> {
+        const data = await this.api.getFloorplan({ xUserId: userId });
         return { rooms: data.rooms.map((r) => this.toRoomWithFurniture(r)) };
     }
 

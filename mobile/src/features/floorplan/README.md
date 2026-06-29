@@ -10,24 +10,24 @@
 |---|---|
 | 部屋の追加 | `AddRoomModal` で部屋名・種別（RoomType）を入力して追加 |
 | 家具の追加 | `AddFurnitureModal` で家具名を入力して特定の部屋に追加 |
-| フロアプランの描画 | `FloorPlanCanvas` でグリッド上に部屋・家具を一覧表示 |
+| フロアプランの描画 | `FloorplanCanvas` でグリッド上に部屋・家具を一覧表示 |
 | 部屋・家具の選択 | `RoomShape` / `FurnitureItem` をタップして選択状態を切り替え |
 
 ## 提供する Capability
 
-`FloorPlanCapabilityImpl`（`mobile/src/capabilities/`）を通じて、他の feature（例: heatmap）が部屋・家具情報を読み取れるインターフェースを提供します。
+`FloorplanCapabilityImpl`（`mobile/src/capabilities/`）を通じて、他の feature（例: heatmap）が部屋・家具情報を読み取れるインターフェースを提供します。
 
 ```
 features/floorplan (データ所有)
     ↓ implements
-FloorPlanCapabilityImpl
+FloorplanCapabilityImpl
     ↓ satisfies
-FloorPlanCapability (インターフェース)
+FloorplanCapability (インターフェース)
     ↑ depends on
 features/heatmap（など）
 ```
 
-feature 間の直接 import は eslint-plugin-boundaries によって禁止されており、`FloorPlanCapability` インターフェース経由でのみアクセスできます。
+feature 間の直接 import は eslint-plugin-boundaries によって禁止されており、`FloorplanCapability` インターフェース経由でのみアクセスできます。
 
 ## ディレクトリ構成
 
@@ -36,14 +36,14 @@ features/floorplan/
 ├── components/          # UI コンポーネント（View のみ、hooks に依存）
 │   ├── AddRoomModal.tsx
 │   ├── AddFurnitureModal.tsx
-│   ├── FloorPlanCanvas.tsx  # グリッド描画（Skia）+ Room/Furniture 一覧
+│   ├── FloorplanCanvas.tsx  # グリッド描画（Skia）+ Room/Furniture 一覧
 │   ├── RoomShape.tsx
 │   ├── FurnitureItem.tsx
 │   └── __tests__/
 ├── hooks/               # TanStack Query 統合（楽観的更新）
 │   └── useFloormap.ts
 ├── repositories/        # API アクセス層
-│   └── FloorPlanRepository.ts
+│   └── FloorplanRepository.ts
 ├── usecases/            # ビジネスロジック（React 非依存）
 │   ├── AddRoomUseCase.ts
 │   ├── DeleteRoomUseCase.ts

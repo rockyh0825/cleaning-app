@@ -7,15 +7,15 @@
  * 現時点では stub として any 型でインスタンスを渡す。
  */
 
-import { FloorPlanRepository } from '@/features/floorplan/repositories/FloorPlanRepository';
-import { FloorPlanCapabilityImpl } from '@/features/floorplan/repositories/FloorPlanCapabilityImpl';
-import type { FloorPlanCapability } from '@/capabilities/FloorPlanCapability';
+import { FloorplanRepository } from '@/features/floorplan/repositories/FloorplanRepository';
+import { FloorplanCapabilityImpl } from '@/features/floorplan/repositories/FloorplanCapabilityImpl';
+import type { FloorplanCapability } from '@/capabilities/FloorplanCapability';
 
 // DefaultApi は生成コードのため stub を使用
 // 本番では: import { DefaultApi } from '@/shared/api/apis/DefaultApi';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const apiStub: any = {};
 
-const floorPlanRepository = new FloorPlanRepository(apiStub);
+const floorplanRepository = new FloorplanRepository(apiStub);
 
-export const floorPlanCapability: FloorPlanCapability = new FloorPlanCapabilityImpl(floorPlanRepository);
+export const floorplanCapability: FloorplanCapability = new FloorplanCapabilityImpl(floorplanRepository);

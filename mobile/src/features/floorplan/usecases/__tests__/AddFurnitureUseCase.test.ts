@@ -1,5 +1,5 @@
 import { AddFurnitureUseCase } from '../AddFurnitureUseCase';
-import type { FloorPlanRepository } from '../../repositories/FloorPlanRepository';
+import type { FloorplanRepository } from '../../repositories/FloorplanRepository';
 import type { Furniture, CreateFurnitureInput, RoomWithFurniture } from '../../types';
 
 const mockFurniture: Furniture = {
@@ -29,7 +29,7 @@ const mockRoom: RoomWithFurniture = {
 };
 
 const mockRepository = {
-    getFloorPlan: jest.fn(),
+    getFloorplan: jest.fn(),
     listRooms: jest.fn(),
     createRoom: jest.fn(),
     updateRoom: jest.fn(),
@@ -37,13 +37,13 @@ const mockRepository = {
     createFurniture: jest.fn(),
     updateFurniture: jest.fn(),
     deleteFurniture: jest.fn(),
-} as unknown as FloorPlanRepository;
+} as unknown as FloorplanRepository;
 
 describe('AddFurnitureUseCase', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         (mockRepository.createFurniture as jest.Mock).mockResolvedValue(mockFurniture);
-        (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({ rooms: [mockRoom] });
+        (mockRepository.getFloorplan as jest.Mock).mockResolvedValue({ rooms: [mockRoom] });
     });
 
     it('正常系: 部屋内に家具を追加できる', async () => {

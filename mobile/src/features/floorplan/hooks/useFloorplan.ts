@@ -1,15 +1,15 @@
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import type { FloorPlanRepository } from '../repositories/FloorPlanRepository';
-import type { FloorPlan, CreateRoomInput, Room } from '../types';
+import type { FloorplanRepository } from '../repositories/FloorplanRepository';
+import type { Floorplan, CreateRoomInput, Room } from '../types';
 import { AddRoomUseCase } from '../usecases/AddRoomUseCase';
 import { DeleteRoomUseCase } from '../usecases/DeleteRoomUseCase';
 
 type AddRoomExecutor = { execute: (userId: string, input: CreateRoomInput) => Promise<Room> };
 
-export function buildFloorPlanQuery(userId: string, repository: Pick<FloorPlanRepository, 'getFloorPlan'>) {
+export function buildFloorplanQuery(userId: string, repository: Pick<FloorplanRepository, 'getFloorplan'>) {
     return {
-        queryKey: ['floorPlan', userId] as const,
-        queryFn: () => repository.getFloorPlan(userId),
+        queryKey: ['floorplan', userId] as const,
+        queryFn: () => repository.getFloorplan(userId),
     };
 }
 
@@ -21,9 +21,9 @@ export function buildAddRoomMutationOptions(
     return {
         mutationFn: (input: CreateRoomInput) => useCase.execute(userId, input),
         onMutate: async (input: CreateRoomInput) => {
-            await queryClient.cancelQueries({ queryKey: ['floorPlan', userId] });
-            const previous = queryClient.getQueryData<FloorPlan>(['floorPlan', userId]);
-            queryClient.setQueryData<FloorPlan>(['floorPlan', userId], (old) => ({
+            await queryClient.cancelQueries({ queryKey: ['floorplan', userId] });
+            const previous = queryClient.getQueryData<Floorplan>(['floorplan', userId]);
+            queryClient.setQueryData<Floorplan>(['floorplan', userId], (old) => ({
                 rooms: [
                     ...(old?.rooms ?? []),
                     {
@@ -45,20 +45,20 @@ export function buildAddRoomMutationOptions(
         onError: (
             _err: unknown,
             _input: CreateRoomInput,
-            context: { previous: FloorPlan | undefined } | undefined,
+            context: { previous: Floorplan | undefined } | undefined,
         ) => {
-            queryClient.setQueryData<FloorPlan>(['floorPlan', userId], context?.previous);
+            queryClient.setQueryData<Floorplan>(['floorplan', userId], context?.previous);
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['floorPlan', userId] });
+            queryClient.invalidateQueries({ queryKey: ['floorplan', userId] });
         },
     };
 }
 
-export function useFloorPlan(userId: string, repository: FloorPlanRepository) {
+export function useFloorplan(userId: string, repository: FloorplanRepository) {
     const queryClient = useQueryClient();
 
-    const floorPlan = useQuery(buildFloorPlanQuery(userId, repository));
+    const floorplan = useQuery(buildFloorplanQuery(userId, repository));
 
     const addRoom = useMutation(
         buildAddRoomMutationOptions(queryClient, userId, new AddRoomUseCase(repository)),
@@ -67,9 +67,9 @@ export function useFloorPlan(userId: string, repository: FloorPlanRepository) {
     const deleteRoom = useMutation({
         mutationFn: (roomId: string) => new DeleteRoomUseCase(repository).execute(userId, roomId),
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['floorPlan', userId] });
+            queryClient.invalidateQueries({ queryKey: ['floorplan', userId] });
         },
     });
 
-    return { floorPlan, addRoom, deleteRoom };
+    return { floorplan, addRoom, deleteRoom };
 }

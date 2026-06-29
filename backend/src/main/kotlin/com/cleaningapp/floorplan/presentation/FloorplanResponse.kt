@@ -1,6 +1,6 @@
 package com.cleaningapp.floorplan.presentation
 
-import com.cleaningapp.floorplan.application.FloorPlanResult
+import com.cleaningapp.floorplan.application.FloorplanResult
 import com.cleaningapp.floorplan.domain.Furniture
 import com.cleaningapp.floorplan.domain.Room
 import com.cleaningapp.floorplan.domain.RoomType
@@ -39,12 +39,12 @@ data class RoomWithFurnitureResponse(
     }
 }
 
-data class FloorPlanResponse(
+data class FloorplanResponse(
     val rooms: List<RoomWithFurnitureResponse>,
 ) {
     companion object {
-        fun from(result: FloorPlanResult): FloorPlanResponse =
-            FloorPlanResponse(
+        fun from(result: FloorplanResult): FloorplanResponse =
+            FloorplanResponse(
                 rooms =
                     result.rooms.map { (room, furniture) ->
                         RoomWithFurnitureResponse.from(room, furniture)
