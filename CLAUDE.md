@@ -2,6 +2,30 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Worktree ルール
+
+他の作業との干渉を防ぐため、**作業開始時に必ず worktree を作成し、作業終了時に必ず削除**してください。
+
+### 作業開始時
+
+```bash
+git worktree add /tmp/worktree-<feature-name> -b <branch-name>
+```
+
+- worktree のパスは `/tmp/worktree-<feature-name>` の形式を推奨
+- ブランチ名はブランチ戦略（`tech.md` 参照）に従う
+
+### 作業終了時
+
+```bash
+git worktree remove /tmp/worktree-<feature-name>
+```
+
+- PR マージ後やタスク完了後は必ず remove する
+- ロックされている場合は `git worktree remove --force -f` を使用する
+
+---
+
 ## 実装の流れとTDDのルール
 
 すべての新機能開発およびバグ修正において、テスト駆動開発（TDD）を厳格に適用してください。対応するテストが存在しない状態でプロダクションコードを先に書いてはいけません。
