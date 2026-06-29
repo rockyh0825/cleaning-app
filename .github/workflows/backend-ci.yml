@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      - "api/openapi.yaml"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     # paths フィルターを外す
@@ -45,6 +46,7 @@ jobs:
           filters: |
             backend:
               - 'backend/**'
+              - 'api/openapi.yaml'
               - '.github/workflows/backend-ci.yml'
 
       - name: Set up JDK 21

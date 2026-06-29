@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "mobile/**"
+      - "api/openapi.yaml"
       - ".github/workflows/mobile-ci.yml"
   pull_request:
     # paths フィルターを外す
@@ -30,6 +31,7 @@ jobs:
           filters: |
             mobile:
               - 'mobile/**'
+              - 'api/openapi.yaml'
               - '.github/workflows/mobile-ci.yml'
 
       - name: Set up Node.js
