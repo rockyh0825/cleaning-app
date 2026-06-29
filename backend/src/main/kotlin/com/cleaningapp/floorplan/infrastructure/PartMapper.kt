@@ -50,9 +50,25 @@ interface PartMapper {
     )
     fun update(part: Part)
 
+    @Select(
+        """
+        SELECT id, owner_type, owner_id, name, recommended_cycle_days, last_cleaned_at, created_at, updated_at
+        FROM part
+        WHERE id = #{id}
+        """,
+    )
+    fun selectById(
+        @Param("id") id: UUID,
+    ): Part?
+
     @Delete("DELETE FROM part WHERE owner_type = #{ownerType} AND owner_id = #{ownerId}")
     fun deleteByOwnerId(
         @Param("ownerType") ownerType: OwnerType,
         @Param("ownerId") ownerId: UUID,
+    )
+
+    @Delete("DELETE FROM part WHERE id = #{id}")
+    fun deleteById(
+        @Param("id") id: UUID,
     )
 }
