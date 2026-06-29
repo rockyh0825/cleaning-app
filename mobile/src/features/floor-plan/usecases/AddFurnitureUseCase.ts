@@ -6,8 +6,8 @@ export class AddFurnitureUseCase {
     constructor(private readonly repository: FloorPlanRepository) {}
 
     async execute(userId: string, roomId: string, input: CreateFurnitureInput): Promise<Furniture> {
-        const floorplan = await this.repository.getFloorPlan(userId);
-        const room = floorplan.rooms.find((r) => r.id === roomId);
+        const floorPlan = await this.repository.getFloorPlan(userId);
+        const room = floorPlan.rooms.find((r) => r.id === roomId);
 
         if (!room) {
             return this.repository.createFurniture(userId, roomId, input);

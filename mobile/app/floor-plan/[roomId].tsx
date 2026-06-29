@@ -20,7 +20,7 @@ const EMPTY_FLOORPLAN: FloorPlan = { rooms: [] };
 export default function RoomDetailScreen({ roomId, userId }: Props) {
     const [isModalVisible, setIsModalVisible] = useState(false);
 
-    const { floorplan, addRoom: _addRoom } = useFloorPlan(userId, repository);
+    const { floorPlan, addRoom: _addRoom } = useFloorPlan(userId, repository);
 
     const floorPlanData = floorPlan.data ?? EMPTY_FLOORPLAN;
     const room = floorPlanData.rooms.find((r) => r.id === roomId);
@@ -37,7 +37,7 @@ export default function RoomDetailScreen({ roomId, userId }: Props) {
 
     return (
         <View style={styles.container}>
-            <FloorPlanCanvas floorplan={singleRoomPlan} />
+            <FloorPlanCanvas floorPlan={singleRoomPlan} />
 
             <TouchableOpacity
                 style={styles.addButton}

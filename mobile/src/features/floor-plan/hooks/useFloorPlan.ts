@@ -58,7 +58,7 @@ export function buildAddRoomMutationOptions(
 export function useFloorPlan(userId: string, repository: FloorPlanRepository) {
     const queryClient = useQueryClient();
 
-    const floorplan = useQuery(buildFloorPlanQuery(userId, repository));
+    const floorPlan = useQuery(buildFloorPlanQuery(userId, repository));
 
     const addRoom = useMutation(
         buildAddRoomMutationOptions(queryClient, userId, new AddRoomUseCase(repository)),
@@ -71,5 +71,5 @@ export function useFloorPlan(userId: string, repository: FloorPlanRepository) {
         },
     });
 
-    return { floorplan, addRoom, deleteRoom };
+    return { floorPlan, addRoom, deleteRoom };
 }

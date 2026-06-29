@@ -12,14 +12,14 @@ export class UpdateFurnitureUseCase {
             return this.repository.updateFurniture(userId, furnitureId, input);
         }
 
-        const floorplan = await this.repository.getFloorPlan(userId);
-        const current = floorplan.rooms.flatMap((r) => r.furniture).find((f) => f.id === furnitureId);
+        const floorPlan = await this.repository.getFloorPlan(userId);
+        const current = floorPlan.rooms.flatMap((r) => r.furniture).find((f) => f.id === furnitureId);
 
         if (!current) {
             return this.repository.updateFurniture(userId, furnitureId, input);
         }
 
-        const room = floorplan.rooms.find((r) => r.id === current.roomId);
+        const room = floorPlan.rooms.find((r) => r.id === current.roomId);
 
         if (!room) {
             return this.repository.updateFurniture(userId, furnitureId, input);

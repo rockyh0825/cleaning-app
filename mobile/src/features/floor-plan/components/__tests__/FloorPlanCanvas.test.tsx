@@ -40,7 +40,7 @@ describe('FloorPlanCanvas', () => {
     it('renders_without_crashing_with_empty_floor_plan', () => {
         // Arrange & Act & Assert
         const { toJSON } = render(
-            <FloorPlanCanvas floorplan={emptyFloorPlan} />,
+            <FloorPlanCanvas floorPlan={emptyFloorPlan} />,
         );
 
         expect(toJSON()).toBeTruthy();
@@ -50,7 +50,7 @@ describe('FloorPlanCanvas', () => {
         // Arrange & Act
         const { toJSON } = render(
             <FloorPlanCanvas
-                floorplan={floorplanWithRoom}
+                floorPlan={floorplanWithRoom}
                 onRoomPress={jest.fn()}
                 onFurniturePress={jest.fn()}
             />,
@@ -63,7 +63,7 @@ describe('FloorPlanCanvas', () => {
     it('renders_with_custom_cell_size', () => {
         // Arrange & Act & Assert
         const { toJSON } = render(
-            <FloorPlanCanvas floorplan={emptyFloorPlan} cellSize={60} />,
+            <FloorPlanCanvas floorPlan={emptyFloorPlan} cellSize={60} />,
         );
 
         expect(toJSON()).toBeTruthy();

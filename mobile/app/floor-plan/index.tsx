@@ -39,7 +39,7 @@ export default function FloorPlanIndexScreen() {
         initUserId();
     }, []);
 
-    const { floorplan, addRoom } = useFloorPlan(userId ?? '', repository);
+    const { floorPlan, addRoom } = useFloorPlan(userId ?? '', repository);
 
     const rooms = floorPlan.data?.rooms ?? [];
 
@@ -63,7 +63,7 @@ export default function FloorPlanIndexScreen() {
                     <Text style={styles.emptySubText}>「部屋を追加」ボタンで始めましょう</Text>
                 </View>
             ) : (
-                <FloorPlanCanvas floorplan={floorPlan.data!} />
+                <FloorPlanCanvas floorPlan={floorPlan.data!} />
             )}
 
             <TouchableOpacity

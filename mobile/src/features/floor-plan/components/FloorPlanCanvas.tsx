@@ -28,14 +28,14 @@ const GRID_COLS = 20;
 const GRID_ROWS = 20;
 
 type Props = {
-    floorplan: FloorPlan;
+    floorPlan: FloorPlan;
     cellSize?: number;
     onRoomPress?: (roomId: string) => void;
     onFurniturePress?: (furnitureId: string) => void;
 };
 
 export function FloorPlanCanvas({
-    floorplan,
+    floorPlan,
     cellSize = DEFAULT_CELL_SIZE,
     onRoomPress,
     onFurniturePress,
@@ -59,12 +59,12 @@ export function FloorPlanCanvas({
 
     return (
         <View
-            testID="floorplan-canvas"
+            testID="floorPlan-canvas"
             style={[styles.container, { width: canvasWidth, height: canvasHeight }]}
         >
             {renderGrid(canvasWidth, canvasHeight, cellSize)}
 
-            {floorplan.rooms.map((room) => (
+            {floorPlan.rooms.map((room) => (
                 <React.Fragment key={room.id}>
                     <RoomShape
                         room={room}

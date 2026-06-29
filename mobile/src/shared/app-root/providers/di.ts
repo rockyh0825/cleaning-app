@@ -18,4 +18,4 @@ const apiStub: any = {};
 
 const floorPlanRepository = new FloorPlanRepository(apiStub);
 
-export const floorPlanCapability: FloorPlanCapability = new FloorPlanCapabilityImpl(floorplanRepository);
+export const floorPlanCapability: FloorPlanCapability = new FloorPlanCapabilityImpl(floorPlanRepository);

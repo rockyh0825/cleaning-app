@@ -38,7 +38,7 @@ describe('FloorPlanIndexScreen', () => {
     it('shows_empty_state_when_floor_plan_has_no_rooms', async () => {
         // Arrange
         mockUseLayout.mockReturnValue({
-            floorplan: { data: { rooms: [] }, isLoading: false, isError: false },
+            floorPlan: { data: { rooms: [] }, isLoading: false, isError: false },
             addRoom: { mutate: jest.fn() },
             deleteRoom: { mutate: jest.fn() },
         });
@@ -56,7 +56,7 @@ describe('FloorPlanIndexScreen', () => {
     it('saves_new_uuid_to_async_storage_when_no_uuid_exists', async () => {
         // Arrange
         mockUseLayout.mockReturnValue({
-            floorplan: { data: { rooms: [] }, isLoading: false, isError: false },
+            floorPlan: { data: { rooms: [] }, isLoading: false, isError: false },
             addRoom: { mutate: jest.fn() },
             deleteRoom: { mutate: jest.fn() },
         });

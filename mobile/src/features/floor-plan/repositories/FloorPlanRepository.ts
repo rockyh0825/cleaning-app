@@ -24,7 +24,7 @@ export class FloorPlanRepository {
     constructor(private readonly api: DefaultApi) {}
 
     async getFloorPlan(userId: string): Promise<FloorPlan> {
-        const data = await this.api.getFloorMap({ xUserId: userId });
+        const data = await this.api.getFloorPlan({ xUserId: userId });
         return { rooms: data.rooms.map((r: ApiRoomWithFurniture) => this.toRoomWithFurniture(r)) };
     }
 
