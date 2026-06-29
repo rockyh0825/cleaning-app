@@ -27,6 +27,9 @@ if [ -z "$LOCAL_SHA" ] || [ "$LOCAL_SHA" = "$ZERO" ]; then
   exit 0
 fi
 
+# cd よりも先に確定させる（GIT_DIR が設定された状態で cd 後に呼ぶと誤ったパスになる）
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
 if [ "$REMOTE_SHA" = "$ZERO" ]; then
   # 新規ブランチ：main との差分で変更ファイルを検出
   BASE=$(git merge-base "$LOCAL_SHA" main 2>/dev/null || true)
@@ -43,10 +46,10 @@ fi
 BACKEND_CHANGED=false
 MOBILE_CHANGED=false
 while IFS= read -r f; do
-  if [[ "$f" == backend/* || "$f" == .github/workflows/backend-ci.yml ]]; then
+  if [[ "$f" == backend/* || "$f" == api/openapi.yaml || "$f" == .github/workflows/backend-ci.yml ]]; then
     BACKEND_CHANGED=true
   fi
-  if [[ "$f" == mobile/* || "$f" == .github/workflows/mobile-ci.yml ]]; then
+  if [[ "$f" == mobile/* || "$f" == api/openapi.yaml || "$f" == .github/workflows/mobile-ci.yml ]]; then
     MOBILE_CHANGED=true
   fi
 done <<< "$CHANGED"
@@ -61,7 +64,7 @@ fi
 # ============================================================
 if [ "$BACKEND_CHANGED" = true ]; then
   info "backend の変更を検出。CI チェックを実行します..."
-  cd "$(git rev-parse --show-toplevel)/backend"
+  cd "$REPO_ROOT/backend"
 
   # --- ktlint ---
   info "ktlintCheck を実行中..."
@@ -101,7 +104,25 @@ fi
 # ============================================================
 if [ "$MOBILE_CHANGED" = true ]; then
   info "mobile の変更を検出。CI チェックを実行します..."
-  cd "$(git rev-parse --show-toplevel)/mobile"
+  cd "$REPO_ROOT/mobile"
+
+  # node_modules が未インストールの場合はインストール（worktree 利用時など）
+  if [[ ! -d node_modules ]]; then
+    info "node_modules が見つかりません。npm ci を実行中..."
+    npm ci --legacy-peer-deps --silent
+  fi
+
+  # --- TypeScript API クライアント生成 ---
+  info "TypeScript API クライアントを生成中..."
+  if ! npx --yes @openapitools/openapi-generator-cli generate \
+      --input-spec "$REPO_ROOT/api/openapi.yaml" \
+      --generator-name typescript-fetch \
+      --output "$REPO_ROOT/mobile/src/shared/api" \
+      --additional-properties=typescriptThreePlus=true; then
+    error "API クライアントの生成に失敗しました。"
+    exit 1
+  fi
+  success "API クライアント生成 OK"
 
   # --- ESLint ---
   info "ESLint を実行中..."
