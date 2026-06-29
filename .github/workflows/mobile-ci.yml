@@ -43,7 +43,7 @@ jobs:
       - name: Install dependencies
         if: steps.filter.outputs.mobile == 'true'
         working-directory: mobile
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: ESLint
         if: steps.filter.outputs.mobile == 'true'
