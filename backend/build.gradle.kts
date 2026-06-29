@@ -59,7 +59,7 @@ tasks.withType<Test> {
 
 openApiGenerate {
     generatorName.set("kotlin-spring")
-    inputSpec.set("${rootDir}/../api/openapi.yaml")
+    inputSpec.set("$rootDir/../api/openapi.yaml")
     outputDir.set("${layout.buildDirectory.get()}/generated")
     additionalProperties.set(
         mapOf(
