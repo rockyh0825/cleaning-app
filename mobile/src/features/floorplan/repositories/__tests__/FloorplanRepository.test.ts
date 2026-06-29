@@ -73,7 +73,7 @@ const makeApiFurniture = (overrides: Partial<ApiFurniture> = {}): ApiFurniture =
 
 const mockApi = () =>
     ({
-        getFloorplan: jest.fn(),
+        getFloorMap: jest.fn(),
         listRooms: jest.fn(),
         createRoom: jest.fn(),
         updateRoom: jest.fn(),
@@ -108,7 +108,7 @@ describe('FloorplanRepository', () => {
             const floorplan: ApiFloorplan = {
                 rooms: [{ ...makeApiRoom(), furniture: [furniture] }],
             };
-            api.getFloorplan.mockResolvedValue(floorplan);
+            api.getFloorMap.mockResolvedValue(floorplan);
             const repo = new FloorplanRepository(api);
 
             // Act
@@ -125,20 +125,20 @@ describe('FloorplanRepository', () => {
         it('calls_api_with_correct_user_id', async () => {
             // Arrange
             const api = mockApi();
-            api.getFloorplan.mockResolvedValue({ rooms: [] });
+            api.getFloorMap.mockResolvedValue({ rooms: [] });
             const repo = new FloorplanRepository(api);
 
             // Act
             await repo.getFloorplan(userId);
 
             // Assert
-            expect(api.getFloorplan).toHaveBeenCalledWith({ xUserId: userId });
+            expect(api.getFloorMap).toHaveBeenCalledWith({ xUserId: userId });
         });
 
         it('returns_empty_rooms_when_floor_plan_has_no_rooms', async () => {
             // Arrange
             const api = mockApi();
-            api.getFloorplan.mockResolvedValue({ rooms: [] });
+            api.getFloorMap.mockResolvedValue({ rooms: [] });
             const repo = new FloorplanRepository(api);
 
             // Act

@@ -41,51 +41,91 @@ fi
 
 # 変更ファイルを行単位で走査（スペース含むファイル名対応）
 BACKEND_CHANGED=false
+MOBILE_CHANGED=false
 while IFS= read -r f; do
   if [[ "$f" == backend/* || "$f" == .github/workflows/backend-ci.yml ]]; then
     BACKEND_CHANGED=true
-    break
+  fi
+  if [[ "$f" == mobile/* || "$f" == .github/workflows/mobile-ci.yml ]]; then
+    MOBILE_CHANGED=true
   fi
 done <<< "$CHANGED"
 
-if [ "$BACKEND_CHANGED" = false ]; then
-  success "backend の変更なし。チェックをスキップします。"
+if [ "$BACKEND_CHANGED" = false ] && [ "$MOBILE_CHANGED" = false ]; then
+  success "backend/mobile の変更なし。チェックをスキップします。"
   exit 0
 fi
 
-info "backend の変更を検出。CI チェックを実行します..."
-cd "$(git rev-parse --show-toplevel)/backend"
+# ============================================================
+# Backend チェック
+# ============================================================
+if [ "$BACKEND_CHANGED" = true ]; then
+  info "backend の変更を検出。CI チェックを実行します..."
+  cd "$(git rev-parse --show-toplevel)/backend"
 
-# --- ktlint ---
-info "ktlintCheck を実行中..."
-if ! ./gradlew ktlintCheck -q; then
-  error "ktlintCheck に失敗しました。./gradlew ktlintFormat で修正できます。"
-  exit 1
-fi
-success "ktlintCheck OK"
-
-# --- Detekt ---
-info "detekt を実行中..."
-if ! ./gradlew detekt -q; then
-  error "detekt に失敗しました。レポートを確認してください: build/reports/detekt/"
-  exit 1
-fi
-success "detekt OK"
-
-# --- Test（PostgreSQL が起動中の場合のみ）---
-if nc -z localhost 5432 2>/dev/null; then
-  info "PostgreSQL を検出。テストを実行中..."
-  if ! ./gradlew test -q \
-      -Dspring.datasource.url=jdbc:postgresql://localhost:5432/cleaning_app \
-      -Dspring.datasource.username=cleaning \
-      -Dspring.datasource.password=cleaning; then
-    error "テストに失敗しました。レポートを確認してください: build/reports/tests/"
+  # --- ktlint ---
+  info "ktlintCheck を実行中..."
+  if ! ./gradlew ktlintCheck -q; then
+    error "ktlintCheck に失敗しました。./gradlew ktlintFormat で修正できます。"
     exit 1
   fi
-  success "テスト OK"
-else
-  warn "PostgreSQL が localhost:5432 で見つかりません。テストをスキップします。"
-  warn "CI でテストが実行されます。"
+  success "ktlintCheck OK"
+
+  # --- Detekt ---
+  info "detekt を実行中..."
+  if ! ./gradlew detekt -q; then
+    error "detekt に失敗しました。レポートを確認してください: build/reports/detekt/"
+    exit 1
+  fi
+  success "detekt OK"
+
+  # --- Test（PostgreSQL が起動中の場合のみ）---
+  if nc -z localhost 5432 2>/dev/null; then
+    info "PostgreSQL を検出。テストを実行中..."
+    if ! ./gradlew test -q \
+        -Dspring.datasource.url=jdbc:postgresql://localhost:5432/cleaning_app \
+        -Dspring.datasource.username=cleaning \
+        -Dspring.datasource.password=cleaning; then
+      error "テストに失敗しました。レポートを確認してください: build/reports/tests/"
+      exit 1
+    fi
+    success "テスト OK"
+  else
+    warn "PostgreSQL が localhost:5432 で見つかりません。テストをスキップします。"
+    warn "CI でテストが実行されます。"
+  fi
+fi
+
+# ============================================================
+# Mobile チェック
+# ============================================================
+if [ "$MOBILE_CHANGED" = true ]; then
+  info "mobile の変更を検出。CI チェックを実行します..."
+  cd "$(git rev-parse --show-toplevel)/mobile"
+
+  # --- ESLint ---
+  info "ESLint を実行中..."
+  if ! npm run lint; then
+    error "ESLint に失敗しました。npx eslint src/ --fix で自動修正できます。"
+    exit 1
+  fi
+  success "ESLint OK"
+
+  # --- TypeScript 型チェック ---
+  info "TypeScript 型チェックを実行中..."
+  if ! npx tsc --noEmit; then
+    error "TypeScript 型チェックに失敗しました。"
+    exit 1
+  fi
+  success "TypeScript OK"
+
+  # --- Jest ---
+  info "Jest を実行中..."
+  if ! npm test; then
+    error "テストに失敗しました。"
+    exit 1
+  fi
+  success "Jest OK"
 fi
 
 success "すべてのチェックが通りました。プッシュを続行します。"
