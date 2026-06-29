@@ -66,6 +66,14 @@ if [ "$BACKEND_CHANGED" = true ]; then
   info "backend の変更を検出。CI チェックを実行します..."
   cd "$REPO_ROOT/backend"
 
+  # --- API スタブ生成 ---
+  info "Kotlin API スタブを生成中..."
+  if ! ./gradlew openApiGenerate -q; then
+    error "API スタブの生成に失敗しました。"
+    exit 1
+  fi
+  success "API スタブ生成 OK"
+
   # --- ktlint ---
   info "ktlintCheck を実行中..."
   if ! ./gradlew ktlintCheck -q; then
@@ -114,11 +122,7 @@ if [ "$MOBILE_CHANGED" = true ]; then
 
   # --- TypeScript API クライアント生成 ---
   info "TypeScript API クライアントを生成中..."
-  if ! npx --yes @openapitools/openapi-generator-cli generate \
-      --input-spec "$REPO_ROOT/api/openapi.yaml" \
-      --generator-name typescript-fetch \
-      --output "$REPO_ROOT/mobile/src/shared/api" \
-      --additional-properties=typescriptThreePlus=true; then
+  if ! npm run generate:api; then
     error "API クライアントの生成に失敗しました。"
     exit 1
   fi
