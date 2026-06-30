@@ -1,5 +1,6 @@
 package com.cleaningapp.capabilities
 
+import com.cleaningapp.floorplan.domain.OwnerType
 import com.cleaningapp.floorplan.domain.Part
 import java.util.UUID
 
@@ -12,6 +13,15 @@ import java.util.UUID
  */
 interface PartManagementPort {
     fun findById(id: UUID): Part?
+
+    /** ownerType と ownerId の組み合わせで一致するパーツを取得する */
+    fun findByOwnerId(
+        ownerType: OwnerType,
+        ownerId: UUID,
+    ): List<Part>
+
+    /** userId に紐づくすべてのパーツ（ROOM・FURNITURE 両方）を取得する */
+    fun findAllByUserId(userId: UUID): List<Part>
 
     fun create(part: Part): Part
 

@@ -18,6 +18,9 @@ interface PartRepository {
         ownerId: UUID,
     ): List<Part>
 
+    /** userId に紐づく room / furniture のすべてのパーツを返す（JOIN クエリ） */
+    fun findAllByUserId(userId: UUID): List<Part>
+
     fun create(part: Part): Part
 
     fun saveAll(parts: List<Part>)
