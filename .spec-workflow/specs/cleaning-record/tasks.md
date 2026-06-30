@@ -38,7 +38,7 @@
     - 境界値: lastCleanedAt が null → elapsedRatio を最大値として扱う
   - _Requirements: 1, 5_
 
-- [ ] 5. infrastructure層: MyBatis Mapper（CleaningRecord / Part）
+- [x] 5. infrastructure層: MyBatis Mapper（CleaningRecord / Part）
   - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/infrastructure/{CleaningRecordMapper,CleaningRecordRepositoryImpl}.kt
   - 記録のCRUD、履歴の絞り込み・ページング、`SELECT MAX(cleaned_at)` での最終掃除日時取得
   - Purpose: データアクセス実装
@@ -50,7 +50,7 @@
     - 正常系: part削除で記録が連鎖削除される（FK CASCADE）
   - _Requirements: 1, 2, 3_
 
-- [ ] 6. application層: RecomputeLastCleanedService と各ユースケース
+- [x] 6. application層: RecomputeLastCleanedService と各ユースケース
   - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/application/{RecomputeLastCleanedService,LogCleaningUseCase,EditRecordUseCase,DeleteRecordUseCase,ManagePartUseCase}.kt
   - RecomputeLastCleanedServiceに再計算を一元化。LogCleaningは複数partを1トランザクションで記録、各操作後に再計算
   - Purpose: ビジネスロジックとトランザクション境界
@@ -62,7 +62,7 @@
     - 正常系: `RecomputeLastCleanedService` → MAX(cleaned_at) を取得してpartのlastCleanedAtを更新する
   - _Requirements: 1, 2, 3, 4_
 
-- [ ] 7. application層: CleaningStatusPort と実装（他feature公開）
+- [x] 7. application層: CleaningStatusPort と実装（他feature公開）
   - File: backend/src/main/kotlin/com/cleaningapp/capabilities/CleaningStatusPort.kt, backend/src/main/kotlin/com/cleaningapp/cleaningrecord/application/CleaningStatusPortImpl.kt
   - getLastCleanedAt(areaId) / getOverdueAreas() を提供
   - Purpose: heatmap・notificationへの掃除状態公開
@@ -73,7 +73,7 @@
     - 境界値: 記録が一件もない場合 → null を返す
   - _Requirements: 5_
 
-- [ ] 8. presentation層: CleaningRecordController と PartController
+- [x] 8. presentation層: CleaningRecordController と PartController
   - File: backend/src/main/kotlin/com/cleaningapp/cleaningrecord/presentation/{CleaningRecordController,PartController}.kt
   - 生成スタブ実装、UUIDヘッダでスコープ限定、バリデーション
   - Purpose: HTTP入出力
@@ -89,7 +89,7 @@
 
 ## フェーズ3: モバイル（Expo / React Native）
 
-- [ ] 9. features/cleaning-record: types.ts と CleaningRecordRepository
+- [x] 9. features/cleaning-record: types.ts と CleaningRecordRepository
   - File: mobile/src/features/cleaning-record/{types.ts, repositories/CleaningRecordRepository.ts}
   - 生成クライアントをラップした記録CRUD・パーツ管理の実装
   - Purpose: データアクセス層
@@ -101,7 +101,7 @@
   - _Leverage: mobile/src/shared/api_
   - _Requirements: 1, 2, 3, 4_
 
-- [ ] 10. features/cleaning-record/usecases
+- [x] 10. features/cleaning-record/usecases
   - File: mobile/src/features/cleaning-record/usecases/{LogCleaningUseCase,EditRecordUseCase,DeleteRecordUseCase,ManagePartUseCase}.ts
   - Purpose: React非依存のビジネスロジック
   - **Red**: `usecases/__tests__/*.test.ts` を先に作成し `npx jest src/features/cleaning-record/usecases` で失敗を確認
@@ -111,7 +111,7 @@
     - 正常系: `ManagePartUseCase.addPart` → repository.createPart が呼ばれ Part を返す
   - _Requirements: 1, 3, 4_
 
-- [ ] 11. features/cleaning-record/hooks: useLogCleaning / useCleaningHistory
+- [x] 11. features/cleaning-record/hooks: useLogCleaning / useCleaningHistory
   - File: mobile/src/features/cleaning-record/hooks/{useLogCleaning,useCleaningHistory}.ts
   - TanStack Queryで履歴取得、useMutationで記録/修正/削除の楽観的更新とロールバック
   - Purpose: UIとユースケースの橋渡し
@@ -123,7 +123,7 @@
   - _Leverage: TanStack Query_
   - _Requirements: 1, 2, 3_
 
-- [ ] 12. features/cleaning-record/components: PartChecklist と CleaningTimeline
+- [x] 12. features/cleaning-record/components: PartChecklist と CleaningTimeline
   - File: mobile/src/features/cleaning-record/components/{PartChecklist,CleaningTimeline,RecordButton}.tsx
   - 複数パーツの一括チェックUI（3タップ目標）、新しい順タイムライン・絞り込み・修正/削除操作
   - Purpose: 視覚操作によるUI
@@ -146,7 +146,7 @@
     - 正常系: エリア詳細画面に PartChecklist が表示される
   - _Requirements: 1, 2_
 
-- [ ] 14. CleaningStatusCapability と DI配線
+- [x] 14. CleaningStatusCapability と DI配線
   - File: mobile/src/capabilities/CleaningStatusCapability.ts, mobile/src/features/cleaning-record/repositories/CleaningStatusCapabilityImpl.ts, mobile/src/shared/app-root/providers/di.ts
   - heatmap・notificationが掃除状態を読むための境界インターフェースと実装の配線
   - Purpose: feature間依存の逆転
