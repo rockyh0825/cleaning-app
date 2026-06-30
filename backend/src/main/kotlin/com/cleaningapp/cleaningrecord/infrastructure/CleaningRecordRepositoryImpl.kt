@@ -33,6 +33,15 @@ class CleaningRecordRepositoryImpl(
         return cleaningRecordMapper.selectByPartId(partId, pageSize, offset)
     }
 
+    override fun findByUserId(
+        userId: UUID,
+        page: Int,
+        pageSize: Int,
+    ): List<CleaningRecord> {
+        val offset = page * pageSize
+        return cleaningRecordMapper.selectByUserId(userId, pageSize, offset)
+    }
+
     override fun findMaxCleanedAtByPartId(partId: UUID): Instant? =
         cleaningRecordMapper.selectMaxCleanedAtByPartId(partId)
 
