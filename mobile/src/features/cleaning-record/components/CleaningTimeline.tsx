@@ -6,36 +6,30 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
-import type { CleaningRecord, UpdateRecordInput } from "../types";
+import type { CleaningRecord } from "../types";
 
 type CleaningTimelineProps = {
   records: CleaningRecord[];
   onDelete?: (recordId: string) => void;
-  onEdit?: (recordId: string, input: UpdateRecordInput) => void;
 };
 
 function formatDate(date: Date): string {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${year}/${month}/${day} ${hours}:${minutes}`;
 }
 
 // cleanedAt の降順（新しい順）でソート
 function sortByCleanedAtDesc(records: CleaningRecord[]): CleaningRecord[] {
   return [...records].sort(
-    (a, b) => new Date(b.cleanedAt).getTime() - new Date(a.cleanedAt).getTime(),
+    (a, b) => b.cleanedAt.getTime() - a.cleanedAt.getTime(),
   );
 }
 
-export function CleaningTimeline({
-  records,
-  onDelete,
-  onEdit: _onEdit,
-}: CleaningTimelineProps) {
+export function CleaningTimeline({ records, onDelete }: CleaningTimelineProps) {
   if (records.length === 0) {
     return (
       <View testID="empty-state" style={styles.emptyContainer}>

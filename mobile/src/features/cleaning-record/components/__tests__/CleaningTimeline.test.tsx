@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react-native";
+import { render, screen, fireEvent, within } from "@testing-library/react-native";
 import { CleaningTimeline } from "../CleaningTimeline";
 import type { CleaningRecord } from "../../types";
 
@@ -21,15 +21,15 @@ describe("CleaningTimeline", () => {
     const records: CleaningRecord[] = [
       makeRecord({
         id: "record-old",
-        cleanedAt: new Date("2024-05-01T10:00:00Z"),
+        cleanedAt: new Date("2024-05-01T12:00:00Z"),
       }),
       makeRecord({
         id: "record-new",
-        cleanedAt: new Date("2024-06-15T10:00:00Z"),
+        cleanedAt: new Date("2024-06-15T12:00:00Z"),
       }),
       makeRecord({
         id: "record-mid",
-        cleanedAt: new Date("2024-06-01T10:00:00Z"),
+        cleanedAt: new Date("2024-06-01T12:00:00Z"),
       }),
     ];
     const onDelete = jest.fn();
@@ -37,12 +37,12 @@ describe("CleaningTimeline", () => {
     // Act
     render(<CleaningTimeline records={records} onDelete={onDelete} />);
 
-    // Assert: 各記録のtestIdが降順（新→古）で並んでいること
+    // Assert: 削除ボタンの testID（record-id を含む）で表示順（新→古）を検証する
     const items = screen.getAllByTestId("timeline-item");
-    expect(items[0].props.testID).toBe("timeline-item");
-    // 最初のアイテムが最新のもの（record-new）
-    const firstItemText = screen.getAllByTestId("timeline-item-date")[0];
-    expect(firstItemText.props.children).toContain("2024");
+    expect(items).toHaveLength(3);
+    within(items[0]).getByTestId("delete-button-record-new");
+    within(items[1]).getByTestId("delete-button-record-mid");
+    within(items[2]).getByTestId("delete-button-record-old");
   });
 
   it("calls_onDelete_with_record_id_when_delete_button_pressed", () => {
