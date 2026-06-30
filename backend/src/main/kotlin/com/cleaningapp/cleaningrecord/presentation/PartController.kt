@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
@@ -20,12 +21,13 @@ import java.util.UUID
  * X-User-Id ヘッダでユーザーを識別する（MVP の認証なし方式）。
  */
 @RestController
+@RequestMapping("/parts")
 class PartController(
     private val createPartUseCase: CreatePartUseCase,
     private val updatePartUseCase: UpdatePartUseCase,
     private val deletePartUseCase: DeletePartUseCase,
 ) {
-    @PostMapping("/parts")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun create(
         @RequestHeader("X-User-Id") userId: UUID,
@@ -42,7 +44,7 @@ class PartController(
         return PartResponse.from(part)
     }
 
-    @PatchMapping("/parts/{partId}")
+    @PatchMapping("/{partId}")
     fun update(
         @RequestHeader("X-User-Id") userId: UUID,
         @PathVariable partId: UUID,
@@ -58,7 +60,7 @@ class PartController(
         return PartResponse.from(part)
     }
 
-    @DeleteMapping("/parts/{partId}")
+    @DeleteMapping("/{partId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun delete(
         @RequestHeader("X-User-Id") userId: UUID,

@@ -328,6 +328,10 @@ components:
             - type: string
             - type: 'null'
           description: 掃除メモ
+        clearNote:
+          type: boolean
+          description: true を指定するとメモを null にクリアする。note と同時に指定した場合は clearNote が優先
+          default: false
 
     # 掃除記録の一覧（ページング付き）
     CleaningRecordList:
