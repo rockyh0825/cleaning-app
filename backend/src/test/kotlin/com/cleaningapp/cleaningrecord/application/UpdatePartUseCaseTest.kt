@@ -9,7 +9,6 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.justRun
 import io.mockk.slot
-import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -18,11 +17,11 @@ import java.time.Instant
 import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
-class ManagePartUseCaseTest {
+class UpdatePartUseCaseTest {
     @MockK
     private lateinit var partManagementPort: PartManagementPort
 
-    private val useCase by lazy { ManagePartUseCase(partManagementPort) }
+    private val useCase by lazy { UpdatePartUseCase(partManagementPort) }
 
     private val userId = UUID.randomUUID()
     private val partId = UUID.randomUUID()
@@ -44,36 +43,6 @@ class ManagePartUseCaseTest {
     )
 
     @Test
-    fun `creates_part_with_given_properties`() {
-        // Arrange
-        val partSlot = slot<Part>()
-        every { partManagementPort.create(capture(partSlot)) } answers { partSlot.captured }
-
-        // Act
-        val result = useCase.createPart(userId, OwnerType.ROOM, ownerId, "床", 7)
-
-        // Assert
-        assertThat(result.name).isEqualTo("床")
-        assertThat(result.ownerType).isEqualTo(OwnerType.ROOM)
-        assertThat(result.ownerId).isEqualTo(ownerId)
-        assertThat(result.recommendedCycleDays).isEqualTo(7)
-        assertThat(result.lastCleanedAt).isNull()
-    }
-
-    @Test
-    fun `created_part_has_new_uuid`() {
-        // Arrange
-        val partSlot = slot<Part>()
-        every { partManagementPort.create(capture(partSlot)) } answers { partSlot.captured }
-
-        // Act
-        val result = useCase.createPart(userId, OwnerType.ROOM, ownerId, "床", 7)
-
-        // Assert
-        assertThat(result.id).isNotNull()
-    }
-
-    @Test
     fun `updates_part_name_when_new_name_is_provided`() {
         // Arrange
         val part = makePart(name = "古い名前")
@@ -82,7 +51,7 @@ class ManagePartUseCaseTest {
         justRun { partManagementPort.update(capture(updatedSlot)) }
 
         // Act
-        val result = useCase.updatePart(userId, partId, "新しい名前", null)
+        val result = useCase.execute(userId, partId, "新しい名前", null)
 
         // Assert
         assertThat(result.name).isEqualTo("新しい名前")
@@ -97,7 +66,7 @@ class ManagePartUseCaseTest {
         justRun { partManagementPort.update(capture(updatedSlot)) }
 
         // Act
-        val result = useCase.updatePart(userId, partId, null, 14)
+        val result = useCase.execute(userId, partId, null, 14)
 
         // Assert
         assertThat(result.recommendedCycleDays).isEqualTo(14)
@@ -112,7 +81,7 @@ class ManagePartUseCaseTest {
         justRun { partManagementPort.update(capture(updatedSlot)) }
 
         // Act
-        val result = useCase.updatePart(userId, partId, null, 14)
+        val result = useCase.execute(userId, partId, null, 14)
 
         // Assert
         assertThat(result.name).isEqualTo("元の名前")
@@ -125,31 +94,7 @@ class ManagePartUseCaseTest {
 
         // Act / Assert
         assertThatThrownBy {
-            useCase.updatePart(userId, partId, "新名前", null)
-        }.isInstanceOf(NotFoundException::class.java)
-    }
-
-    @Test
-    fun `deletes_part_when_it_exists`() {
-        // Arrange
-        every { partManagementPort.findById(partId) } returns makePart()
-        justRun { partManagementPort.delete(partId) }
-
-        // Act
-        useCase.deletePart(userId, partId)
-
-        // Assert
-        verify(exactly = 1) { partManagementPort.delete(partId) }
-    }
-
-    @Test
-    fun `throws_not_found_exception_when_deleting_non_existent_part`() {
-        // Arrange
-        every { partManagementPort.findById(partId) } returns null
-
-        // Act / Assert
-        assertThatThrownBy {
-            useCase.deletePart(userId, partId)
+            useCase.execute(userId, partId, "新名前", null)
         }.isInstanceOf(NotFoundException::class.java)
     }
 }

@@ -36,8 +36,8 @@ class RecomputeLastCleanedServiceTest {
             name = "テストパーツ",
             recommendedCycleDays = 7,
             lastCleanedAt = lastCleanedAt,
-            createdAt = Instant.now(),
-            updatedAt = Instant.now(),
+            createdAt = Instant.parse("2024-01-01T00:00:00Z"),
+            updatedAt = Instant.parse("2024-01-01T00:00:00Z"),
         )
 
     @Test
@@ -109,5 +109,6 @@ class RecomputeLastCleanedServiceTest {
         assertThat(updated.recommendedCycleDays).isEqualTo(part.recommendedCycleDays)
         assertThat(updated.ownerType).isEqualTo(part.ownerType)
         assertThat(updated.ownerId).isEqualTo(part.ownerId)
+        assertThat(updated.updatedAt).isAfter(part.updatedAt)
     }
 }

@@ -3,6 +3,7 @@ package com.cleaningapp.cleaningrecord.application
 import com.cleaningapp.capabilities.PartManagementPort
 import com.cleaningapp.cleaningrecord.domain.CleaningRecordRepository
 import org.springframework.stereotype.Service
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -18,6 +19,6 @@ class RecomputeLastCleanedService(
     fun recompute(partId: UUID) {
         val maxCleanedAt = cleaningRecordRepository.findMaxCleanedAtByPartId(partId)
         val part = partManagementPort.findById(partId) ?: return
-        partManagementPort.update(part.copy(lastCleanedAt = maxCleanedAt))
+        partManagementPort.update(part.copy(lastCleanedAt = maxCleanedAt, updatedAt = Instant.now()))
     }
 }

@@ -8,6 +8,7 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.justRun
 import io.mockk.verify
+import io.mockk.verifyOrder
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -77,23 +78,9 @@ class DeleteRecordUseCaseTest {
         useCase.execute(userId, recordId)
 
         // Assert
-        verify(exactly = 1) { recomputeLastCleanedService.recompute(partId) }
-    }
-
-    @Test
-    fun `recompute_is_called_after_delete_so_last_cleaned_at_can_become_null`() {
-        // Arrange
-        val record = makeRecord()
-        every { cleaningRecordRepository.findById(recordId) } returns record
-        justRun { cleaningRecordRepository.delete(recordId) }
-        justRun { recomputeLastCleanedService.recompute(any()) }
-
-        // Act
-        useCase.execute(userId, recordId)
-
-        // Assert
-        // 削除後に recompute が呼ばれることで lastCleanedAt が null になりうる
-        verify { cleaningRecordRepository.delete(recordId) }
-        verify { recomputeLastCleanedService.recompute(partId) }
+        verifyOrder {
+            cleaningRecordRepository.delete(recordId)
+            recomputeLastCleanedService.recompute(partId)
+        }
     }
 }

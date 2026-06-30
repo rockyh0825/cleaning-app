@@ -11,14 +11,20 @@ import java.util.UUID
  * cleaning-record / heatmap feature も同じインターフェースを通じて参照・更新する。
  */
 interface PartRepository {
+    fun findById(id: UUID): Part?
+
     fun findByOwnerId(
         ownerType: OwnerType,
         ownerId: UUID,
     ): List<Part>
 
+    fun create(part: Part): Part
+
     fun saveAll(parts: List<Part>)
 
     fun update(part: Part)
+
+    fun deleteById(id: UUID)
 
     fun deleteByOwnerId(
         ownerType: OwnerType,

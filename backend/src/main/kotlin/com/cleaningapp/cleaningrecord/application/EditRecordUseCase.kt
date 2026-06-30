@@ -26,6 +26,7 @@ class EditRecordUseCase(
         recordId: UUID,
         cleanedAt: Instant?,
         note: String?,
+        clearNote: Boolean = false,
     ): CleaningRecord {
         val existing =
             cleaningRecordRepository.findById(recordId)
@@ -34,7 +35,12 @@ class EditRecordUseCase(
         val updated =
             existing.copy(
                 cleanedAt = cleanedAt ?: existing.cleanedAt,
-                note = note ?: existing.note,
+                note =
+                    when {
+                        clearNote -> null
+                        note != null -> note
+                        else -> existing.note
+                    },
                 updatedAt = Instant.now(),
             )
         val saved = cleaningRecordRepository.save(updated)

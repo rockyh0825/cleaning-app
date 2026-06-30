@@ -118,4 +118,20 @@ class EditRecordUseCaseTest {
         // Assert
         verify(exactly = 1) { recomputeLastCleanedService.recompute(partId) }
     }
+
+    @Test
+    fun `clears_note_to_null_when_clear_note_is_true`() {
+        // Arrange
+        val record = makeRecord() // has note = "元のメモ"
+        every { cleaningRecordRepository.findById(recordId) } returns record
+        val savedSlot = slot<CleaningRecord>()
+        every { cleaningRecordRepository.save(capture(savedSlot)) } answers { savedSlot.captured }
+        justRun { recomputeLastCleanedService.recompute(any()) }
+
+        // Act
+        val result = useCase.execute(userId, recordId, null, null, clearNote = true)
+
+        // Assert
+        assertThat(result.note).isNull()
+    }
 }
