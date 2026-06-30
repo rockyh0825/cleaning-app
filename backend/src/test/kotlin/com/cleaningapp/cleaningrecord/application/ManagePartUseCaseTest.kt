@@ -132,6 +132,7 @@ class ManagePartUseCaseTest {
     @Test
     fun `deletes_part_when_it_exists`() {
         // Arrange
+        every { partManagementPort.findById(partId) } returns makePart()
         justRun { partManagementPort.delete(partId) }
 
         // Act
@@ -139,5 +140,16 @@ class ManagePartUseCaseTest {
 
         // Assert
         verify(exactly = 1) { partManagementPort.delete(partId) }
+    }
+
+    @Test
+    fun `throws_not_found_exception_when_deleting_non_existent_part`() {
+        // Arrange
+        every { partManagementPort.findById(partId) } returns null
+
+        // Act / Assert
+        assertThatThrownBy {
+            useCase.deletePart(userId, partId)
+        }.isInstanceOf(NotFoundException::class.java)
     }
 }

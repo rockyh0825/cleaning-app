@@ -17,6 +17,7 @@ import java.util.UUID
 class ManagePartUseCase(
     private val partManagementPort: PartManagementPort,
 ) {
+    // userId: 将来の認可チェック（自分のデータのみ操作可能）で使用する予定
     @Suppress("UnusedParameter")
     fun createPart(
         userId: UUID,
@@ -40,6 +41,7 @@ class ManagePartUseCase(
         return partManagementPort.create(part)
     }
 
+    // userId: 将来の認可チェック（自分のデータのみ操作可能）で使用する予定
     @Suppress("UnusedParameter")
     fun updatePart(
         userId: UUID,
@@ -61,11 +63,14 @@ class ManagePartUseCase(
         return updated
     }
 
+    // userId: 将来の認可チェック（自分のデータのみ操作可能）で使用する予定
     @Suppress("UnusedParameter")
     fun deletePart(
         userId: UUID,
         partId: UUID,
     ) {
+        partManagementPort.findById(partId)
+            ?: throw NotFoundException("Part not found: $partId")
         partManagementPort.delete(partId)
     }
 }
