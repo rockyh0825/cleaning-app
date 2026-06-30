@@ -63,94 +63,55 @@ fi
 # Backend チェック
 # ============================================================
 if [ "$BACKEND_CHANGED" = true ]; then
-  info "backend の変更を検出。CI チェックを実行します..."
+  info "backend の変更を検出。軽量チェックを実行します..."
   cd "$REPO_ROOT/backend"
 
-  # --- API スタブ生成 ---
   info "Kotlin API スタブを生成中..."
   if ! ./gradlew openApiGenerate -q; then
     error "API スタブの生成に失敗しました。"
     exit 1
   fi
-  success "API スタブ生成 OK"
 
-  # --- ktlint ---
   info "ktlintCheck を実行中..."
   if ! ./gradlew ktlintCheck -q; then
-    error "ktlintCheck に失敗しました。./gradlew ktlintFormat で修正できます。"
+    error "ktlintCheck に失敗しました。./gradlew ktlintFormat で修正してください。"
     exit 1
   fi
-  success "ktlintCheck OK"
 
-  # --- Detekt ---
-  info "detekt を実行中..."
-  if ! ./gradlew detekt -q; then
-    error "detekt に失敗しました。レポートを確認してください: build/reports/detekt/"
-    exit 1
-  fi
-  success "detekt OK"
-
-  # --- Test（PostgreSQL が起動中の場合のみ）---
-  if nc -z localhost 5432 2>/dev/null; then
-    info "PostgreSQL を検出。テストを実行中..."
-    if ! ./gradlew test -q \
-        -Dspring.datasource.url=jdbc:postgresql://localhost:5432/cleaning_app \
-        -Dspring.datasource.username=cleaning \
-        -Dspring.datasource.password=cleaning; then
-      error "テストに失敗しました。レポートを確認してください: build/reports/tests/"
-      exit 1
-    fi
-    success "テスト OK"
-  else
-    warn "PostgreSQL が localhost:5432 で見つかりません。テストをスキップします。"
-    warn "CI でテストが実行されます。"
-  fi
+  # detekt と test は重いため CI に委譲
+  warn "detekt と test はローカルではスキップし、CI で実行されます。"
 fi
 
 # ============================================================
 # Mobile チェック
 # ============================================================
 if [ "$MOBILE_CHANGED" = true ]; then
-  info "mobile の変更を検出。CI チェックを実行します..."
+  info "mobile の変更を検出。軽量チェックを実行します..."
   cd "$REPO_ROOT/mobile"
 
-  # node_modules が未インストールの場合はインストール（worktree 利用時など）
   if [[ ! -d node_modules ]]; then
     info "node_modules が見つかりません。npm ci を実行中..."
     npm ci --legacy-peer-deps --silent
   fi
 
-  # --- TypeScript API クライアント生成 ---
   info "TypeScript API クライアントを生成中..."
   if ! npm run generate:api; then
     error "API クライアントの生成に失敗しました。"
     exit 1
   fi
-  success "API クライアント生成 OK"
 
-  # --- ESLint ---
-  info "ESLint を実行中..."
-  if ! npm run lint; then
-    error "ESLint に失敗しました。npx eslint src/ --fix で自動修正できます。"
-    exit 1
-  fi
-  success "ESLint OK"
-
-  # --- TypeScript 型チェック ---
   info "TypeScript 型チェックを実行中..."
   if ! npx tsc --noEmit; then
     error "TypeScript 型チェックに失敗しました。"
     exit 1
   fi
-  success "TypeScript OK"
 
-  # --- Jest ---
-  info "Jest を実行中..."
-  if ! npm test; then
-    error "テストに失敗しました。"
+  # ESLint を全体にかけるのではなく、対象を絞るか CI に任せるのも手です
+  info "ESLint を実行中..."
+  if ! npm run lint; then
+    error "ESLint に失敗しました。npx eslint src/ --fix で自動修正してください。"
     exit 1
   fi
-  success "Jest OK"
 fi
 
 success "すべてのチェックが通りました。プッシュを続行します。"
