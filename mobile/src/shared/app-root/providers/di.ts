@@ -4,9 +4,16 @@
  *
  * 注意: DefaultApi は `scripts/generate-api-client.sh` で生成されるコードのため
  * gitignore 対象。本番環境では生成後にインポート可能になる。
- * 現時点では stub として any 型でインスタンスを渡す。
+ *
+ * api は FallbackApi でラップしており、実APIがネットワークエラー（バックエンド未起動）
+ * の場合のみ MockDefaultApi（メモリ内フィクスチャ）へ自動 fallback する。
+ * 4xx/5xx は fallback せずそのままエラーを伝播する。
  */
 
+import { DefaultApi } from "@/shared/api/apis/DefaultApi";
+import { Configuration } from "@/shared/api/runtime";
+import { MockDefaultApi } from "@/shared/api-fallback/MockDefaultApi";
+import { FallbackApi } from "@/shared/api-fallback/FallbackApi";
 import { FloorPlanRepository } from "@/features/floor-plan/repositories/FloorPlanRepository";
 import { FloorPlanCapabilityImpl } from "@/features/floor-plan/repositories/FloorPlanCapabilityImpl";
 import type { FloorPlanCapability } from "@/capabilities/FloorPlanCapability";
@@ -14,12 +21,14 @@ import { CleaningRecordRepository } from "@/features/cleaning-record/repositorie
 import { CleaningStatusCapabilityImpl } from "@/features/cleaning-record/repositories/CleaningStatusCapabilityImpl";
 import type { CleaningStatusCapability } from "@/capabilities/CleaningStatusCapability";
 
-// DefaultApi は生成コードのため stub を使用
-// 本番では: import { DefaultApi } from '@/shared/api/apis/DefaultApi';
-const apiStub: any = {};
+const realApi = new DefaultApi(
+  new Configuration({ basePath: "http://localhost:8080" }),
+);
+const mockApi = new MockDefaultApi();
+export const api: DefaultApi = new FallbackApi(realApi, mockApi);
 
-const floorPlanRepository = new FloorPlanRepository(apiStub);
-const cleaningRecordRepository = new CleaningRecordRepository(apiStub);
+const floorPlanRepository = new FloorPlanRepository(api);
+const cleaningRecordRepository = new CleaningRecordRepository(api);
 
 export const floorPlanCapability: FloorPlanCapability =
   new FloorPlanCapabilityImpl(floorPlanRepository);
