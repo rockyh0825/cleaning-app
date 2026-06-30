@@ -1,6 +1,7 @@
 package com.cleaningapp.floorplan.infrastructure
 
 import com.cleaningapp.capabilities.PartManagementPort
+import com.cleaningapp.floorplan.domain.OwnerType
 import com.cleaningapp.floorplan.domain.Part
 import com.cleaningapp.floorplan.domain.PartRepository
 import org.springframework.stereotype.Component
@@ -16,6 +17,13 @@ class PartManagementAdapter(
     private val partRepository: PartRepository,
 ) : PartManagementPort {
     override fun findById(id: UUID): Part? = partRepository.findById(id)
+
+    override fun findByOwnerId(
+        ownerType: OwnerType,
+        ownerId: UUID,
+    ): List<Part> = partRepository.findByOwnerId(ownerType, ownerId)
+
+    override fun findAllByUserId(userId: UUID): List<Part> = partRepository.findAllByUserId(userId)
 
     override fun create(part: Part): Part = partRepository.create(part)
 

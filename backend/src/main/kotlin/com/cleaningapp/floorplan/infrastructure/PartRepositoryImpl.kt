@@ -18,6 +18,8 @@ class PartRepositoryImpl(
         ownerId: UUID,
     ): List<Part> = partMapper.selectByOwnerId(ownerType, ownerId)
 
+    override fun findAllByUserId(userId: UUID): List<Part> = partMapper.selectAllByUserId(userId)
+
     override fun create(part: Part): Part {
         partMapper.insert(part)
         return part
