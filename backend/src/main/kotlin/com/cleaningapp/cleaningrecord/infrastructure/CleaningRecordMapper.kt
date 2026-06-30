@@ -61,6 +61,21 @@ interface CleaningRecordMapper {
 
     @Select(
         """
+        SELECT id, part_id, user_id, cleaned_at, note, created_at, updated_at
+        FROM cleaning_record
+        WHERE user_id = #{userId}
+        ORDER BY cleaned_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+        """,
+    )
+    fun selectByUserId(
+        @Param("userId") userId: UUID,
+        @Param("limit") limit: Int,
+        @Param("offset") offset: Int,
+    ): List<CleaningRecord>
+
+    @Select(
+        """
         SELECT MAX(cleaned_at)
         FROM cleaning_record
         WHERE part_id = #{partId}
