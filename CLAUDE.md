@@ -96,7 +96,16 @@ git config core.hooksPath .githooks   # pre-push フックを有効化
 ### APIクライアント生成
 
 ```bash
-./scripts/generate-api-client.sh   # api/openapi.yaml からクライアントコード生成
+# モバイル（TypeScript クライアント）
+npm run generate:api             # mobile/ ディレクトリで実行
+
+# バックエンド（Kotlin Spring Boot スタブ）
+./gradlew openApiGenerate        # backend/ ディレクトリで実行
+
+# 両方まとめて生成
+./scripts/generate-api-client.sh
 ```
 
-生成物は `mobile/src/shared/api/` に出力される。このディレクトリはコミット対象外（`.gitignore`）。
+生成物はコミット対象外（`.gitignore`）：
+- モバイル: `mobile/src/shared/api/`
+- バックエンド: `backend/build/generated/`
