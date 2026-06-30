@@ -9,3 +9,5 @@ backend/build/generated/
 mobile/node_modules/
 mobile/.expo/
 mobile/dist/
+mobile/ios/
+mobile/android/

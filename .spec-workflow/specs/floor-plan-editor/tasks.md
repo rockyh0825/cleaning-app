@@ -111,7 +111,7 @@
   - _Leverage: React Native Skia, mobile/src/shared/components_
   - _Requirements: 1, 2_
 
-- [ ] 14. app/floor-plan: 画面ルートとオンボーディング誘導・空状態
+- [x] 14. app/floor-plan: 画面ルートとオンボーディング誘導・空状態
   - File: mobile/app/floor-plan/index.tsx, mobile/app/floor-plan/[roomId].tsx
   - 間取りが無い場合のempty state、初回起動時の誘導、初回UUID発行（AsyncStorage）
   - Purpose: 画面の組み立てとオンボーディング

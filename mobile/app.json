@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "掃除管理アプリ",
+    "slug": "cleaning-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "cleaning-app",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.cleaningapp.mobile"
+    },
+    "android": {
+      "package": "com.cleaningapp.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-dev-client"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
