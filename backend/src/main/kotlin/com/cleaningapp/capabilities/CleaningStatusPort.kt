@@ -9,10 +9,16 @@ import java.util.UUID
  * 実装する側: cleaningrecord feature の CleaningStatusPortImpl
  */
 interface CleaningStatusPort {
-    /** areaId（Room の UUID）の最新掃除日時を返す。記録なし → null */
+    /**
+     * areaId（Room の UUID）に属する ROOM タイプパーツの最新掃除日時を返す。
+     * 対象パーツが存在しない、またはすべて未掃除の場合は null。
+     */
     fun getLastCleanedAt(areaId: UUID): Instant?
 
-    /** userId のすべてのパーツのうち期限超過（elapsedRatio > 1.0）のエリアリストを返す */
+    /**
+     * userId に属するすべての ROOM タイプパーツのうち期限超過（elapsedRatio > 1.0）のエリアリストを返す。
+     * OverdueArea.areaId は常に Room の UUID。FURNITURE タイプパーツは対象外。
+     */
     fun getOverdueAreas(userId: UUID): List<OverdueArea>
 }
 

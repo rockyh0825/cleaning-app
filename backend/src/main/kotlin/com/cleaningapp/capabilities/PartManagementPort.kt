@@ -14,13 +14,13 @@ import java.util.UUID
 interface PartManagementPort {
     fun findById(id: UUID): Part?
 
-    /** ownerType と ownerId の組み合わせでパーツを取得する（getLastCleanedAt 用） */
+    /** ownerType と ownerId の組み合わせで一致するパーツを取得する */
     fun findByOwnerId(
         ownerType: OwnerType,
         ownerId: UUID,
     ): List<Part>
 
-    /** userId に紐づくすべてのパーツを取得する（getOverdueAreas 用） */
+    /** userId に紐づくすべてのパーツ（ROOM・FURNITURE 両方）を取得する */
     fun findAllByUserId(userId: UUID): List<Part>
 
     fun create(part: Part): Part

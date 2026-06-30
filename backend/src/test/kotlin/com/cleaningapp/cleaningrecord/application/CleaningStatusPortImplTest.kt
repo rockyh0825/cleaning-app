@@ -119,4 +119,41 @@ class CleaningStatusPortImplTest {
         // Assert
         assertThat(result).hasSize(0)
     }
+
+    @Test
+    fun `returns_never_cleaned_part_as_overdue_when_last_cleaned_at_is_null`() {
+        // Arrange: 未掃除（lastCleanedAt = null）→ CleaningStatus.compute が Double.MAX_VALUE を返し期限超過扱い
+        val roomId = UUID.randomUUID()
+        val partId = UUID.randomUUID()
+        val neverCleanedPart = makePart(id = partId, ownerId = roomId, lastCleanedAt = null, cycleDays = 7)
+        every { partManagementPort.findAllByUserId(userId) } returns listOf(neverCleanedPart)
+
+        // Act
+        val result = portImpl.getOverdueAreas(userId)
+
+        // Assert
+        assertThat(result).hasSize(1)
+        assertThat(result.first().partId).isEqualTo(partId)
+        assertThat(result.first().elapsedRatio).isEqualTo(Double.MAX_VALUE)
+    }
+
+    @Test
+    fun `excludes_furniture_parts_from_overdue_areas`() {
+        // Arrange: FURNITURE タイプのパーツは areaId が Room UUID でないため除外する
+        val furnitureId = UUID.randomUUID()
+        val furniturePart =
+            makePart(
+                ownerId = furnitureId,
+                ownerType = OwnerType.FURNITURE,
+                lastCleanedAt = Instant.now().minus(30, ChronoUnit.DAYS),
+                cycleDays = 7,
+            )
+        every { partManagementPort.findAllByUserId(userId) } returns listOf(furniturePart)
+
+        // Act
+        val result = portImpl.getOverdueAreas(userId)
+
+        // Assert: FURNITURE は除外されるため空リスト
+        assertThat(result).hasSize(0)
+    }
 }
