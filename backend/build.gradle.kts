@@ -5,6 +5,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "12.1.2"
     id("io.gitlab.arturbosch.detekt") version "1.23.7"
+    id("org.openapi.generator") version "7.10.0"
 }
 
 group = "com.cleaningapp"
@@ -54,4 +55,17 @@ detekt {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+openApiGenerate {
+    generatorName.set("kotlin-spring")
+    inputSpec.set("$rootDir/../api/openapi.yaml")
+    outputDir.set("${layout.buildDirectory.get()}/generated")
+    additionalProperties.set(
+        mapOf(
+            "interfaceOnly" to "true",
+            "useSpringBoot3" to "true",
+            "reactive" to "false",
+        ),
+    )
 }

@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      - "api/openapi.yaml"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     # paths フィルターを外す
@@ -45,6 +46,7 @@ jobs:
           filters: |
             backend:
               - 'backend/**'
+              - 'api/openapi.yaml'
               - '.github/workflows/backend-ci.yml'
 
       - name: Set up JDK 21
@@ -57,6 +59,11 @@ jobs:
       - name: Setup Gradle
         if: steps.filter.outputs.backend == 'true'
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate API client (Kotlin)
+        if: steps.filter.outputs.backend == 'true'
+        working-directory: backend
+        run: ./gradlew openApiGenerate
 
       - name: ktlint check
         if: steps.filter.outputs.backend == 'true'

@@ -1,0 +1,68 @@
+name: Mobile CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - "api/openapi.yaml"
+      - ".github/workflows/mobile-ci.yml"
+  pull_request:
+    # paths フィルターを外す
+    # → PRでは常にジョブを起動してステータスを報告し、ブランチ保護ルールを満たす
+    # → モバイル変更がないPRは内部の paths-filter でステップをスキップして高速に通過する
+
+permissions:
+  contents: read
+  pull-requests: read  # dorny/paths-filter が PR の差分を GitHub API 経由で取得するために必要
+
+jobs:
+  ci:
+    name: ESLint / TypeScript / Jest
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect mobile changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            mobile:
+              - 'mobile/**'
+              - 'api/openapi.yaml'
+              - '.github/workflows/mobile-ci.yml'
+
+      - name: Set up Node.js
+        if: steps.filter.outputs.mobile == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate API client (TypeScript)
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npm run generate:api
+
+      - name: ESLint
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npx eslint src/
+
+      - name: TypeScript type check
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npx tsc --noEmit
+
+      - name: Jest
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npx jest --passWithNoTests

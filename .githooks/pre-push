@@ -27,6 +27,9 @@ if [ -z "$LOCAL_SHA" ] || [ "$LOCAL_SHA" = "$ZERO" ]; then
   exit 0
 fi
 
+# cd よりも先に確定させる（GIT_DIR が設定された状態で cd 後に呼ぶと誤ったパスになる）
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
 if [ "$REMOTE_SHA" = "$ZERO" ]; then
   # 新規ブランチ：main との差分で変更ファイルを検出
   BASE=$(git merge-base "$LOCAL_SHA" main 2>/dev/null || true)
@@ -41,51 +44,113 @@ fi
 
 # 変更ファイルを行単位で走査（スペース含むファイル名対応）
 BACKEND_CHANGED=false
+MOBILE_CHANGED=false
 while IFS= read -r f; do
-  if [[ "$f" == backend/* || "$f" == .github/workflows/backend-ci.yml ]]; then
+  if [[ "$f" == backend/* || "$f" == api/openapi.yaml || "$f" == .github/workflows/backend-ci.yml ]]; then
     BACKEND_CHANGED=true
-    break
+  fi
+  if [[ "$f" == mobile/* || "$f" == api/openapi.yaml || "$f" == .github/workflows/mobile-ci.yml ]]; then
+    MOBILE_CHANGED=true
   fi
 done <<< "$CHANGED"
 
-if [ "$BACKEND_CHANGED" = false ]; then
-  success "backend の変更なし。チェックをスキップします。"
+if [ "$BACKEND_CHANGED" = false ] && [ "$MOBILE_CHANGED" = false ]; then
+  success "backend/mobile の変更なし。チェックをスキップします。"
   exit 0
 fi
 
-info "backend の変更を検出。CI チェックを実行します..."
-cd "$(git rev-parse --show-toplevel)/backend"
+# ============================================================
+# Backend チェック
+# ============================================================
+if [ "$BACKEND_CHANGED" = true ]; then
+  info "backend の変更を検出。CI チェックを実行します..."
+  cd "$REPO_ROOT/backend"
 
-# --- ktlint ---
-info "ktlintCheck を実行中..."
-if ! ./gradlew ktlintCheck -q; then
-  error "ktlintCheck に失敗しました。./gradlew ktlintFormat で修正できます。"
-  exit 1
-fi
-success "ktlintCheck OK"
-
-# --- Detekt ---
-info "detekt を実行中..."
-if ! ./gradlew detekt -q; then
-  error "detekt に失敗しました。レポートを確認してください: build/reports/detekt/"
-  exit 1
-fi
-success "detekt OK"
-
-# --- Test（PostgreSQL が起動中の場合のみ）---
-if nc -z localhost 5432 2>/dev/null; then
-  info "PostgreSQL を検出。テストを実行中..."
-  if ! ./gradlew test -q \
-      -Dspring.datasource.url=jdbc:postgresql://localhost:5432/cleaning_app \
-      -Dspring.datasource.username=cleaning \
-      -Dspring.datasource.password=cleaning; then
-    error "テストに失敗しました。レポートを確認してください: build/reports/tests/"
+  # --- API スタブ生成 ---
+  info "Kotlin API スタブを生成中..."
+  if ! ./gradlew openApiGenerate -q; then
+    error "API スタブの生成に失敗しました。"
     exit 1
   fi
-  success "テスト OK"
-else
-  warn "PostgreSQL が localhost:5432 で見つかりません。テストをスキップします。"
-  warn "CI でテストが実行されます。"
+  success "API スタブ生成 OK"
+
+  # --- ktlint ---
+  info "ktlintCheck を実行中..."
+  if ! ./gradlew ktlintCheck -q; then
+    error "ktlintCheck に失敗しました。./gradlew ktlintFormat で修正できます。"
+    exit 1
+  fi
+  success "ktlintCheck OK"
+
+  # --- Detekt ---
+  info "detekt を実行中..."
+  if ! ./gradlew detekt -q; then
+    error "detekt に失敗しました。レポートを確認してください: build/reports/detekt/"
+    exit 1
+  fi
+  success "detekt OK"
+
+  # --- Test（PostgreSQL が起動中の場合のみ）---
+  if nc -z localhost 5432 2>/dev/null; then
+    info "PostgreSQL を検出。テストを実行中..."
+    if ! ./gradlew test -q \
+        -Dspring.datasource.url=jdbc:postgresql://localhost:5432/cleaning_app \
+        -Dspring.datasource.username=cleaning \
+        -Dspring.datasource.password=cleaning; then
+      error "テストに失敗しました。レポートを確認してください: build/reports/tests/"
+      exit 1
+    fi
+    success "テスト OK"
+  else
+    warn "PostgreSQL が localhost:5432 で見つかりません。テストをスキップします。"
+    warn "CI でテストが実行されます。"
+  fi
+fi
+
+# ============================================================
+# Mobile チェック
+# ============================================================
+if [ "$MOBILE_CHANGED" = true ]; then
+  info "mobile の変更を検出。CI チェックを実行します..."
+  cd "$REPO_ROOT/mobile"
+
+  # node_modules が未インストールの場合はインストール（worktree 利用時など）
+  if [[ ! -d node_modules ]]; then
+    info "node_modules が見つかりません。npm ci を実行中..."
+    npm ci --legacy-peer-deps --silent
+  fi
+
+  # --- TypeScript API クライアント生成 ---
+  info "TypeScript API クライアントを生成中..."
+  if ! npm run generate:api; then
+    error "API クライアントの生成に失敗しました。"
+    exit 1
+  fi
+  success "API クライアント生成 OK"
+
+  # --- ESLint ---
+  info "ESLint を実行中..."
+  if ! npm run lint; then
+    error "ESLint に失敗しました。npx eslint src/ --fix で自動修正できます。"
+    exit 1
+  fi
+  success "ESLint OK"
+
+  # --- TypeScript 型チェック ---
+  info "TypeScript 型チェックを実行中..."
+  if ! npx tsc --noEmit; then
+    error "TypeScript 型チェックに失敗しました。"
+    exit 1
+  fi
+  success "TypeScript OK"
+
+  # --- Jest ---
+  info "Jest を実行中..."
+  if ! npm test; then
+    error "テストに失敗しました。"
+    exit 1
+  fi
+  success "Jest OK"
 fi
 
 success "すべてのチェックが通りました。プッシュを続行します。"

@@ -378,7 +378,7 @@ components:
           description: 推奨周期に対する経過割合（elapsed days / recommendedCycleDays）。1.0超で期限超過
           example: 1.5
 
-    # 家具を埋め込んだ部屋。GET /floor-map のレスポンスで使用
+    # 家具を埋め込んだ部屋。GET /floor-plan のレスポンスで使用
     RoomWithFurniture:
       allOf:
         - $ref: '#/components/schemas/Room'
@@ -390,8 +390,8 @@ components:
               items:
                 $ref: '#/components/schemas/Furniture'
 
-    # GET /floor-map のレスポンス。ユーザーの間取り全体（部屋＋家具）
-    FloorMap:
+    # GET /floor-plan のレスポンス。ユーザーの間取り全体（部屋＋家具）
+    FloorPlan:
       type: object
       required: [rooms]
       properties:
@@ -405,13 +405,13 @@ components:
 # エンドポイント定義
 # ───────────────────────────────────────────────
 paths:
-  /floor-map:
+  /floor-plan:
     get:
       summary: 間取り全体を取得する
       description: |
         ユーザーの間取り全体（部屋と各部屋に所属する家具）を一括取得する。
         間取り画面の初期ロードやTanStack Queryのキャッシュキーとして使用する。
-      operationId: getFloorMap
+      operationId: getFloorPlan
       parameters:
         - $ref: '#/components/parameters/UserIdHeader'
       responses:
@@ -420,7 +420,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FloorMap'
+                $ref: '#/components/schemas/FloorPlan'
         '400':
           description: X-User-Idヘッダが不正
 
