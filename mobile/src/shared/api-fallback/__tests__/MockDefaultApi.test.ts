@@ -102,6 +102,67 @@ describe("MockDefaultApi", () => {
         roomWithFurniture.id,
       );
     });
+
+    it("also_removes_cleaning_records_belonging_to_parts_owned_by_the_deleted_room", async () => {
+      // Arrange
+      const mock = new MockDefaultApi();
+      const [room] = await mock.listRooms({ xUserId: userId });
+      const part = await mock.createPart({
+        xUserId: userId,
+        partCreate: {
+          ownerType: "ROOM" as never,
+          ownerId: room.id,
+          name: "壁",
+        },
+      });
+      await mock.createCleaningRecords({
+        xUserId: userId,
+        cleaningRecordCreate: { partIds: [part.id] },
+      });
+
+      // Act
+      await mock.deleteRoom({ xUserId: userId, roomId: room.id });
+
+      // Assert
+      const records = await mock.listCleaningRecords({
+        xUserId: userId,
+        partId: part.id,
+      });
+      expect(records.items).toHaveLength(0);
+    });
+
+    it("also_removes_cleaning_records_belonging_to_parts_owned_by_furniture_in_the_deleted_room", async () => {
+      // Arrange
+      const mock = new MockDefaultApi();
+      const [room] = await mock.listRooms({ xUserId: userId });
+      const furniture = await mock.createFurniture({
+        xUserId: userId,
+        roomId: room.id,
+        furnitureCreate: { name: "棚", gridX: 0, gridY: 0, gridW: 1, gridH: 1 },
+      });
+      const part = await mock.createPart({
+        xUserId: userId,
+        partCreate: {
+          ownerType: "FURNITURE" as never,
+          ownerId: furniture.id,
+          name: "扉",
+        },
+      });
+      await mock.createCleaningRecords({
+        xUserId: userId,
+        cleaningRecordCreate: { partIds: [part.id] },
+      });
+
+      // Act
+      await mock.deleteRoom({ xUserId: userId, roomId: room.id });
+
+      // Assert
+      const records = await mock.listCleaningRecords({
+        xUserId: userId,
+        partId: part.id,
+      });
+      expect(records.items).toHaveLength(0);
+    });
   });
 
   describe("createFurniture", () => {
@@ -129,6 +190,44 @@ describe("MockDefaultApi", () => {
       const floorPlan = await mock.getFloorPlan({ xUserId: userId });
       const room = floorPlan.rooms.find((r) => r.id === targetRoomId)!;
       expect(room.furniture.map((f) => f.id)).toContain(created.id);
+    });
+  });
+
+  describe("deleteFurniture", () => {
+    it("also_removes_cleaning_records_belonging_to_parts_owned_by_the_deleted_furniture", async () => {
+      // Arrange
+      const mock = new MockDefaultApi();
+      const [room] = await mock.listRooms({ xUserId: userId });
+      const furniture = await mock.createFurniture({
+        xUserId: userId,
+        roomId: room.id,
+        furnitureCreate: { name: "棚", gridX: 0, gridY: 0, gridW: 1, gridH: 1 },
+      });
+      const part = await mock.createPart({
+        xUserId: userId,
+        partCreate: {
+          ownerType: "FURNITURE" as never,
+          ownerId: furniture.id,
+          name: "扉",
+        },
+      });
+      await mock.createCleaningRecords({
+        xUserId: userId,
+        cleaningRecordCreate: { partIds: [part.id] },
+      });
+
+      // Act
+      await mock.deleteFurniture({
+        xUserId: userId,
+        furnitureId: furniture.id,
+      });
+
+      // Assert
+      const records = await mock.listCleaningRecords({
+        xUserId: userId,
+        partId: part.id,
+      });
+      expect(records.items).toHaveLength(0);
     });
   });
 
