@@ -71,4 +71,23 @@ interface PartMapper {
     fun deleteById(
         @Param("id") id: UUID,
     )
+
+    @Select(
+        """
+        SELECT p.id, p.owner_type, p.owner_id, p.name, p.recommended_cycle_days, p.last_cleaned_at, p.created_at, p.updated_at
+        FROM part p
+        JOIN room r ON (p.owner_type = 'ROOM' AND p.owner_id = r.id)
+        WHERE r.user_id = #{userId}
+        UNION ALL
+        SELECT p.id, p.owner_type, p.owner_id, p.name, p.recommended_cycle_days, p.last_cleaned_at, p.created_at, p.updated_at
+        FROM part p
+        JOIN furniture f ON (p.owner_type = 'FURNITURE' AND p.owner_id = f.id)
+        JOIN room r2 ON f.room_id = r2.id
+        WHERE r2.user_id = #{userId}
+        ORDER BY created_at
+        """,
+    )
+    fun selectAllByUserId(
+        @Param("userId") userId: UUID,
+    ): List<Part>
 }
