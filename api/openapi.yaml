@@ -733,6 +733,34 @@ paths:
           description: 掃除記録が存在しない、または他ユーザーの記録
 
   /parts:
+    get:
+      summary: パーツ一覧を取得
+      description: |
+        ユーザーが所有するパーツの一覧を返す。
+        ownerId で特定のエリア（部屋・家具）に絞り込みできる。
+        lastCleanedAt は最終掃除日時（未掃除の場合は null）。
+      operationId: listParts
+      parameters:
+        - $ref: '#/components/parameters/UserIdHeader'
+        - name: ownerId
+          in: query
+          required: false
+          description: 絞り込むオーナーID（部屋IDまたは家具ID）
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: パーツの一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Part'
+        '400':
+          description: 入力が不正
+
     post:
       summary: パーツを作成（間取りエディタが呼ぶ）
       description: |
