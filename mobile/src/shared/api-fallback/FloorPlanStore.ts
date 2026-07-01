@@ -3,8 +3,12 @@
  * パーツ・掃除記録（CleaningRecordStore の責務）は関知しない。
  * deleteRoom は配下の家具を削除し、その家具IDを呼び出し元に返すことで、
  * パーツ・掃除記録のカスケード削除をMockDefaultApi側で行えるようにする。
+ *
+ * データは AsyncStorage にも書き出す。バックエンド未起動を前提としたE2E検証
+ * （#68）でアプリ再起動後もデータが復元されることを保証するための永続化。
  */
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type {
   CreateFurnitureRequest,
   CreateRoomRequest,
@@ -26,17 +30,69 @@ function notFoundError(entity: string, id: string): Error {
   return new Error(`${entity} not found: ${id}`);
 }
 
+const STORAGE_KEY = "mock-floor-plan-store";
+
+type PersistedState = {
+  rooms: Room[];
+  furniture: Furniture[];
+  idSequence: number;
+};
+
+function reviveRoom(raw: Room): Room {
+  return {
+    ...raw,
+    createdAt: new Date(raw.createdAt),
+    updatedAt: new Date(raw.updatedAt),
+  };
+}
+
+function reviveFurniture(raw: Furniture): Furniture {
+  return {
+    ...raw,
+    createdAt: new Date(raw.createdAt),
+    updatedAt: new Date(raw.updatedAt),
+  };
+}
+
 export class FloorPlanStore {
   private readonly rooms = new Map<string, Room>();
   private readonly furniture = new Map<string, Furniture>();
   private idSequence = 0;
+  readonly ready: Promise<void>;
 
   constructor() {
-    this.seedFixtures();
+    this.ready = this.hydrate();
   }
 
   get initialRoomIds(): string[] {
     return Array.from(this.rooms.keys());
+  }
+
+  private async hydrate(): Promise<void> {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      // E2E（Maestro）は「新規ユーザーの空状態」から検証するため、
+      // このフラグが立っている間はデモ用フィクスチャをシードしない。
+      if (process.env.EXPO_PUBLIC_MOCK_START_EMPTY !== "true") {
+        this.seedFixtures();
+      }
+      return;
+    }
+    const state: PersistedState = JSON.parse(raw);
+    state.rooms.forEach((room) => this.rooms.set(room.id, reviveRoom(room)));
+    state.furniture.forEach((f) =>
+      this.furniture.set(f.id, reviveFurniture(f)),
+    );
+    this.idSequence = state.idSequence;
+  }
+
+  private async persist(): Promise<void> {
+    const state: PersistedState = {
+      rooms: Array.from(this.rooms.values()),
+      furniture: Array.from(this.furniture.values()),
+      idSequence: this.idSequence,
+    };
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
   private nextId(prefix: string): string {
@@ -121,6 +177,7 @@ export class FloorPlanStore {
   async getFloorPlan(
     _requestParameters: GetFloorPlanRequest,
   ): Promise<FloorPlan> {
+    await this.ready;
     return {
       rooms: Array.from(this.rooms.values()).map((r) =>
         this.toRoomWithFurniture(r),
@@ -129,10 +186,12 @@ export class FloorPlanStore {
   }
 
   async listRooms(_requestParameters: ListRoomsRequest): Promise<Array<Room>> {
+    await this.ready;
     return Array.from(this.rooms.values());
   }
 
   async createRoom(requestParameters: CreateRoomRequest): Promise<Room> {
+    await this.ready;
     const now = new Date();
     const room: Room = {
       id: this.nextId("room"),
@@ -141,10 +200,12 @@ export class FloorPlanStore {
       updatedAt: now,
     };
     this.rooms.set(room.id, room);
+    await this.persist();
     return room;
   }
 
   async updateRoom(requestParameters: UpdateRoomRequest): Promise<Room> {
+    await this.ready;
     const existing = this.rooms.get(requestParameters.roomId);
     if (!existing) throw notFoundError("Room", requestParameters.roomId);
     const updated: Room = {
@@ -153,6 +214,7 @@ export class FloorPlanStore {
       updatedAt: new Date(),
     };
     this.rooms.set(updated.id, updated);
+    await this.persist();
     return updated;
   }
 
@@ -163,6 +225,7 @@ export class FloorPlanStore {
   async deleteRoom(
     requestParameters: DeleteRoomRequest,
   ): Promise<{ deletedFurnitureIds: string[] }> {
+    await this.ready;
     const { roomId } = requestParameters;
     if (!this.rooms.has(roomId)) throw notFoundError("Room", roomId);
     const deletedFurnitureIds = Array.from(this.furniture.values())
@@ -170,12 +233,14 @@ export class FloorPlanStore {
       .map((f) => f.id);
     deletedFurnitureIds.forEach((id) => this.furniture.delete(id));
     this.rooms.delete(roomId);
+    await this.persist();
     return { deletedFurnitureIds };
   }
 
   async createFurniture(
     requestParameters: CreateFurnitureRequest,
   ): Promise<Furniture> {
+    await this.ready;
     if (!this.rooms.has(requestParameters.roomId)) {
       throw notFoundError("Room", requestParameters.roomId);
     }
@@ -188,12 +253,14 @@ export class FloorPlanStore {
       updatedAt: now,
     };
     this.furniture.set(furniture.id, furniture);
+    await this.persist();
     return furniture;
   }
 
   async updateFurniture(
     requestParameters: UpdateFurnitureRequest,
   ): Promise<Furniture> {
+    await this.ready;
     const existing = this.furniture.get(requestParameters.furnitureId);
     if (!existing)
       throw notFoundError("Furniture", requestParameters.furnitureId);
@@ -203,15 +270,18 @@ export class FloorPlanStore {
       updatedAt: new Date(),
     };
     this.furniture.set(updated.id, updated);
+    await this.persist();
     return updated;
   }
 
   async deleteFurniture(
     requestParameters: DeleteFurnitureRequest,
   ): Promise<void> {
+    await this.ready;
     const { furnitureId } = requestParameters;
     if (!this.furniture.has(furnitureId))
       throw notFoundError("Furniture", furnitureId);
     this.furniture.delete(furnitureId);
+    await this.persist();
   }
 }

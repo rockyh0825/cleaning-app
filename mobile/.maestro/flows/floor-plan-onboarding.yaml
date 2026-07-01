@@ -1,0 +1,43 @@
+appId: com.cleaningapp.mobile
+---
+# floor-plan-editor E2E（issue #68 / tasks.md フェーズ4 Task17）
+#
+# 検証フロー: 空状態表示 → 「部屋を追加」→ 種別選択 → 部屋がキャンバスに表示される
+#            → 家具配置 → アプリ再起動後もデータが復元される
+#
+# 前提:
+# - バックエンド未起動（#64 の MockDefaultApi fallback）でアプリが起動していること
+# - EXPO_PUBLIC_MOCK_START_EMPTY=true でビルドされていること
+#   （このフラグが無いとデモ用フィクスチャ部屋が最初から表示され、空状態から検証できない）
+
+- launchApp:
+    clearState: true
+
+- assertVisible:
+    id: "empty-state"
+- takeScreenshot: screenshots/01-empty-state
+
+- tapOn: "部屋を追加"
+- assertVisible: "部屋名"
+- inputText: "自分の部屋"
+- tapOn: "その他"
+- takeScreenshot: screenshots/02-room-type-selected
+
+- tapOn: "追加"
+- assertVisible: "自分の部屋"
+- takeScreenshot: screenshots/03-room-added-on-canvas
+
+- tapOn: "自分の部屋"
+- assertVisible: "家具を追加"
+- tapOn: "家具を追加"
+- assertVisible: "家具名"
+- inputText: "本棚"
+- tapOn: "追加"
+- assertVisible: "本棚"
+- takeScreenshot: screenshots/04-furniture-added
+
+- launchApp:
+    clearState: false
+- assertVisible: "自分の部屋"
+- assertVisible: "本棚"
+- takeScreenshot: screenshots/05-restored-after-restart

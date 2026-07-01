@@ -66,3 +66,85 @@ jobs:
         if: steps.filter.outputs.mobile == 'true'
         working-directory: mobile
         run: npx jest --passWithNoTests
+
+  e2e:
+    name: Maestro E2E (iOS Simulator)
+    runs-on: macos-14
+    needs: ci
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect mobile changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            mobile:
+              - 'mobile/**'
+              - 'api/openapi.yaml'
+              - '.github/workflows/mobile-ci.yml'
+
+      - name: Set up Node.js
+        if: steps.filter.outputs.mobile == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate API client (TypeScript)
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npm run generate:api
+
+      - name: Install Maestro CLI
+        if: steps.filter.outputs.mobile == 'true'
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Prebuild iOS native project
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npx expo prebuild --platform ios
+
+      # --configuration Release で JS バンドルをビルド時に静的に埋め込むため、
+      # Metro を別プロセスで起動しておく必要がない（CIでの安定性を優先）。
+      # EXPO_PUBLIC_MOCK_START_EMPTY はバンドルビルド時にインライン化されるため、
+      # このステップで指定する（実行時に渡しても反映されない）。
+      - name: Build and launch app on iOS Simulator
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_MOCK_START_EMPTY: "true"
+        run: npx expo run:ios --configuration Release
+
+      - name: Run Maestro E2E flow
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: |
+          mkdir -p .maestro/screenshots
+          maestro test .maestro/flows/floor-plan-onboarding.yaml --format junit --output .maestro/report.xml
+
+      - name: Upload E2E screenshots
+        if: always() && steps.filter.outputs.mobile == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-screenshots
+          path: mobile/.maestro/screenshots/*.png
+          if-no-files-found: warn
+
+      - name: Upload E2E test report
+        if: always() && steps.filter.outputs.mobile == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-report
+          path: mobile/.maestro/report.xml
+          if-no-files-found: warn
