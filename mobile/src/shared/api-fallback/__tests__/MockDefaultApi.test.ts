@@ -24,6 +24,23 @@ describe("MockDefaultApi", () => {
     });
   });
 
+  describe("parts fixtures", () => {
+    it("seeds_a_floor_part_for_each_fixture_room_on_initial_state", async () => {
+      // Arrange
+      const mock = new MockDefaultApi();
+      const rooms = await mock.listRooms({ xUserId: userId });
+
+      // Act
+      const parts = await mock.listParts({
+        xUserId: userId,
+        ownerId: rooms[0].id,
+      });
+
+      // Assert
+      expect(parts.some((p) => p.name === "床")).toBe(true);
+    });
+  });
+
   describe("getFloorPlan", () => {
     it("returns_fixture_rooms_with_furniture_on_initial_state", async () => {
       // Arrange

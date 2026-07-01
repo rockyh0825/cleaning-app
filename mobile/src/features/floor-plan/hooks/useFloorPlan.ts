@@ -1,10 +1,14 @@
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { FloorPlanRepository } from '../repositories/FloorPlanRepository';
-import type { FloorPlan, CreateRoomInput, Room } from '../types';
+import type { FloorPlan, CreateRoomInput, CreateFurnitureInput, Furniture, Room } from '../types';
 import { AddRoomUseCase } from '../usecases/AddRoomUseCase';
 import { DeleteRoomUseCase } from '../usecases/DeleteRoomUseCase';
+import { AddFurnitureUseCase } from '../usecases/AddFurnitureUseCase';
 
 type AddRoomExecutor = { execute: (userId: string, input: CreateRoomInput) => Promise<Room> };
+type AddFurnitureExecutor = {
+    execute: (userId: string, roomId: string, input: CreateFurnitureInput) => Promise<Furniture>;
+};
 
 export function buildFloorPlanQuery(userId: string, repository: Pick<FloorPlanRepository, 'getFloorPlan'>) {
     return {
@@ -55,6 +59,20 @@ export function buildAddRoomMutationOptions(
     };
 }
 
+export function buildAddFurnitureMutationOptions(
+    queryClient: QueryClient,
+    userId: string,
+    useCase: AddFurnitureExecutor,
+) {
+    return {
+        mutationFn: ({ roomId, input }: { roomId: string; input: CreateFurnitureInput }) =>
+            useCase.execute(userId, roomId, input),
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['floorPlan', userId] });
+        },
+    };
+}
+
 export function useFloorPlan(userId: string, repository: FloorPlanRepository) {
     const queryClient = useQueryClient();
 
@@ -71,5 +89,9 @@ export function useFloorPlan(userId: string, repository: FloorPlanRepository) {
         },
     });
 
-    return { floorPlan, addRoom, deleteRoom };
+    const addFurniture = useMutation(
+        buildAddFurnitureMutationOptions(queryClient, userId, new AddFurnitureUseCase(repository)),
+    );
+
+    return { floorPlan, addRoom, deleteRoom, addFurniture };
 }

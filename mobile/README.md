@@ -33,7 +33,8 @@ npm install --legacy-peer-deps
 ### Mock モード（バックエンド不要）
 
 バックエンドが未起動の場合、アプリは自動的に `MockDefaultApi` にフォールバックします。  
-セッション内メモリで fixture データを保持するため、追加・削除などの操作もアプリ内で反映されます（アプリ再起動でリセット）。
+部屋・家具（間取り）は AsyncStorage に永続化され、アプリを再起動してもデータが復元されます。  
+パーツ・掃除記録はセッション内メモリのみで保持され、アプリ再起動でリセットされます（cleaning-record 側の永続化は別issue対応）。
 
 **フォールバックの条件**: ネットワークエラー（`Failed to fetch` 相当）が発生した場合のみ。  
 バックエンドが起動しているが 4xx / 5xx を返す場合はフォールバックせず、エラーをそのまま伝播します。
@@ -43,9 +44,10 @@ npm install --legacy-peer-deps
 npx expo run:ios
 ```
 
-初回起動時は fixture データ（サンプルの部屋・家具）が表示されます。
+初回起動時は fixture データ（サンプルの部屋・家具）が表示されます。  
+`EXPO_PUBLIC_MOCK_START_EMPTY=true` を設定して起動すると、fixture をシードせず空状態から開始します（E2Eテストで使用）。
 
-> **実装詳細**: `src/shared/api/mocks/MockDefaultApi.ts` / `src/shared/api/FallbackApi.ts`  
+> **実装詳細**: `src/shared/api-fallback/MockDefaultApi.ts` / `FloorPlanStore.ts` / `FallbackApi.ts`  
 > 参照 issue: [#64](https://github.com/rockyh0825/cleaning-app/issues/64)
 
 ### バックエンド API モード（実データ）
@@ -145,8 +147,14 @@ npx eslint src/                 # 静的解析
 
 ```
 mobile/
+├── .maestro/                   # Maestro E2E フロー定義・スクリーンショット
+│   ├── config.yaml
+│   ├── flows/
+│   │   └── floor-plan-onboarding.yaml
+│   └── screenshots/             # `maestro test` 実行時に生成（コミット対象外）
 ├── app/                        # Expo Router によるファイルベースルーティング
 │   ├── _layout.tsx             # ルートレイアウト（QueryClient, Stack）
+│   ├── index.tsx                # ルートパス → /floor-plan へリダイレクト
 │   └── floor-plan/
 │       ├── index.tsx           # 間取り一覧画面
 │       └── [roomId].tsx        # 部屋詳細画面
@@ -223,3 +231,43 @@ cd mobile && npx jest src/features/floor-plan/components/__tests__/AddRoomModal.
 - **react-test-renderer のバージョン固定**: `react-test-renderer` は React のバージョン（`18.3.1`）と完全に一致させてください。バージョン不一致はランタイムエラーになります。
 - **transformIgnorePatterns**: `react-native` や Expo のパッケージは ES Module 形式で配布されるため、`transformIgnorePatterns` で変換対象から除外しないよう設定が必要です。
 - **コンポーネントテストは `.tsx` 拡張子**: `testMatch` パターンで `.tsx` と `.ts` を両方含めてください。`projects` 設定では `displayName` でプロジェクトを区別できます。
+
+---
+
+## E2Eテスト（Maestro）
+
+floor-plan editor の一連のユーザー体験（空状態 → 部屋追加 → 種別選択 → 部屋がキャンバスに表示される →
+家具配置 → アプリ再起動後もデータが復元される）を [Maestro](https://maestro.mobile.dev/) で検証します。
+バックエンド未起動（[#64](https://github.com/rockyh0825/cleaning-app/issues/64) の MockDefaultApi fallback）を前提としたローカル実行です。
+
+### Maestro CLI のインストール（初回のみ）
+
+```bash
+curl -Ls "https://get.maestro.mobile.dev" | bash
+export PATH="$PATH":"$HOME/.maestro/bin"
+```
+
+### ローカルでの実行方法
+
+```bash
+cd mobile
+npx expo prebuild --platform ios
+
+# EXPO_PUBLIC_MOCK_START_EMPTY=true でビルドすることで、
+# fixture 部屋をシードせず空状態から検証できる
+EXPO_PUBLIC_MOCK_START_EMPTY=true npx expo run:ios --configuration Release
+
+maestro test .maestro/flows/floor-plan-onboarding.yaml
+```
+
+> `EXPO_PUBLIC_MOCK_START_EMPTY` を付けずに起動した場合、fixture の部屋が最初から表示されるため
+> `empty-state` の表示アサーションで失敗します。E2E実行時は必ず付与してください。
+
+### スクリーンショットの確認方法
+
+各ステップの `takeScreenshot` コマンドにより、`mobile/.maestro/screenshots/` 配下に PNG が出力されます
+（Git管理対象外）。実装変更の前後でこのディレクトリの画像を目視比較することで、UIの差分を確認できます。
+
+CI（GitHub Actions）では `.github/workflows/mobile-ci.yml` の `e2e` ジョブが同じフローを実行し、
+`maestro-screenshots` / `maestro-report` アーティファクトとしてアップロードします。PRのActionsタブから
+ダウンロードして確認してください。

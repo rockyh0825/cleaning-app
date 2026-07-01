@@ -1,46 +1,31 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 import { useFloorPlan } from "@/features/floor-plan/hooks/useFloorPlan";
 import { FloorPlanCanvas } from "@/features/floor-plan/components/FloorPlanCanvas";
 import { AddRoomModal } from "@/features/floor-plan/components/AddRoomModal";
 import { FloorPlanRepository } from "@/features/floor-plan/repositories/FloorPlanRepository";
 import type { CreateRoomInput } from "@/features/floor-plan/types";
 import { api } from "@/shared/app-root/providers/di";
-
-const USER_UUID_KEY = "user-uuid";
-
-function generateUUID(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+import { useUserId } from "@/shared/hooks/useUserId";
 
 const repository = new FloorPlanRepository(api);
 
 export default function FloorPlanIndexScreen() {
-  const [userId, setUserId] = useState<string | null>(null);
+  const userId = useUserId();
+  const router = useRouter();
   const [isModalVisible, setIsModalVisible] = useState(false);
-
-  useEffect(() => {
-    async function initUserId() {
-      const stored = await AsyncStorage.getItem(USER_UUID_KEY);
-      if (stored) {
-        setUserId(stored);
-      } else {
-        const newUuid = generateUUID();
-        await AsyncStorage.setItem(USER_UUID_KEY, newUuid);
-        setUserId(newUuid);
-      }
-    }
-    initUserId();
-  }, []);
 
   const { floorPlan, addRoom } = useFloorPlan(userId ?? "", repository);
 
   const rooms = floorPlan.data?.rooms ?? [];
+
+  function handleRoomPress(roomId: string) {
+    router.push({
+      pathname: "/floor-plan/[roomId]",
+      params: { roomId },
+    });
+  }
 
   function handleAddRoom(input: {
     name: string;
@@ -67,7 +52,7 @@ export default function FloorPlanIndexScreen() {
           </Text>
         </View>
       ) : (
-        <FloorPlanCanvas floorPlan={floorPlan.data!} />
+        <FloorPlanCanvas floorPlan={floorPlan.data!} onRoomPress={handleRoomPress} />
       )}
 
       <TouchableOpacity

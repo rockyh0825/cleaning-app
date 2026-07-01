@@ -1,26 +1,24 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
 import { FloorPlanCanvas } from '@/features/floor-plan/components/FloorPlanCanvas';
 import { AddFurnitureModal } from '@/features/floor-plan/components/AddFurnitureModal';
 import { FloorPlanRepository } from '@/features/floor-plan/repositories/FloorPlanRepository';
 import type { FloorPlan } from '@/features/floor-plan/types';
+import { api } from '@/shared/app-root/providers/di';
+import { useUserId } from '@/shared/hooks/useUserId';
 
-type Props = {
-    roomId: string;
-    userId: string;
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const apiStub: any = {};
-const repository = new FloorPlanRepository(apiStub);
+const repository = new FloorPlanRepository(api);
 
 const EMPTY_FLOORPLAN: FloorPlan = { rooms: [] };
 
-export default function RoomDetailScreen({ roomId, userId }: Props) {
+export default function RoomDetailScreen() {
+    const { roomId } = useLocalSearchParams<{ roomId: string }>();
+    const userId = useUserId();
     const [isModalVisible, setIsModalVisible] = useState(false);
 
-    const { floorPlan, addRoom: _addRoom } = useFloorPlan(userId, repository);
+    const { floorPlan, addFurniture } = useFloorPlan(userId ?? '', repository);
 
     const floorPlanData = floorPlan.data ?? EMPTY_FLOORPLAN;
     const room = floorPlanData.rooms.find((r) => r.id === roomId);
@@ -30,8 +28,10 @@ export default function RoomDetailScreen({ roomId, userId }: Props) {
         : EMPTY_FLOORPLAN;
 
     function handleAddFurniture(input: { name: string }) {
-        // TODO: addFurniture usecase を実装後に接続
-        console.log('Add furniture:', input.name, 'to room:', roomId);
+        addFurniture.mutate({
+            roomId,
+            input: { name: input.name, gridX: 0, gridY: 0, gridW: 1, gridH: 1 },
+        });
         setIsModalVisible(false);
     }
 
