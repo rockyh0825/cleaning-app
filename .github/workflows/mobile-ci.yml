@@ -86,6 +86,13 @@ jobs:
               - 'api/openapi.yaml'
               - '.github/workflows/mobile-ci.yml'
 
+      # Expo SDK 53 は Xcode 16 以降が必須（macos-14 ランナーのデフォルトは Xcode 15.4）。
+      # 既定のまま prebuild/build すると expo-modules-core の SwiftUI コード
+      # （onGeometryChange, iOS 17 SDK以降が必要）がコンパイルできず失敗する。
+      - name: Select Xcode 16
+        if: steps.filter.outputs.mobile == 'true'
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
       - name: Set up Node.js
         if: steps.filter.outputs.mobile == 'true'
         uses: actions/setup-node@v4
