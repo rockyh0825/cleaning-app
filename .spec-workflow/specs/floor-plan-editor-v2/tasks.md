@@ -94,7 +94,7 @@
   - _Leverage: mobile/src/features/floor-plan/usecases/UpdateFurnitureUseCase.ts_
   - _Requirements: 4_
 
-- [ ] 9. 部屋追加時の自動空き配置
+- [x] 9. 部屋追加時の自動空き配置
   - File: mobile/app/floor-plan/index.tsx（handleAddRoom）
   - 固定 (0,0) をやめ、`findFreePosition` で空き位置を探索して addRoom に渡す。null の場合は (0,0) に配置
   - Purpose: 「追加するたびに重なる」問題の解消（Requirement 3.1 / 3.2）
