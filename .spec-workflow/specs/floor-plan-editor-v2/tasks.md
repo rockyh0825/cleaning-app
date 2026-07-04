@@ -72,7 +72,7 @@
     - 正常系: updateFurniture 同上
   - _Requirements: 1, 2, 4_
 
-- [ ] 7. hooks: useFloorPlan に updateRoom mutation（楽観的更新）
+- [x] 7. hooks: useFloorPlan に updateRoom mutation（楽観的更新）
   - File: mobile/src/features/floor-plan/hooks/useFloorPlan.ts
   - `buildUpdateRoomMutationOptions` を追加。キャッシュ上の該当部屋の座標・サイズを楽観的に差し替え、失敗時ロールバック
   - Purpose: ドラッグ確定時の保存経路（Requirement 1.4 / 2.4）
