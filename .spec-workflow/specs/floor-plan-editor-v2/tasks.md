@@ -6,7 +6,7 @@
 
 ## フェーズ1: 基盤（ジェスチャー・テーマ・純関数）
 
-- [ ] 1. react-native-gesture-handler / react-native-reanimated の導入
+- [x] 1. react-native-gesture-handler / react-native-reanimated の導入
   - File: mobile/package.json, mobile/babel.config.js, mobile/jest.config（jestSetup追加）, mobile/app/_layout.tsx（GestureHandlerRootView）
   - `npx expo install react-native-gesture-handler react-native-reanimated` で Expo SDK 53 互換バージョンを導入し、babel plugin と jest モックを設定する
   - Purpose: ドラッグ・ピンチ操作の実装基盤（このタスクでは機能追加しない）
