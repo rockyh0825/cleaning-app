@@ -36,7 +36,7 @@
     - 異常系: 全面が埋まっている → null を返す
   - _Requirements: 3_
 
-- [ ] 4. shared/utils/grid.ts: pxOffsetToGridDelta（ドラッグ量→グリッド差分変換）
+- [x] 4. shared/utils/grid.ts: pxOffsetToGridDelta（ドラッグ量→グリッド差分変換）
   - File: mobile/src/shared/utils/grid.ts（追記）
   - px単位の累積ドラッグオフセットとセルサイズからグリッド差分（整数）を返す純粋関数。ズーム倍率も引数で受ける
   - Purpose: ジェスチャーAPIから分離したテスト可能なドラッグ計算の中核
