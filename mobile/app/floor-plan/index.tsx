@@ -6,10 +6,14 @@ import { FloorPlanCanvas } from "@/features/floor-plan/components/FloorPlanCanva
 import { AddRoomModal } from "@/features/floor-plan/components/AddRoomModal";
 import { FloorPlanRepository } from "@/features/floor-plan/repositories/FloorPlanRepository";
 import type { CreateRoomInput } from "@/features/floor-plan/types";
+import { GRID_COLS, GRID_ROWS } from "@/features/floor-plan/constants";
 import { useUserId } from "@/shared/hooks/useUserId";
 import { api } from "@/shared/app-root/providers/di";
+import { findFreePosition } from "@/shared/utils/grid";
 
 const repository = new FloorPlanRepository(api);
+
+const DEFAULT_ROOM_SIZE = { w: 4, h: 4 };
 
 export default function FloorPlanIndexScreen() {
   const userId = useUserId();
@@ -23,13 +27,27 @@ export default function FloorPlanIndexScreen() {
     name: string;
     type: CreateRoomInput["type"];
   }) {
+    // 既存部屋と重ならない位置を探索する。満杯なら (0,0) に置き、重なり警告に委ねる
+    const obstacles = rooms.map((room) => ({
+      x: room.gridX,
+      y: room.gridY,
+      w: room.gridW,
+      h: room.gridH,
+    }));
+    const freePosition = findFreePosition(DEFAULT_ROOM_SIZE, obstacles, {
+      x: 0,
+      y: 0,
+      w: GRID_COLS,
+      h: GRID_ROWS,
+    });
+
     addRoom.mutate({
       name: input.name,
       type: input.type,
-      gridX: 0,
-      gridY: 0,
-      gridW: 4,
-      gridH: 4,
+      gridX: freePosition?.x ?? 0,
+      gridY: freePosition?.y ?? 0,
+      gridW: DEFAULT_ROOM_SIZE.w,
+      gridH: DEFAULT_ROOM_SIZE.h,
     });
     setIsModalVisible(false);
   }
