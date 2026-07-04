@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { FloorPlan } from '../types';
+import { GRID_COLS, GRID_ROWS } from '../constants';
 import { FurnitureItem } from './FurnitureItem';
 import { RoomShape } from './RoomShape';
 
@@ -24,8 +25,6 @@ try {
 }
 
 const DEFAULT_CELL_SIZE = 40;
-const GRID_COLS = 20;
-const GRID_ROWS = 20;
 
 type Props = {
     floorPlan: FloorPlan;
