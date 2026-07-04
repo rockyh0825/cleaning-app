@@ -4,6 +4,7 @@ import {
     buildFloorPlanQuery,
     buildAddRoomMutationOptions,
     buildAddFurnitureMutationOptions,
+    buildUpdateRoomMutationOptions,
 } from '../useFloorPlan';
 
 const mockRoom: Room = {
@@ -163,6 +164,119 @@ describe('useFloorPlan', () => {
             const afterRollback = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
             expect(afterRollback).toEqual(mockFloorPlan);
             expect(afterRollback?.rooms[0]?.furniture).toHaveLength(0);
+        });
+    });
+
+
+    describe('正常系: 部屋更新時にキャッシュが楽観的更新される', () => {
+        const secondRoom: Room = {
+            id: 'room-2',
+            name: 'キッチン',
+            type: 'KITCHEN',
+            gridX: 10,
+            gridY: 10,
+            gridW: 4,
+            gridH: 3,
+            createdAt: new Date('2024-01-01'),
+            updatedAt: new Date('2024-01-01'),
+        };
+        const twoRoomFloorPlan: FloorPlan = {
+            rooms: [
+                { ...mockRoom, furniture: [] },
+                { ...secondRoom, furniture: [] },
+            ],
+        };
+
+        it('calls_usecase_with_userId_roomId_and_input', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(mockRoom) };
+            const options = buildUpdateRoomMutationOptions(queryClient, 'user-1', mockUseCase);
+
+            // Act
+            await options.mutationFn!({ roomId: 'room-1', input: { gridX: 3, gridY: 2 } });
+
+            // Assert
+            expect(mockUseCase.execute).toHaveBeenCalledWith('user-1', 'room-1', {
+                gridX: 3,
+                gridY: 2,
+            });
+        });
+
+        it('updates_target_room_coordinates_optimistically_without_touching_others', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(mockRoom) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], twoRoomFloorPlan);
+
+            // Act
+            const options = buildUpdateRoomMutationOptions(queryClient, 'user-1', mockUseCase);
+            await options.onMutate!({ roomId: 'room-1', input: { gridX: 3, gridY: 2, gridW: 7, gridH: 5 } });
+
+            // Assert
+            const optimistic = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            const updated = optimistic?.rooms.find((r) => r.id === 'room-1');
+            expect(updated?.gridX).toBe(3);
+            expect(updated?.gridY).toBe(2);
+            expect(updated?.gridW).toBe(7);
+            expect(updated?.gridH).toBe(5);
+            const untouched = optimistic?.rooms.find((r) => r.id === 'room-2');
+            expect(untouched).toEqual(twoRoomFloorPlan.rooms[1]);
+        });
+
+        it('keeps_room_furniture_when_updating_room_optimistically', async () => {
+            // Arrange
+            const furniture: Furniture = {
+                id: 'furniture-1',
+                roomId: 'room-1',
+                name: 'ソファ',
+                gridX: 1,
+                gridY: 1,
+                gridW: 2,
+                gridH: 1,
+                createdAt: new Date('2024-01-02'),
+                updatedAt: new Date('2024-01-02'),
+            };
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(mockRoom) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], {
+                rooms: [{ ...mockRoom, furniture: [furniture] }],
+            });
+
+            // Act
+            const options = buildUpdateRoomMutationOptions(queryClient, 'user-1', mockUseCase);
+            await options.onMutate!({ roomId: 'room-1', input: { gridX: 5 } });
+
+            // Assert
+            const optimistic = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            expect(optimistic?.rooms[0]?.furniture).toEqual([furniture]);
+            expect(optimistic?.rooms[0]?.gridX).toBe(5);
+        });
+
+        it('rolls_back_to_previous_coordinates_when_update_fails', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockRejectedValue(new Error('network error')) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], twoRoomFloorPlan);
+            const options = buildUpdateRoomMutationOptions(queryClient, 'user-1', mockUseCase);
+            const variables = { roomId: 'room-1', input: { gridX: 9 } };
+
+            // Act
+            const context = await options.onMutate!(variables);
+            options.onError!(new Error('network error'), variables, context);
+
+            // Assert
+            const afterRollback = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            expect(afterRollback).toEqual(twoRoomFloorPlan);
+            expect(afterRollback?.rooms[0]?.gridX).toBe(0);
         });
     });
 
