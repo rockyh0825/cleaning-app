@@ -1,43 +1,54 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
 import { FloorPlanCanvas } from '@/features/floor-plan/components/FloorPlanCanvas';
 import { AddFurnitureModal } from '@/features/floor-plan/components/AddFurnitureModal';
 import { FloorPlanRepository } from '@/features/floor-plan/repositories/FloorPlanRepository';
+import { useUserId } from '@/shared/hooks/useUserId';
+import { api } from '@/shared/app-root/providers/di';
 import type { FloorPlan } from '@/features/floor-plan/types';
 
-type Props = {
-    roomId: string;
-    userId: string;
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const apiStub: any = {};
-const repository = new FloorPlanRepository(apiStub);
+const repository = new FloorPlanRepository(api);
 
 const EMPTY_FLOORPLAN: FloorPlan = { rooms: [] };
 
-export default function RoomDetailScreen({ roomId, userId }: Props) {
+export default function RoomDetailScreen() {
+    const { roomId } = useLocalSearchParams<{ roomId: string }>();
+    const userId = useUserId();
     const [isModalVisible, setIsModalVisible] = useState(false);
 
-    const { floorPlan, addRoom: _addRoom } = useFloorPlan(userId, repository);
+    const { floorPlan, addFurniture } = useFloorPlan(userId ?? '', repository);
 
     const floorPlanData = floorPlan.data ?? EMPTY_FLOORPLAN;
     const room = floorPlanData.rooms.find((r) => r.id === roomId);
 
-    const singleRoomPlan: FloorPlan = room
-        ? { rooms: [room] }
-        : EMPTY_FLOORPLAN;
+    if (!room) {
+        return (
+            <View testID="room-not-found" style={styles.notFound}>
+                <Text style={styles.notFoundText}>部屋が見つかりません</Text>
+            </View>
+        );
+    }
 
     function handleAddFurniture(input: { name: string }) {
-        // TODO: addFurniture usecase を実装後に接続
-        console.log('Add furniture:', input.name, 'to room:', roomId);
+        if (!room) return;
+        addFurniture.mutate({
+            roomId: room.id,
+            input: {
+                name: input.name,
+                gridX: room.gridX,
+                gridY: room.gridY,
+                gridW: 1,
+                gridH: 1,
+            },
+        });
         setIsModalVisible(false);
     }
 
     return (
         <View style={styles.container}>
-            <FloorPlanCanvas floorPlan={singleRoomPlan} />
+            <FloorPlanCanvas floorPlan={{ rooms: [room] }} />
 
             <TouchableOpacity
                 style={styles.addButton}
@@ -48,7 +59,7 @@ export default function RoomDetailScreen({ roomId, userId }: Props) {
 
             <AddFurnitureModal
                 visible={isModalVisible}
-                roomId={roomId}
+                roomId={room.id}
                 onSubmit={handleAddFurniture}
                 onCancel={() => setIsModalVisible(false)}
             />
@@ -60,6 +71,16 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+    },
+    notFound: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+    },
+    notFoundText: {
+        fontSize: 16,
+        color: '#888',
     },
     addButton: {
         margin: 16,

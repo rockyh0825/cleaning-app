@@ -1,14 +1,20 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloorPlanIndexScreen from '../index';
+
+// expo-router をモック（部屋タップで詳細画面へ push する）
+jest.mock('expo-router', () => ({
+    router: { push: jest.fn() },
+}));
 
 // useFloorPlan をモック
 jest.mock('@/features/floor-plan/hooks/useFloorPlan', () => ({
     useFloorPlan: jest.fn(),
 }));
 
+import { router } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
 const mockUseLayout = useFloorPlan as jest.Mock;
 
@@ -50,6 +56,45 @@ describe('FloorPlanIndexScreen', () => {
         // Assert
         await waitFor(() => {
             expect(screen.getByTestId('empty-state')).toBeTruthy();
+        });
+    });
+
+    it('navigates_to_room_detail_when_room_is_pressed', async () => {
+        // Arrange
+        mockUseLayout.mockReturnValue({
+            floorPlan: {
+                data: {
+                    rooms: [
+                        {
+                            id: 'room-1',
+                            name: 'リビング',
+                            type: 'LIVING',
+                            gridX: 0,
+                            gridY: 0,
+                            gridW: 6,
+                            gridH: 4,
+                            createdAt: new Date('2024-01-01'),
+                            updatedAt: new Date('2024-01-01'),
+                            furniture: [],
+                        },
+                    ],
+                },
+                isLoading: false,
+                isError: false,
+            },
+            addRoom: { mutate: jest.fn() },
+            addFurniture: { mutate: jest.fn() },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+
+        // Act
+        fireEvent.press(await screen.findByText('リビング'));
+
+        // Assert
+        await waitFor(() => {
+            expect(router.push).toHaveBeenCalledWith('/floor-plan/room-1');
         });
     });
 

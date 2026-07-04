@@ -4,6 +4,10 @@ const tsParser = require("@typescript-eslint/parser");
 
 module.exports = [
   {
+    // OpenAPI Generator による自動生成コードは lint 対象外
+    ignores: ["src/shared/api/**"],
+  },
+  {
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {
       "@typescript-eslint": tsPlugin,
