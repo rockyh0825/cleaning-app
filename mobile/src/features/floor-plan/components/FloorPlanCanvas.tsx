@@ -33,7 +33,7 @@ type Props = {
     cellSize?: number;
     onRoomPress?: (roomId: string) => void;
     onFurniturePress?: (furnitureId: string) => void;
-    /** 部屋のドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
+    /** 部屋のドラッグ・リサイズ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
     onRoomDragEnd?: (roomId: string, rect: Rect) => void;
 };
 
@@ -81,6 +81,17 @@ export function FloorPlanCanvas({
                         onPress={() => handleRoomPress(room.id)}
                         onDragEnd={(rect) => onRoomDragEnd?.(room.id, rect)}
                         overlapping={overlappingRoomIds.has(room.id)}
+                        onResizeEnd={
+                            onRoomDragEnd
+                                ? (size) =>
+                                      onRoomDragEnd(room.id, {
+                                          x: room.gridX,
+                                          y: room.gridY,
+                                          w: size.w,
+                                          h: size.h,
+                                      })
+                                : undefined
+                        }
                     />
                     {room.furniture.map((furn) => (
                         <FurnitureItem

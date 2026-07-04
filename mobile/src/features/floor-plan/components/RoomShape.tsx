@@ -6,6 +6,7 @@ import { useAppTheme } from '@/shared/theme/useAppTheme';
 import type { Rect } from '@/shared/utils/grid';
 import { GRID_COLS, GRID_ROWS } from '../constants';
 import { useDragToGrid } from '../hooks/useDragToGrid';
+import { ResizeHandle } from './ResizeHandle';
 import type { Room } from '../types';
 
 type Props = {
@@ -17,6 +18,8 @@ type Props = {
     onDragEnd?: (rect: Rect) => void;
     /** 他の部屋と重なっているとき警告スタイルを表示する */
     overlapping?: boolean;
+    /** リサイズ確定時にグリッド単位の新サイズを受け取る（選択中のみハンドル表示） */
+    onResizeEnd?: (size: { w: number; h: number }) => void;
 };
 
 const ROOM_COLORS: Record<string, string> = {
@@ -37,6 +40,7 @@ export function RoomShape({
     onPress,
     onDragEnd,
     overlapping = false,
+    onResizeEnd,
 }: Props) {
     const theme = useAppTheme();
     const width = room.gridW * cellSize;
@@ -98,6 +102,9 @@ export function RoomShape({
                 <Text style={styles.label} numberOfLines={1}>
                     {room.name}
                 </Text>
+                {selected && onResizeEnd && (
+                    <ResizeHandle room={room} cellSize={cellSize} onCommit={onResizeEnd} />
+                )}
             </Animated.View>
         </GestureDetector>
     );
