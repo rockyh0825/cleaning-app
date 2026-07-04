@@ -1,6 +1,21 @@
 import { UpdateRoomUseCase } from '../UpdateRoomUseCase';
 import type { FloorPlanRepository } from '../../repositories/FloorPlanRepository';
-import type { Room, RoomWithFurniture, UpdateRoomInput } from '../../types';
+import type { Furniture, Room, RoomWithFurniture, UpdateRoomInput } from '../../types';
+
+function makeFurniture(overrides: Partial<Furniture> & { id: string }): Furniture {
+    return {
+        roomId: 'room-1',
+        name: 'ソファ',
+        presetKey: null,
+        gridX: 2,
+        gridY: 2,
+        gridW: 1,
+        gridH: 1,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+        ...overrides,
+    };
+}
 
 const mockRoom: RoomWithFurniture = {
     id: 'room-1',
@@ -106,5 +121,106 @@ describe('UpdateRoomUseCase', () => {
         await useCase.execute('user-1', 'unknown-room', input);
 
         expect(mockRepository.updateRoom).toHaveBeenCalledWith('user-1', 'unknown-room', input);
+    });
+
+    describe('内包家具のクランプ（Requirement 2.3）', () => {
+        it('正常系: 部屋の縮小ではみ出す家具は新しい部屋矩形内にクランプして updateFurniture が呼ばれる', async () => {
+            // Arrange: 部屋 (2,2) 5x4 → 3x3 に縮小。家具 (6,5) 1x1 は新矩形 (2,2)-(5,5) の外
+            const furnitureOut = makeFurniture({ id: 'furn-out', gridX: 6, gridY: 5 });
+            (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({
+                rooms: [{ ...mockRoom, furniture: [furnitureOut] }],
+            });
+            const useCase = new UpdateRoomUseCase(mockRepository);
+
+            // Act
+            await useCase.execute('user-1', 'room-1', { gridW: 3, gridH: 3 });
+
+            // Assert: 右下端 (2+3-1, 2+3-1) = (4,4) にクランプされる
+            expect(mockRepository.updateFurniture).toHaveBeenCalledTimes(1);
+            expect(mockRepository.updateFurniture).toHaveBeenCalledWith('user-1', 'furn-out', {
+                gridX: 4,
+                gridY: 4,
+            });
+        });
+
+        it('正常系: 新しい部屋矩形に収まっている家具は updateFurniture を呼ばない', async () => {
+            // Arrange: 家具 (2,2) 1x1 は縮小後の矩形 (2,2) 3x3 に収まる
+            const furnitureIn = makeFurniture({ id: 'furn-in', gridX: 2, gridY: 2 });
+            (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({
+                rooms: [{ ...mockRoom, furniture: [furnitureIn] }],
+            });
+            const useCase = new UpdateRoomUseCase(mockRepository);
+
+            // Act
+            await useCase.execute('user-1', 'room-1', { gridW: 3, gridH: 3 });
+
+            // Assert
+            expect(mockRepository.updateFurniture).not.toHaveBeenCalled();
+        });
+
+        it('正常系: はみ出す家具と収まる家具が混在する場合ははみ出す家具のみ更新される', async () => {
+            // Arrange
+            const furnitureIn = makeFurniture({ id: 'furn-in', gridX: 2, gridY: 2 });
+            const furnitureOut = makeFurniture({ id: 'furn-out', gridX: 6, gridY: 2 });
+            (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({
+                rooms: [{ ...mockRoom, furniture: [furnitureIn, furnitureOut] }],
+            });
+            const useCase = new UpdateRoomUseCase(mockRepository);
+
+            // Act
+            await useCase.execute('user-1', 'room-1', { gridW: 3, gridH: 3 });
+
+            // Assert
+            expect(mockRepository.updateFurniture).toHaveBeenCalledTimes(1);
+            expect(mockRepository.updateFurniture).toHaveBeenCalledWith('user-1', 'furn-out', {
+                gridX: 4,
+                gridY: 2,
+            });
+        });
+
+        it('境界値: 家具が新しい部屋矩形より大きい場合は部屋の左上に揃える（clampWithin の仕様）', async () => {
+            // Arrange: 家具 (3,3) 4x3 は縮小後の矩形 (2,2) 3x3 より幅が大きい
+            const bigFurniture = makeFurniture({ id: 'furn-big', gridX: 3, gridY: 3, gridW: 4, gridH: 3 });
+            (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({
+                rooms: [{ ...mockRoom, furniture: [bigFurniture] }],
+            });
+            const useCase = new UpdateRoomUseCase(mockRepository);
+
+            // Act
+            await useCase.execute('user-1', 'room-1', { gridW: 3, gridH: 3 });
+
+            // Assert: 左上 (2,2) に揃う
+            expect(mockRepository.updateFurniture).toHaveBeenCalledTimes(1);
+            expect(mockRepository.updateFurniture).toHaveBeenCalledWith('user-1', 'furn-big', {
+                gridX: 2,
+                gridY: 2,
+            });
+        });
+
+        it('正常系: 家具が無い部屋のリサイズでは updateFurniture を呼ばない', async () => {
+            // Arrange: mockRoom は furniture: []
+            const useCase = new UpdateRoomUseCase(mockRepository);
+
+            // Act
+            await useCase.execute('user-1', 'room-1', { gridW: 3, gridH: 3 });
+
+            // Assert
+            expect(mockRepository.updateFurniture).not.toHaveBeenCalled();
+        });
+
+        it('正常系: 名前のみの更新では updateFurniture を呼ばない', async () => {
+            // Arrange
+            const furnitureOut = makeFurniture({ id: 'furn-out', gridX: 6, gridY: 5 });
+            (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({
+                rooms: [{ ...mockRoom, furniture: [furnitureOut] }],
+            });
+            const useCase = new UpdateRoomUseCase(mockRepository);
+
+            // Act
+            await useCase.execute('user-1', 'room-1', { name: '新しいリビング' });
+
+            // Assert
+            expect(mockRepository.updateFurniture).not.toHaveBeenCalled();
+        });
     });
 });

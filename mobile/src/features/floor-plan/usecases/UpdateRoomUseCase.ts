@@ -1,6 +1,7 @@
 import type { FloorPlanRepository } from '../repositories/FloorPlanRepository';
-import type { Room, UpdateRoomInput } from '../types';
+import type { Furniture, Room, UpdateRoomInput } from '../types';
 import { clampWithin } from '@/shared/utils/grid';
+import type { Rect } from '@/shared/utils/grid';
 import { GRID_COLS, GRID_ROWS } from '../constants';
 
 export class UpdateRoomUseCase {
@@ -30,12 +31,43 @@ export class UpdateRoomUseCase {
         };
         const clamped = clampWithin(roomRect, canvasRect);
 
-        return this.repository.updateRoom(userId, roomId, {
+        const updatedRoom = await this.repository.updateRoom(userId, roomId, {
             ...input,
             gridX: clamped.x,
             gridY: clamped.y,
             gridW: clamped.w,
             gridH: clamped.h,
         } as UpdateRoomInput);
+
+        await this.clampContainedFurniture(userId, current.furniture, clamped);
+
+        return updatedRoom;
+    }
+
+    /**
+     * 新しい部屋矩形からはみ出した内包家具を境界内にクランプし追随更新する（Requirement 2.3）。
+     * 家具の座標はキャンバス絶対座標のため、部屋矩形をそのまま親 bounds として使う。
+     * 家具が部屋より大きい場合は clampWithin の仕様に従い部屋の左上に揃える。
+     */
+    private async clampContainedFurniture(
+        userId: string,
+        furniture: Furniture[],
+        roomRect: Rect,
+    ): Promise<void> {
+        const updates = furniture
+            .map((f) => ({
+                furniture: f,
+                clamped: clampWithin({ x: f.gridX, y: f.gridY, w: f.gridW, h: f.gridH }, roomRect),
+            }))
+            .filter(({ furniture: f, clamped }) => clamped.x !== f.gridX || clamped.y !== f.gridY);
+
+        await Promise.all(
+            updates.map(({ furniture: f, clamped }) =>
+                this.repository.updateFurniture(userId, f.id, {
+                    gridX: clamped.x,
+                    gridY: clamped.y,
+                }),
+            ),
+        );
     }
 }

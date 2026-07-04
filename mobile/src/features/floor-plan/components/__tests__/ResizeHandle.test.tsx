@@ -42,7 +42,7 @@ describe('ResizeHandle', () => {
         });
     });
 
-    it('commits_one_by_one_when_drag_shrinks_below_minimum_size', async () => {
+    it('commits_one_x_one_when_drag_shrinks_below_minimum_size', async () => {
         // Arrange: 5x4 の部屋を左上へ大きく縮めるドラッグ → 最小 1x1 で確定
         const mockOnCommit = jest.fn();
 

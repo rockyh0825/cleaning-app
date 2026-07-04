@@ -81,13 +81,16 @@ export function FloorPlanCanvas({
                         onPress={() => handleRoomPress(room.id)}
                         onDragEnd={(rect) => onRoomDragEnd?.(room.id, rect)}
                         overlapping={overlappingRoomIds.has(room.id)}
-                        onResizeEnd={(size) =>
-                            onRoomDragEnd?.(room.id, {
-                                x: room.gridX,
-                                y: room.gridY,
-                                w: size.w,
-                                h: size.h,
-                            })
+                        onResizeEnd={
+                            onRoomDragEnd
+                                ? (size) =>
+                                      onRoomDragEnd(room.id, {
+                                          x: room.gridX,
+                                          y: room.gridY,
+                                          w: size.w,
+                                          h: size.h,
+                                      })
+                                : undefined
                         }
                     />
                     {room.furniture.map((furn) => (
