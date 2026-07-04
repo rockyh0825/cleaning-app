@@ -66,3 +66,140 @@ jobs:
         if: steps.filter.outputs.mobile == 'true'
         working-directory: mobile
         run: npx jest --passWithNoTests
+
+  e2e:
+    name: Maestro E2E (iOS Simulator)
+    runs-on: macos-14
+    needs: ci
+    # iOS の Release ビルドは実測約29分（run 28521747001）。余裕を持って2時間確保する
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect mobile changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            mobile:
+              - 'mobile/**'
+              - 'api/openapi.yaml'
+              - '.github/workflows/mobile-ci.yml'
+
+      # Expo SDK 53 は Xcode 16 以降が必須（macos-14 ランナーのデフォルトは Xcode 15.4）。
+      # 既定のまま prebuild/build すると expo-modules-core の SwiftUI コード
+      # （onGeometryChange, iOS 17 SDK以降が必要）がコンパイルできず失敗する。
+      - name: Select Xcode 16
+        if: steps.filter.outputs.mobile == 'true'
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Set up Node.js
+        if: steps.filter.outputs.mobile == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate API client (TypeScript)
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npm run generate:api
+
+      - name: Install Maestro CLI
+        if: steps.filter.outputs.mobile == 'true'
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Prebuild iOS native project
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npx expo prebuild --platform ios
+
+      # expo run:ios はアプリ起動後もログを流し続けて終了しないため CI では使わない
+      # （run 28521747001 で Maestro ステップに到達できずタイムアウトした敗因）。
+      # 「終了するコマンドの連鎖」に分解する: xcodebuild → simctl boot → simctl install
+      #
+      # - Release 構成で JS バンドルをビルド時に静的に埋め込むため、Metro の起動が不要
+      # - EXPO_PUBLIC_MOCK_START_EMPTY は xcodebuild の "Bundle React Native code and images"
+      #   フェーズでバンドルにインライン化されるため、このステップの env で渡す
+      # - シミュレータビルドはコード署名不要（CODE_SIGNING_ALLOWED=NO）
+      # - app.json の name が日本語のため、生成される workspace / scheme 名は決め打ちせず
+      #   prebuild の生成物から動的に取得する
+      - name: Build app for iOS Simulator (Release)
+        if: steps.filter.outputs.mobile == 'true'
+        timeout-minutes: 110
+        working-directory: mobile/ios
+        env:
+          EXPO_PUBLIC_MOCK_START_EMPTY: "true"
+        run: |
+          set -o pipefail
+          command -v xcbeautify >/dev/null || brew install -q xcbeautify
+          WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
+          SCHEME=$(basename "$(ls -d *.xcodeproj | head -n 1)" .xcodeproj)
+          echo "workspace=$WORKSPACE scheme=$SCHEME"
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" \
+            -configuration Release -sdk iphonesimulator \
+            -derivedDataPath build \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build | xcbeautify --quiet
+
+      # 機種名は決め打ちせず、選択中の Xcode ランタイムで available な最初の iPhone を使う
+      - name: Boot iOS Simulator
+        if: steps.filter.outputs.mobile == 'true'
+        run: |
+          UDID=$(xcrun simctl list devices available --json \
+            | jq -r '[.devices[] | .[] | select(.name | startswith("iPhone"))][0].udid')
+          echo "Booting simulator: $UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          # inputText 直後に QuickPath（なぞり入力）のチュートリアルオーバーレイが
+          # 全画面に出現し、後続のタップを吸ってフローが失敗する（run 28698159722 の
+          # スクリーンショットで確認）。「表示済み」を事前に書き込んで抑止する。
+          # 予測変換・自動修正も inputText の入力内容を汚しうるため無効化する
+          xcrun simctl spawn "$UDID" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
+          xcrun simctl spawn "$UDID" defaults write com.apple.keyboard.preferences DidShowGestureKeyboardIntroduction -bool true
+          xcrun simctl spawn "$UDID" defaults write com.apple.Preferences KeyboardAutocorrection -bool false
+          xcrun simctl spawn "$UDID" defaults write com.apple.Preferences KeyboardPrediction -bool false
+          echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
+
+      # アプリの起動は Maestro フロー先頭の launchApp が行うため、install まででよい
+      - name: Install app on simulator
+        if: steps.filter.outputs.mobile == 'true'
+        run: xcrun simctl install "$SIMULATOR_UDID" mobile/ios/build/Build/Products/Release-iphonesimulator/*.app
+
+      - name: Run Maestro E2E flow
+        if: steps.filter.outputs.mobile == 'true'
+        working-directory: mobile
+        run: |
+          mkdir -p .maestro/screenshots
+          maestro test .maestro/flows/floor-plan-onboarding.yaml --format junit --output .maestro/report.xml
+
+      - name: Upload E2E screenshots
+        if: always() && steps.filter.outputs.mobile == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-screenshots
+          # takeScreenshot の相対パスは Maestro 実行時の CWD（mobile/）基準で解決される。
+          # フロー側は .maestro/screenshots/ を指定しているが、Maestro のバージョン差異に
+          # 備えて CWD 直下の screenshots/ もフォールバックとして含める
+          path: |
+            mobile/.maestro/screenshots/*.png
+            mobile/screenshots/*.png
+          if-no-files-found: warn
+
+      - name: Upload E2E test report
+        if: always() && steps.filter.outputs.mobile == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-report
+          path: mobile/.maestro/report.xml
+          if-no-files-found: warn

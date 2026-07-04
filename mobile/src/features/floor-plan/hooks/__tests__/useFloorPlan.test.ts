@@ -391,4 +391,49 @@ describe('useFloorPlan', () => {
             expect(afterRollback?.rooms).toHaveLength(1);
         });
     });
+
+    describe('正常系: 家具追加時にユースケースを実行しキャッシュを再取得する', () => {
+        it('executes_use_case_with_user_and_room_id_and_invalidates_cache_on_settle', async () => {
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+            const addedFurniture: Furniture = {
+                id: 'furniture-1',
+                roomId: 'room-1',
+                name: '本棚',
+                gridX: 0,
+                gridY: 0,
+                gridW: 1,
+                gridH: 1,
+                createdAt: new Date('2024-01-03'),
+                updatedAt: new Date('2024-01-03'),
+            };
+            const mockAddFurnitureUseCase = {
+                execute: jest.fn().mockResolvedValue(addedFurniture),
+            };
+            const input: CreateFurnitureInput = {
+                name: '本棚',
+                gridX: 0,
+                gridY: 0,
+                gridW: 1,
+                gridH: 1,
+            };
+
+            const options = buildAddFurnitureMutationOptions(
+                queryClient,
+                'user-1',
+                mockAddFurnitureUseCase,
+            );
+            const result = await (options.mutationFn as (v: {
+                roomId: string;
+                input: CreateFurnitureInput;
+            }) => Promise<Furniture>)({ roomId: 'room-1', input });
+            await options.onSettled!();
+
+            expect(mockAddFurnitureUseCase.execute).toHaveBeenCalledWith('user-1', 'room-1', input);
+            expect(result).toEqual(addedFurniture);
+            expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['floorPlan', 'user-1'] });
+        });
+    });
 });

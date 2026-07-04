@@ -23,6 +23,10 @@ export default function FloorPlanIndexScreen() {
 
   const rooms = floorPlan.data?.rooms ?? [];
 
+  function handleRoomPress(roomId: string) {
+    router.push(`/floor-plan/${roomId}`);
+  }
+
   function handleAddRoom(input: {
     name: string;
     type: CreateRoomInput["type"];
@@ -66,7 +70,7 @@ export default function FloorPlanIndexScreen() {
           <ScrollView horizontal>
             <FloorPlanCanvas
               floorPlan={floorPlan.data!}
-              onRoomPress={(roomId) => router.push(`/floor-plan/${roomId}`)}
+              onRoomPress={handleRoomPress}
               onRoomDragEnd={(roomId, rect) =>
                 updateRoom.mutate({
                   roomId,

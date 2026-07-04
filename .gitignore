@@ -11,3 +11,7 @@ mobile/.expo/
 mobile/dist/
 mobile/ios/
 mobile/android/
+
+# Maestro E2E のスクリーンショット・実行結果（CIで生成しアーティファクトとしてアップロード。コミットしない）
+mobile/.maestro/screenshots/*.png
+mobile/.maestro/report.xml
