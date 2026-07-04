@@ -180,7 +180,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: maestro-screenshots
-          path: mobile/.maestro/screenshots/*.png
+          # takeScreenshot の相対パスは Maestro 実行時の CWD（mobile/）基準で解決される。
+          # フロー側は .maestro/screenshots/ を指定しているが、Maestro のバージョン差異に
+          # 備えて CWD 直下の screenshots/ もフォールバックとして含める
+          path: |
+            mobile/.maestro/screenshots/*.png
+            mobile/screenshots/*.png
           if-no-files-found: warn
 
       - name: Upload E2E test report
