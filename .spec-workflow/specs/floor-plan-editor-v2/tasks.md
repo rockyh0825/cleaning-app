@@ -13,7 +13,7 @@
   - **確認方法**: `npx jest` で既存全テストが Green のまま、`npx expo start` でアプリが起動すること
   - _Requirements: 1, 2, 4, 5_
 
-- [ ] 2. shared/theme: デザイントークンと ThemeProvider / useAppTheme
+- [x] 2. shared/theme: デザイントークンと ThemeProvider / useAppTheme
   - File: mobile/src/shared/theme/{tokens.ts, ThemeProvider.tsx, useAppTheme.ts}
   - light / dark の semantic tokens（colors・spacing・radius・typography・elevation）と部屋種別アクセント（fill / accent / icon）を定義。`useColorScheme` に追従
   - Purpose: 全UIタスクの色・余白の唯一の供給源（Requirement 6 の基盤）
