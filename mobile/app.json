@@ -18,7 +18,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-dev-client"
+      "expo-dev-client",
+      "./plugins/withFmtXcode26Fix.js"
     ],
     "experiments": {
       "typedRoutes": true

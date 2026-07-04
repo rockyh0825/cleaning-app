@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
 import { FloorPlanCanvas } from '@/features/floor-plan/components/FloorPlanCanvas';
@@ -48,7 +48,11 @@ export default function RoomDetailScreen() {
 
     return (
         <View style={styles.container}>
-            <FloorPlanCanvas floorPlan={{ rooms: [room] }} />
+            <ScrollView style={styles.canvasScroll}>
+                <ScrollView horizontal>
+                    <FloorPlanCanvas floorPlan={{ rooms: [room] }} />
+                </ScrollView>
+            </ScrollView>
 
             <TouchableOpacity
                 style={styles.addButton}
@@ -71,6 +75,9 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+    },
+    canvasScroll: {
+        flex: 1,
     },
     notFound: {
         flex: 1,

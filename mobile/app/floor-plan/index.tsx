@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 import { useFloorPlan } from "@/features/floor-plan/hooks/useFloorPlan";
 import { FloorPlanCanvas } from "@/features/floor-plan/components/FloorPlanCanvas";
@@ -44,10 +44,14 @@ export default function FloorPlanIndexScreen() {
           </Text>
         </View>
       ) : (
-        <FloorPlanCanvas
-          floorPlan={floorPlan.data!}
-          onRoomPress={(roomId) => router.push(`/floor-plan/${roomId}`)}
-        />
+        <ScrollView style={styles.canvasScroll}>
+          <ScrollView horizontal>
+            <FloorPlanCanvas
+              floorPlan={floorPlan.data!}
+              onRoomPress={(roomId) => router.push(`/floor-plan/${roomId}`)}
+            />
+          </ScrollView>
+        </ScrollView>
       )}
 
       <TouchableOpacity
@@ -70,6 +74,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  canvasScroll: {
+    flex: 1,
   },
   emptyState: {
     flex: 1,
