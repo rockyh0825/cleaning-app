@@ -5,6 +5,7 @@ import {
     buildAddRoomMutationOptions,
     buildAddFurnitureMutationOptions,
     buildUpdateRoomMutationOptions,
+    buildUpdateFurnitureMutationOptions,
 } from '../useFloorPlan';
 
 const mockRoom: Room = {
@@ -277,6 +278,93 @@ describe('useFloorPlan', () => {
             const afterRollback = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
             expect(afterRollback).toEqual(twoRoomFloorPlan);
             expect(afterRollback?.rooms[0]?.gridX).toBe(0);
+        });
+    });
+
+
+    describe('正常系: 家具更新時にキャッシュが楽観的更新される', () => {
+        const sofa: Furniture = {
+            id: 'furniture-1',
+            roomId: 'room-1',
+            name: 'ソファ',
+            gridX: 1,
+            gridY: 1,
+            gridW: 2,
+            gridH: 1,
+            createdAt: new Date('2024-01-02'),
+            updatedAt: new Date('2024-01-02'),
+        };
+        const table: Furniture = {
+            id: 'furniture-2',
+            roomId: 'room-1',
+            name: 'テーブル',
+            gridX: 4,
+            gridY: 2,
+            gridW: 1,
+            gridH: 1,
+            createdAt: new Date('2024-01-02'),
+            updatedAt: new Date('2024-01-02'),
+        };
+        const furnishedFloorPlan: FloorPlan = {
+            rooms: [{ ...mockRoom, furniture: [sofa, table] }],
+        };
+
+        it('calls_usecase_with_userId_furnitureId_and_input', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(sofa) };
+            const options = buildUpdateFurnitureMutationOptions(queryClient, 'user-1', mockUseCase);
+
+            // Act
+            await options.mutationFn!({ furnitureId: 'furniture-1', input: { gridX: 3, gridY: 2 } });
+
+            // Assert
+            expect(mockUseCase.execute).toHaveBeenCalledWith('user-1', 'furniture-1', {
+                gridX: 3,
+                gridY: 2,
+            });
+        });
+
+        it('updates_target_furniture_coordinates_optimistically_without_touching_others', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(sofa) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], furnishedFloorPlan);
+
+            // Act
+            const options = buildUpdateFurnitureMutationOptions(queryClient, 'user-1', mockUseCase);
+            await options.onMutate!({ furnitureId: 'furniture-1', input: { gridX: 3, gridY: 2 } });
+
+            // Assert
+            const optimistic = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            const updated = optimistic?.rooms[0]?.furniture.find((f) => f.id === 'furniture-1');
+            expect(updated?.gridX).toBe(3);
+            expect(updated?.gridY).toBe(2);
+            const untouched = optimistic?.rooms[0]?.furniture.find((f) => f.id === 'furniture-2');
+            expect(untouched).toEqual(table);
+        });
+
+        it('rolls_back_furniture_coordinates_when_update_fails', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockRejectedValue(new Error('network error')) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], furnishedFloorPlan);
+            const options = buildUpdateFurnitureMutationOptions(queryClient, 'user-1', mockUseCase);
+            const variables = { furnitureId: 'furniture-1', input: { gridX: 9 } };
+
+            // Act
+            const context = await options.onMutate!(variables);
+            options.onError!(new Error('network error'), variables, context);
+
+            // Assert
+            const afterRollback = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            expect(afterRollback).toEqual(furnishedFloorPlan);
         });
     });
 

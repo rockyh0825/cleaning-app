@@ -83,7 +83,7 @@
   - _Leverage: buildAddRoomMutationOptions のパターン_
   - _Requirements: 1, 2_
 
-- [ ] 8. hooks: useFloorPlan に updateFurniture mutation（楽観的更新）
+- [x] 8. hooks: useFloorPlan に updateFurniture mutation（楽観的更新）
   - File: mobile/src/features/floor-plan/hooks/useFloorPlan.ts
   - 既存の `UpdateFurnitureUseCase`（clampWithin 内蔵）を配線し、該当家具の座標を楽観的更新
   - Purpose: 家具ドラッグ確定時の保存経路（Requirement 4.3）
