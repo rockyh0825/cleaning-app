@@ -1,5 +1,10 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { render, screen, waitFor } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import {
+    fireGestureHandler,
+    getByGestureTestId,
+} from 'react-native-gesture-handler/jest-utils';
 import { RoomShape } from '../RoomShape';
 import type { Room } from '../../types';
 
@@ -16,7 +21,7 @@ describe('RoomShape', () => {
         updatedAt: new Date('2024-01-01'),
     };
 
-    it('calls_onPress_when_tapped', () => {
+    it('calls_onPress_when_tapped', async () => {
         // Arrange
         const mockOnPress = jest.fn();
 
@@ -29,11 +34,71 @@ describe('RoomShape', () => {
             />,
         );
 
-        // Act
-        fireEvent.press(screen.getByTestId('room-shape-room-1'));
+        // Act: タップジェスチャーを発火（GestureDetector 置き換え後の選択操作）
+        fireGestureHandler(getByGestureTestId('room-tap-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
 
-        // Assert
-        expect(mockOnPress).toHaveBeenCalledTimes(1);
+        // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる
+        await waitFor(() => {
+            expect(mockOnPress).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    it('calls_onDragEnd_with_snapped_rect_when_drag_commits', async () => {
+        // Arrange: cellSize=40 で 56px（1.4 セル分）ドラッグ → 1 セル移動にスナップ
+        const mockOnDragEnd = jest.fn();
+
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                onDragEnd={mockOnDragEnd}
+            />,
+        );
+
+        // Act
+        fireGestureHandler(getByGestureTestId('room-pan-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 56, translationY: 0 },
+            { state: State.END, translationX: 56, translationY: 0 },
+        ]);
+
+        // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる
+        await waitFor(() => {
+            expect(mockOnDragEnd).toHaveBeenCalledWith({ x: 1, y: 0, w: 5, h: 4 });
+        });
+    });
+
+    it('does_not_call_onDragEnd_when_drag_does_not_move', async () => {
+        // Arrange
+        const mockOnDragEnd = jest.fn();
+
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                onDragEnd={mockOnDragEnd}
+            />,
+        );
+
+        // Act: 移動量 0 のドラッグ
+        fireGestureHandler(getByGestureTestId('room-pan-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 0, translationY: 0 },
+            { state: State.END, translationX: 0, translationY: 0 },
+        ]);
+
+        // Assert: 非同期呼び出しの取りこぼしを防ぐためタスクキューを流してから検証する
+        await new Promise((resolve) => setImmediate(resolve));
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(mockOnDragEnd).not.toHaveBeenCalled();
     });
 
     it('renders_room_name', () => {

@@ -55,6 +55,8 @@ export type UseDragToGridParams = {
     scale?: number;
     /** ドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
     onCommit: (rect: Rect) => void;
+    /** jest-utils の getByGestureTestId で参照するテストID */
+    testID?: string;
 };
 
 /**
@@ -68,6 +70,7 @@ export function useDragToGrid({
     cellSize,
     scale = 1,
     onCommit,
+    testID,
 }: UseDragToGridParams) {
     const translationX = useSharedValue(0);
     const translationY = useSharedValue(0);
@@ -89,13 +92,18 @@ export function useDragToGrid({
             translationX.value = 0;
             translationY.value = 0;
         });
+    if (testID) gesture.withTestId(testID);
 
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [
-            { translateX: translationX.value },
-            { translateY: translationY.value },
-        ],
-    }));
+    // 依存配列は Babel プラグイン無しの環境（ts-jest でのテスト実行）でも動くよう明示する
+    const animatedStyle = useAnimatedStyle(
+        () => ({
+            transform: [
+                { translateX: translationX.value },
+                { translateY: translationY.value },
+            ],
+        }),
+        [translationX, translationY],
+    );
 
     return { gesture, animatedStyle };
 }

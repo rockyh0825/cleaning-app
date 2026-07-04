@@ -1,5 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import {
+    fireGestureHandler,
+    getByGestureTestId,
+} from 'react-native-gesture-handler/jest-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloorPlanIndexScreen from '../index';
@@ -202,6 +207,54 @@ describe('FloorPlanIndexScreen', () => {
             expect(mockMutate).toHaveBeenCalledWith(
                 expect.objectContaining({ gridX: 0, gridY: 0 }),
             );
+        });
+    });
+
+    it('mutates_update_room_with_snapped_rect_when_room_drag_commits', async () => {
+        // Arrange: cellSize=40 で 56px（1.4 セル分）右へドラッグ → gridX が 1 になる
+        const mockUpdateMutate = jest.fn();
+        mockUseLayout.mockReturnValue({
+            floorPlan: {
+                data: {
+                    rooms: [
+                        {
+                            id: 'room-1',
+                            name: 'リビング',
+                            type: 'LIVING',
+                            gridX: 0,
+                            gridY: 0,
+                            gridW: 6,
+                            gridH: 4,
+                            createdAt: new Date('2024-01-01'),
+                            updatedAt: new Date('2024-01-01'),
+                            furniture: [],
+                        },
+                    ],
+                },
+                isLoading: false,
+                isError: false,
+            },
+            addRoom: { mutate: jest.fn() },
+            updateRoom: { mutate: mockUpdateMutate },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        await screen.findByText('リビング');
+
+        // Act
+        fireGestureHandler(getByGestureTestId('room-pan-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 56, translationY: 0 },
+            { state: State.END, translationX: 56, translationY: 0 },
+        ]);
+
+        // Assert: 楽観的更新の mutation にスナップ済み座標が渡る
+        await waitFor(() => {
+            expect(mockUpdateMutate).toHaveBeenCalledWith({
+                roomId: 'room-1',
+                input: { gridX: 1, gridY: 0, gridW: 6, gridH: 4 },
+            });
         });
     });
 });
