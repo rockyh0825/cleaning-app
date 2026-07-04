@@ -74,11 +74,13 @@ export function RoomShape({
                         left,
                         top,
                         backgroundColor,
+                        // 選択は枠色、重なりは警告アイコンとチャネルを分ける
+                        // （選択中でも重なりが分かり、選択フィードバックも消えない）
                         borderWidth: selected || overlapping ? 2 : 1,
-                        borderColor: overlapping
-                            ? theme.colors.danger
-                            : selected
-                              ? '#1A60C8'
+                        borderColor: selected
+                            ? '#1A60C8'
+                            : overlapping
+                              ? theme.colors.danger
                               : '#888',
                     },
                     animatedStyle,

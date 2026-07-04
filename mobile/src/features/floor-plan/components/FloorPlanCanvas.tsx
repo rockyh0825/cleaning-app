@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { rectsOverlap } from '@/shared/utils/grid';
 import type { Rect } from '@/shared/utils/grid';
@@ -49,7 +49,10 @@ export function FloorPlanCanvas({
 
     const canvasWidth = GRID_COLS * cellSize;
     const canvasHeight = GRID_ROWS * cellSize;
-    const overlappingRoomIds = findOverlappingRoomIds(floorPlan.rooms);
+    const overlappingRoomIds = useMemo(
+        () => findOverlappingRoomIds(floorPlan.rooms),
+        [floorPlan.rooms],
+    );
 
     function handleRoomPress(roomId: string) {
         setSelectedRoomId(roomId);
