@@ -71,7 +71,8 @@ jobs:
     name: Maestro E2E (iOS Simulator)
     runs-on: macos-14
     needs: ci
-    timeout-minutes: 40
+    # iOS の Release ビルドは実測約29分（run 28521747001）。余裕を持って2時間確保する
+    timeout-minutes: 120
 
     steps:
       - uses: actions/checkout@v4
@@ -122,16 +123,50 @@ jobs:
         working-directory: mobile
         run: npx expo prebuild --platform ios
 
-      # --configuration Release で JS バンドルをビルド時に静的に埋め込むため、
-      # Metro を別プロセスで起動しておく必要がない（CIでの安定性を優先）。
-      # EXPO_PUBLIC_MOCK_START_EMPTY はバンドルビルド時にインライン化されるため、
-      # このステップで指定する（実行時に渡しても反映されない）。
-      - name: Build and launch app on iOS Simulator
+      # expo run:ios はアプリ起動後もログを流し続けて終了しないため CI では使わない
+      # （run 28521747001 で Maestro ステップに到達できずタイムアウトした敗因）。
+      # 「終了するコマンドの連鎖」に分解する: xcodebuild → simctl boot → simctl install
+      #
+      # - Release 構成で JS バンドルをビルド時に静的に埋め込むため、Metro の起動が不要
+      # - EXPO_PUBLIC_MOCK_START_EMPTY は xcodebuild の "Bundle React Native code and images"
+      #   フェーズでバンドルにインライン化されるため、このステップの env で渡す
+      # - シミュレータビルドはコード署名不要（CODE_SIGNING_ALLOWED=NO）
+      # - app.json の name が日本語のため、生成される workspace / scheme 名は決め打ちせず
+      #   prebuild の生成物から動的に取得する
+      - name: Build app for iOS Simulator (Release)
         if: steps.filter.outputs.mobile == 'true'
-        working-directory: mobile
+        timeout-minutes: 110
+        working-directory: mobile/ios
         env:
           EXPO_PUBLIC_MOCK_START_EMPTY: "true"
-        run: npx expo run:ios --configuration Release
+        run: |
+          set -o pipefail
+          command -v xcbeautify >/dev/null || brew install -q xcbeautify
+          WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
+          SCHEME=$(basename "$(ls -d *.xcodeproj | head -n 1)" .xcodeproj)
+          echo "workspace=$WORKSPACE scheme=$SCHEME"
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" \
+            -configuration Release -sdk iphonesimulator \
+            -derivedDataPath build \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build | xcbeautify --quiet
+
+      # 機種名は決め打ちせず、選択中の Xcode ランタイムで available な最初の iPhone を使う
+      - name: Boot iOS Simulator
+        if: steps.filter.outputs.mobile == 'true'
+        run: |
+          UDID=$(xcrun simctl list devices available --json \
+            | jq -r '[.devices[] | .[] | select(.name | startswith("iPhone"))][0].udid')
+          echo "Booting simulator: $UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
+
+      # アプリの起動は Maestro フロー先頭の launchApp が行うため、install まででよい
+      - name: Install app on simulator
+        if: steps.filter.outputs.mobile == 'true'
+        run: xcrun simctl install "$SIMULATOR_UDID" mobile/ios/build/Build/Products/Release-iphonesimulator/*.app
 
       - name: Run Maestro E2E flow
         if: steps.filter.outputs.mobile == 'true'
