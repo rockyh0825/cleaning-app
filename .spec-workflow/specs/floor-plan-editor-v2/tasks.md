@@ -24,7 +24,7 @@
     - 正常系: ThemeProvider 配下の useAppTheme がカラースキームに応じたテーマを返す
   - _Requirements: 6_
 
-- [ ] 3. shared/utils/grid.ts: findFreePosition（空き位置探索）
+- [x] 3. shared/utils/grid.ts: findFreePosition（空き位置探索）
   - File: mobile/src/shared/utils/grid.ts（追記）
   - 左上から行優先で走査し、`rectsOverlap` で既存矩形と衝突しない最初の位置を返す純粋関数。空きが無ければ null
   - Purpose: 部屋追加時の重なり解消（Requirement 3.1）の計算部
