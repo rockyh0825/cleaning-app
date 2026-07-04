@@ -4,17 +4,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloorPlanIndexScreen from '../index';
 
+// expo-router をモック（部屋タップで詳細画面へ push する）
+jest.mock('expo-router', () => ({
+    router: { push: jest.fn() },
+}));
+
 // useFloorPlan をモック
 jest.mock('@/features/floor-plan/hooks/useFloorPlan', () => ({
     useFloorPlan: jest.fn(),
 }));
 
-// expo-router をモック（実体は @react-navigation 経由のネイティブ依存を持つため）
-const mockPush = jest.fn();
-jest.mock('expo-router', () => ({
-    useRouter: () => ({ push: mockPush }),
-}));
-
+import { router } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
 const mockUseLayout = useFloorPlan as jest.Mock;
 
@@ -59,6 +59,45 @@ describe('FloorPlanIndexScreen', () => {
         });
     });
 
+    it('navigates_to_room_detail_when_room_is_pressed', async () => {
+        // Arrange
+        mockUseLayout.mockReturnValue({
+            floorPlan: {
+                data: {
+                    rooms: [
+                        {
+                            id: 'room-1',
+                            name: 'リビング',
+                            type: 'LIVING',
+                            gridX: 0,
+                            gridY: 0,
+                            gridW: 6,
+                            gridH: 4,
+                            createdAt: new Date('2024-01-01'),
+                            updatedAt: new Date('2024-01-01'),
+                            furniture: [],
+                        },
+                    ],
+                },
+                isLoading: false,
+                isError: false,
+            },
+            addRoom: { mutate: jest.fn() },
+            addFurniture: { mutate: jest.fn() },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+
+        // Act
+        fireEvent.press(await screen.findByText('リビング'));
+
+        // Assert
+        await waitFor(() => {
+            expect(router.push).toHaveBeenCalledWith('/floor-plan/room-1');
+        });
+    });
+
     it('saves_new_uuid_to_async_storage_when_no_uuid_exists', async () => {
         // Arrange
         mockUseLayout.mockReturnValue({
@@ -77,46 +116,6 @@ describe('FloorPlanIndexScreen', () => {
                 'user-uuid',
                 expect.any(String),
             );
-        });
-    });
-
-    it('navigates_to_room_detail_screen_when_a_room_is_pressed', async () => {
-        // Arrange
-        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
-        mockUseLayout.mockReturnValue({
-            floorPlan: {
-                data: {
-                    rooms: [
-                        {
-                            id: 'room-1',
-                            name: 'リビング',
-                            type: 'LIVING',
-                            gridX: 0,
-                            gridY: 0,
-                            gridW: 4,
-                            gridH: 4,
-                            furniture: [],
-                        },
-                    ],
-                },
-                isLoading: false,
-                isError: false,
-            },
-            addRoom: { mutate: jest.fn() },
-            deleteRoom: { mutate: jest.fn() },
-        });
-
-        // Act
-        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
-        await waitFor(() => {
-            expect(screen.getByTestId('room-shape-room-1')).toBeTruthy();
-        });
-        fireEvent.press(screen.getByTestId('room-shape-room-1'));
-
-        // Assert
-        expect(mockPush).toHaveBeenCalledWith({
-            pathname: '/floor-plan/[roomId]',
-            params: { roomId: 'room-1' },
         });
     });
 });

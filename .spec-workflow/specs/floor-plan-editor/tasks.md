@@ -140,7 +140,7 @@
 
 ## フェーズ4: 統合
 
-- [x] 17. E2E統合とCIパイプライン組み込み ✅ 実装済み（Maestro, #68）
+- [x] 17. E2E統合とCIパイプライン組み込み ✅ 実装済み（Maestro, #68。手法比較は Issue #70）
   - File: mobile/.maestro/, .github/workflows/mobile-ci.yml
   - 空状態→部屋追加→種別選択→家具配置→再起動復元のE2Eフロー確認、CIにlint/test/アーキテストを組み込む
   - Purpose: 一連のユーザー体験とCI自動化の確立

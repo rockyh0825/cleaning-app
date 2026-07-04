@@ -1,20 +1,23 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
-import IndexScreen from '../index';
+import { render, screen } from '@testing-library/react-native';
+import RootIndex from '../index';
 
-jest.mock('expo-router', () => ({
-    Redirect: ({ href }: { href: string }) => {
-        const { Text } = require('react-native');
-        return <Text testID="redirect">{href}</Text>;
-    },
-}));
+// expo-router をモック（Redirect は遷移先を testID 付きで可視化する）
+jest.mock('expo-router', () => {
+    const { Text } = require('react-native');
+    return {
+        Redirect: ({ href }: { href: string }) => (
+            <Text testID="redirect">{href}</Text>
+        ),
+    };
+});
 
-describe('Root index screen', () => {
-    it('redirects_to_the_floor_plan_screen', () => {
-        // Act
-        const { getByTestId } = render(<IndexScreen />);
+describe('RootIndex', () => {
+    it('redirects_to_floor_plan_screen', () => {
+        // Arrange & Act
+        render(<RootIndex />);
 
         // Assert
-        expect(getByTestId('redirect').props.children).toBe('/floor-plan');
+        expect(screen.getByTestId('redirect').props.children).toBe('/floor-plan');
     });
 });

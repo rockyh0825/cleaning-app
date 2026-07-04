@@ -1,19 +1,18 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useRouter } from "expo-router";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { router } from "expo-router";
 import { useFloorPlan } from "@/features/floor-plan/hooks/useFloorPlan";
 import { FloorPlanCanvas } from "@/features/floor-plan/components/FloorPlanCanvas";
 import { AddRoomModal } from "@/features/floor-plan/components/AddRoomModal";
 import { FloorPlanRepository } from "@/features/floor-plan/repositories/FloorPlanRepository";
 import type { CreateRoomInput } from "@/features/floor-plan/types";
-import { api } from "@/shared/app-root/providers/di";
 import { useUserId } from "@/shared/hooks/useUserId";
+import { api } from "@/shared/app-root/providers/di";
 
 const repository = new FloorPlanRepository(api);
 
 export default function FloorPlanIndexScreen() {
   const userId = useUserId();
-  const router = useRouter();
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const { floorPlan, addRoom } = useFloorPlan(userId ?? "", repository);
@@ -21,10 +20,7 @@ export default function FloorPlanIndexScreen() {
   const rooms = floorPlan.data?.rooms ?? [];
 
   function handleRoomPress(roomId: string) {
-    router.push({
-      pathname: "/floor-plan/[roomId]",
-      params: { roomId },
-    });
+    router.push(`/floor-plan/${roomId}`);
   }
 
   function handleAddRoom(input: {
@@ -52,7 +48,14 @@ export default function FloorPlanIndexScreen() {
           </Text>
         </View>
       ) : (
-        <FloorPlanCanvas floorPlan={floorPlan.data!} onRoomPress={handleRoomPress} />
+        <ScrollView style={styles.canvasScroll}>
+          <ScrollView horizontal>
+            <FloorPlanCanvas
+              floorPlan={floorPlan.data!}
+              onRoomPress={handleRoomPress}
+            />
+          </ScrollView>
+        </ScrollView>
       )}
 
       <TouchableOpacity
@@ -75,6 +78,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  canvasScroll: {
+    flex: 1,
   },
   emptyState: {
     flex: 1,
