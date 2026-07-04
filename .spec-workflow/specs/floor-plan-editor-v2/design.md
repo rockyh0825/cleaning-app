@@ -101,7 +101,7 @@ shared/theme/
 - **Reuses:** shared/theme
 
 ### useFloorPlan (hooks・拡張)
-- **Interfaces（追加分）:** `updateRoom.mutate({ roomId, input })` / `updateFurniture.mutate({ furnitureId, roomId, input })`
+- **Interfaces（追加分）:** `updateRoom.mutate({ roomId, input })` / `updateFurniture.mutate({ furnitureId, input })（roomId は UpdateFurnitureUseCase がフロアプランから自力解決するため不要）`
 - 楽観的更新: キャッシュ上の該当 room / furniture の座標を差し替え、onError で previous に戻す（addRoom と同パターン）
 
 ## Data Models

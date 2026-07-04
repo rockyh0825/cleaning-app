@@ -6,14 +6,14 @@
 
 ## フェーズ1: 基盤（ジェスチャー・テーマ・純関数）
 
-- [ ] 1. react-native-gesture-handler / react-native-reanimated の導入
+- [x] 1. react-native-gesture-handler / react-native-reanimated の導入
   - File: mobile/package.json, mobile/babel.config.js, mobile/jest.config（jestSetup追加）, mobile/app/_layout.tsx（GestureHandlerRootView）
   - `npx expo install react-native-gesture-handler react-native-reanimated` で Expo SDK 53 互換バージョンを導入し、babel plugin と jest モックを設定する
   - Purpose: ドラッグ・ピンチ操作の実装基盤（このタスクでは機能追加しない）
   - **確認方法**: `npx jest` で既存全テストが Green のまま、`npx expo start` でアプリが起動すること
   - _Requirements: 1, 2, 4, 5_
 
-- [ ] 2. shared/theme: デザイントークンと ThemeProvider / useAppTheme
+- [x] 2. shared/theme: デザイントークンと ThemeProvider / useAppTheme
   - File: mobile/src/shared/theme/{tokens.ts, ThemeProvider.tsx, useAppTheme.ts}
   - light / dark の semantic tokens（colors・spacing・radius・typography・elevation）と部屋種別アクセント（fill / accent / icon）を定義。`useColorScheme` に追従
   - Purpose: 全UIタスクの色・余白の唯一の供給源（Requirement 6 の基盤）
@@ -24,7 +24,7 @@
     - 正常系: ThemeProvider 配下の useAppTheme がカラースキームに応じたテーマを返す
   - _Requirements: 6_
 
-- [ ] 3. shared/utils/grid.ts: findFreePosition（空き位置探索）
+- [x] 3. shared/utils/grid.ts: findFreePosition（空き位置探索）
   - File: mobile/src/shared/utils/grid.ts（追記）
   - 左上から行優先で走査し、`rectsOverlap` で既存矩形と衝突しない最初の位置を返す純粋関数。空きが無ければ null
   - Purpose: 部屋追加時の重なり解消（Requirement 3.1）の計算部
@@ -36,7 +36,7 @@
     - 異常系: 全面が埋まっている → null を返す
   - _Requirements: 3_
 
-- [ ] 4. shared/utils/grid.ts: pxOffsetToGridDelta（ドラッグ量→グリッド差分変換）
+- [x] 4. shared/utils/grid.ts: pxOffsetToGridDelta（ドラッグ量→グリッド差分変換）
   - File: mobile/src/shared/utils/grid.ts（追記）
   - px単位の累積ドラッグオフセットとセルサイズからグリッド差分（整数）を返す純粋関数。ズーム倍率も引数で受ける
   - Purpose: ジェスチャーAPIから分離したテスト可能なドラッグ計算の中核
@@ -50,7 +50,7 @@
 
 ## フェーズ2: 動かせるようにする
 
-- [ ] 5. usecases: UpdateRoomUseCase（モバイル）
+- [x] 5. usecases: UpdateRoomUseCase（モバイル）
   - File: mobile/src/features/floor-plan/usecases/UpdateRoomUseCase.ts
   - 座標・サイズ更新をキャンバス境界（20×20）に `clampWithin` してから repository.updateRoom を呼ぶ。最小サイズ 1×1 を下回る入力は 1×1 に補正
   - Purpose: 部屋の移動・リサイズのビジネスルール（React非依存）
@@ -62,7 +62,7 @@
   - _Leverage: mobile/src/shared/utils/grid.ts_
   - _Requirements: 1, 2_
 
-- [ ] 6. repositories: FloorPlanRepository に updateRoom / updateFurniture を追加
+- [x] 6. repositories: FloorPlanRepository に updateRoom / updateFurniture を追加
   - File: mobile/src/features/floor-plan/repositories/FloorPlanRepository.ts
   - 生成クライアントの `updateRoom(roomId, RoomUpdate)` / `updateFurniture(furnitureId, FurnitureUpdate)` をラップ（updateFurniture が未配線の場合のみ）
   - Purpose: PATCH API との接続点
@@ -72,7 +72,7 @@
     - 正常系: updateFurniture 同上
   - _Requirements: 1, 2, 4_
 
-- [ ] 7. hooks: useFloorPlan に updateRoom mutation（楽観的更新）
+- [x] 7. hooks: useFloorPlan に updateRoom mutation（楽観的更新）
   - File: mobile/src/features/floor-plan/hooks/useFloorPlan.ts
   - `buildUpdateRoomMutationOptions` を追加。キャッシュ上の該当部屋の座標・サイズを楽観的に差し替え、失敗時ロールバック
   - Purpose: ドラッグ確定時の保存経路（Requirement 1.4 / 2.4）
@@ -83,7 +83,7 @@
   - _Leverage: buildAddRoomMutationOptions のパターン_
   - _Requirements: 1, 2_
 
-- [ ] 8. hooks: useFloorPlan に updateFurniture mutation（楽観的更新）
+- [x] 8. hooks: useFloorPlan に updateFurniture mutation（楽観的更新）
   - File: mobile/src/features/floor-plan/hooks/useFloorPlan.ts
   - 既存の `UpdateFurnitureUseCase`（clampWithin 内蔵）を配線し、該当家具の座標を楽観的更新
   - Purpose: 家具ドラッグ確定時の保存経路（Requirement 4.3）
@@ -94,7 +94,7 @@
   - _Leverage: mobile/src/features/floor-plan/usecases/UpdateFurnitureUseCase.ts_
   - _Requirements: 4_
 
-- [ ] 9. 部屋追加時の自動空き配置
+- [x] 9. 部屋追加時の自動空き配置
   - File: mobile/app/floor-plan/index.tsx（handleAddRoom）
   - 固定 (0,0) をやめ、`findFreePosition` で空き位置を探索して addRoom に渡す。null の場合は (0,0) に配置
   - Purpose: 「追加するたびに重なる」問題の解消（Requirement 3.1 / 3.2）
@@ -105,7 +105,7 @@
   - _Leverage: mobile/src/shared/utils/grid.ts findFreePosition_
   - _Requirements: 3_
 
-- [ ] 10. hooks: useDragToGrid（共通ドラッグフック）
+- [x] 10. hooks: useDragToGrid（共通ドラッグフック）
   - File: mobile/src/features/floor-plan/hooks/useDragToGrid.ts
   - Gesture.Pan + Reanimated shared value でドラッグ中は transform プレビューのみ行い、onEnd で `pxOffsetToGridDelta` → `snapToGrid` → `clampWithin` を通した確定矩形を onCommit に渡す
   - Purpose: 部屋・家具・リサイズハンドルで共有するドラッグの心臓部（60fps 要件）
@@ -117,7 +117,7 @@
   - _Leverage: mobile/src/shared/utils/grid.ts_
   - _Requirements: 1, 4_
 
-- [ ] 11. RoomShape のドラッグ移動対応
+- [x] 11. RoomShape のドラッグ移動対応
   - File: mobile/src/features/floor-plan/components/{RoomShape.tsx, FloorPlanCanvas.tsx}
   - RoomShape に useDragToGrid を組み込み（bounds = キャンバス 20×20）、onCommit で updateRoom.mutate を呼ぶ。TouchableOpacity は GestureDetector + Animated.View に置き換え、タップ選択は Gesture.Tap で維持
   - Purpose: 部屋を動かせるようにする（Requirement 1）

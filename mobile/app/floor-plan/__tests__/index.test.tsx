@@ -1,5 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import {
+    fireGestureHandler,
+    getByGestureTestId,
+} from 'react-native-gesture-handler/jest-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloorPlanIndexScreen from '../index';
@@ -116,6 +121,140 @@ describe('FloorPlanIndexScreen', () => {
                 'user-uuid',
                 expect.any(String),
             );
+        });
+    });
+
+    it('adds_room_at_non_overlapping_position_when_origin_is_occupied', async () => {
+        // Arrange: (0,0) に 4x4 の既存部屋 → 新規部屋(4x4)は重ならない (4,0) に配置される
+        const mockMutate = jest.fn();
+        mockUseLayout.mockReturnValue({
+            floorPlan: {
+                data: {
+                    rooms: [
+                        {
+                            id: 'room-1',
+                            name: 'リビング',
+                            type: 'LIVING',
+                            gridX: 0,
+                            gridY: 0,
+                            gridW: 4,
+                            gridH: 4,
+                            createdAt: new Date('2024-01-01'),
+                            updatedAt: new Date('2024-01-01'),
+                            furniture: [],
+                        },
+                    ],
+                },
+                isLoading: false,
+                isError: false,
+            },
+            addRoom: { mutate: mockMutate },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+
+        // Act
+        fireEvent.press(screen.getByText('部屋を追加'));
+        fireEvent.changeText(screen.getByPlaceholderText('部屋名'), 'キッチン');
+        fireEvent.press(screen.getByText('追加'));
+
+        // Assert
+        await waitFor(() => {
+            expect(mockMutate).toHaveBeenCalledWith(
+                expect.objectContaining({ gridX: 4, gridY: 0, gridW: 4, gridH: 4 }),
+            );
+        });
+    });
+
+    it('adds_room_at_origin_without_crashing_when_canvas_is_full', async () => {
+        // Arrange: キャンバス(20x20)全面を占有する部屋 → 空きなし → (0,0) に配置
+        const mockMutate = jest.fn();
+        mockUseLayout.mockReturnValue({
+            floorPlan: {
+                data: {
+                    rooms: [
+                        {
+                            id: 'room-1',
+                            name: '巨大部屋',
+                            type: 'OTHER',
+                            gridX: 0,
+                            gridY: 0,
+                            gridW: 20,
+                            gridH: 20,
+                            createdAt: new Date('2024-01-01'),
+                            updatedAt: new Date('2024-01-01'),
+                            furniture: [],
+                        },
+                    ],
+                },
+                isLoading: false,
+                isError: false,
+            },
+            addRoom: { mutate: mockMutate },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+
+        // Act
+        fireEvent.press(screen.getByText('部屋を追加'));
+        fireEvent.changeText(screen.getByPlaceholderText('部屋名'), '物置');
+        fireEvent.press(screen.getByText('追加'));
+
+        // Assert
+        await waitFor(() => {
+            expect(mockMutate).toHaveBeenCalledWith(
+                expect.objectContaining({ gridX: 0, gridY: 0 }),
+            );
+        });
+    });
+
+    it('mutates_update_room_with_snapped_rect_when_room_drag_commits', async () => {
+        // Arrange: cellSize=40 で 56px（1.4 セル分）右へドラッグ → gridX が 1 になる
+        const mockUpdateMutate = jest.fn();
+        mockUseLayout.mockReturnValue({
+            floorPlan: {
+                data: {
+                    rooms: [
+                        {
+                            id: 'room-1',
+                            name: 'リビング',
+                            type: 'LIVING',
+                            gridX: 0,
+                            gridY: 0,
+                            gridW: 6,
+                            gridH: 4,
+                            createdAt: new Date('2024-01-01'),
+                            updatedAt: new Date('2024-01-01'),
+                            furniture: [],
+                        },
+                    ],
+                },
+                isLoading: false,
+                isError: false,
+            },
+            addRoom: { mutate: jest.fn() },
+            updateRoom: { mutate: mockUpdateMutate },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        await screen.findByText('リビング');
+
+        // Act
+        fireGestureHandler(getByGestureTestId('room-pan-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 56, translationY: 0 },
+            { state: State.END, translationX: 56, translationY: 0 },
+        ]);
+
+        // Assert: 楽観的更新の mutation にスナップ済み座標が渡る
+        await waitFor(() => {
+            expect(mockUpdateMutate).toHaveBeenCalledWith({
+                roomId: 'room-1',
+                input: { gridX: 1, gridY: 0, gridW: 6, gridH: 4 },
+            });
         });
     });
 });
