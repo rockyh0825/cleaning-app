@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render, screen, waitFor } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import {
     fireGestureHandler,
@@ -100,5 +100,83 @@ describe('FloorPlanCanvas', () => {
         );
 
         expect(toJSON()).toBeTruthy();
+    });
+
+    it('shows_overlap_warning_on_both_rooms_when_two_rooms_overlap', () => {
+        // Arrange: (0,0,5,4) と (3,2,4,4) は重なる
+        const overlappingPlan: FloorPlan = {
+            rooms: [
+                {
+                    id: 'room-1',
+                    name: 'リビング',
+                    type: 'LIVING',
+                    gridX: 0,
+                    gridY: 0,
+                    gridW: 5,
+                    gridH: 4,
+                    createdAt: new Date('2024-01-01'),
+                    updatedAt: new Date('2024-01-01'),
+                    furniture: [],
+                },
+                {
+                    id: 'room-2',
+                    name: 'キッチン',
+                    type: 'KITCHEN',
+                    gridX: 3,
+                    gridY: 2,
+                    gridW: 4,
+                    gridH: 4,
+                    createdAt: new Date('2024-01-01'),
+                    updatedAt: new Date('2024-01-01'),
+                    furniture: [],
+                },
+            ],
+        };
+
+        // Act
+        render(<FloorPlanCanvas floorPlan={overlappingPlan} />);
+
+        // Assert
+        expect(screen.getByTestId('room-overlap-warning-room-1')).toBeTruthy();
+        expect(screen.getByTestId('room-overlap-warning-room-2')).toBeTruthy();
+    });
+
+    it('shows_no_overlap_warning_when_rooms_only_share_an_edge', () => {
+        // Arrange: (0,0,5,4) と (5,0,4,4) は辺が接するだけで重ならない
+        const touchingPlan: FloorPlan = {
+            rooms: [
+                {
+                    id: 'room-1',
+                    name: 'リビング',
+                    type: 'LIVING',
+                    gridX: 0,
+                    gridY: 0,
+                    gridW: 5,
+                    gridH: 4,
+                    createdAt: new Date('2024-01-01'),
+                    updatedAt: new Date('2024-01-01'),
+                    furniture: [],
+                },
+                {
+                    id: 'room-2',
+                    name: 'キッチン',
+                    type: 'KITCHEN',
+                    gridX: 5,
+                    gridY: 0,
+                    gridW: 4,
+                    gridH: 4,
+                    createdAt: new Date('2024-01-01'),
+                    updatedAt: new Date('2024-01-01'),
+                    furniture: [],
+                },
+            ],
+        };
+
+        // Act
+        render(<FloorPlanCanvas floorPlan={touchingPlan} />);
+
+        // Assert
+        expect(screen.queryByTestId('room-overlap-warning-room-1')).toBeNull();
+        expect(screen.queryByTestId('room-overlap-warning-room-2')).toBeNull();
     });
 });

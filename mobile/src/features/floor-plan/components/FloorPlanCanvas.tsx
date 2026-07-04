@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { rectsOverlap } from '@/shared/utils/grid';
 import type { Rect } from '@/shared/utils/grid';
-import type { FloorPlan } from '../types';
+import type { FloorPlan, Room } from '../types';
 import { GRID_COLS, GRID_ROWS } from '../constants';
 import { FurnitureItem } from './FurnitureItem';
 import { RoomShape } from './RoomShape';
@@ -48,6 +49,10 @@ export function FloorPlanCanvas({
 
     const canvasWidth = GRID_COLS * cellSize;
     const canvasHeight = GRID_ROWS * cellSize;
+    const overlappingRoomIds = useMemo(
+        () => findOverlappingRoomIds(floorPlan.rooms),
+        [floorPlan.rooms],
+    );
 
     function handleRoomPress(roomId: string) {
         setSelectedRoomId(roomId);
@@ -75,6 +80,7 @@ export function FloorPlanCanvas({
                         selected={selectedRoomId === room.id}
                         onPress={() => handleRoomPress(room.id)}
                         onDragEnd={(rect) => onRoomDragEnd?.(room.id, rect)}
+                        overlapping={overlappingRoomIds.has(room.id)}
                     />
                     {room.furniture.map((furn) => (
                         <FurnitureItem
@@ -89,6 +95,27 @@ export function FloorPlanCanvas({
             ))}
         </View>
     );
+}
+
+/**
+ * 全部屋ペアを rectsOverlap で判定し、重なっている部屋の id 集合を返す。
+ * 部屋数は数十件規模なので O(n²) で十分（design.md 重なりポリシー）。
+ */
+function findOverlappingRoomIds(rooms: Room[]): Set<string> {
+    const ids = new Set<string>();
+    for (let i = 0; i < rooms.length; i++) {
+        for (let j = i + 1; j < rooms.length; j++) {
+            const a = rooms[i];
+            const b = rooms[j];
+            const rectA = { x: a.gridX, y: a.gridY, w: a.gridW, h: a.gridH };
+            const rectB = { x: b.gridX, y: b.gridY, w: b.gridW, h: b.gridH };
+            if (rectsOverlap(rectA, rectB)) {
+                ids.add(a.id);
+                ids.add(b.id);
+            }
+        }
+    }
+    return ids;
 }
 
 function renderGrid(

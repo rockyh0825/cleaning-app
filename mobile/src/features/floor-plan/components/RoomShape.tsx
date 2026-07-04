@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
+import { useAppTheme } from '@/shared/theme/useAppTheme';
 import type { Rect } from '@/shared/utils/grid';
 import { GRID_COLS, GRID_ROWS } from '../constants';
 import { useDragToGrid } from '../hooks/useDragToGrid';
@@ -14,6 +15,8 @@ type Props = {
     onPress: () => void;
     /** ドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
     onDragEnd?: (rect: Rect) => void;
+    /** 他の部屋と重なっているとき警告スタイルを表示する */
+    overlapping?: boolean;
 };
 
 const ROOM_COLORS: Record<string, string> = {
@@ -27,7 +30,15 @@ const ROOM_COLORS: Record<string, string> = {
 
 const CANVAS_BOUNDS: Rect = { x: 0, y: 0, w: GRID_COLS, h: GRID_ROWS };
 
-export function RoomShape({ room, cellSize, selected, onPress, onDragEnd }: Props) {
+export function RoomShape({
+    room,
+    cellSize,
+    selected,
+    onPress,
+    onDragEnd,
+    overlapping = false,
+}: Props) {
+    const theme = useAppTheme();
     const width = room.gridW * cellSize;
     const height = room.gridH * cellSize;
     const left = room.gridX * cellSize;
@@ -63,12 +74,27 @@ export function RoomShape({ room, cellSize, selected, onPress, onDragEnd }: Prop
                         left,
                         top,
                         backgroundColor,
-                        borderWidth: selected ? 2 : 1,
-                        borderColor: selected ? '#1A60C8' : '#888',
+                        // 選択は枠色、重なりは警告アイコンとチャネルを分ける
+                        // （選択中でも重なりが分かり、選択フィードバックも消えない）
+                        borderWidth: selected || overlapping ? 2 : 1,
+                        borderColor: selected
+                            ? '#1A60C8'
+                            : overlapping
+                              ? theme.colors.danger
+                              : '#888',
                     },
                     animatedStyle,
                 ]}
             >
+                {overlapping && (
+                    <Text
+                        testID={`room-overlap-warning-${room.id}`}
+                        style={styles.warningIcon}
+                        accessibilityLabel="部屋が重なっています"
+                    >
+                        ⚠️
+                    </Text>
+                )}
                 <Text style={styles.label} numberOfLines={1}>
                     {room.name}
                 </Text>
@@ -88,5 +114,11 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: '#333',
         fontWeight: '500',
+    },
+    warningIcon: {
+        position: 'absolute',
+        top: 2,
+        right: 4,
+        fontSize: 12,
     },
 });

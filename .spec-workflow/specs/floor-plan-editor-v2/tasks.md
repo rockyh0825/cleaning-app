@@ -128,7 +128,7 @@
   - _Leverage: useDragToGrid, useFloorPlan.updateRoom_
   - _Requirements: 1_
 
-- [ ] 12. 重なり警告の表示
+- [x] 12. 重なり警告の表示
   - File: mobile/src/features/floor-plan/components/{FloorPlanCanvas.tsx, RoomShape.tsx}
   - 描画時に全部屋ペアを `rectsOverlap` で判定し、重なっている部屋に警告スタイル（danger トークンの枠 + 警告アイコン）を付与する
   - Purpose: 重なりの可視化（Requirement 3.3）
