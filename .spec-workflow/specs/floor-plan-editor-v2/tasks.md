@@ -62,7 +62,7 @@
   - _Leverage: mobile/src/shared/utils/grid.ts_
   - _Requirements: 1, 2_
 
-- [ ] 6. repositories: FloorPlanRepository に updateRoom / updateFurniture を追加
+- [x] 6. repositories: FloorPlanRepository に updateRoom / updateFurniture を追加
   - File: mobile/src/features/floor-plan/repositories/FloorPlanRepository.ts
   - 生成クライアントの `updateRoom(roomId, RoomUpdate)` / `updateFurniture(furnitureId, FurnitureUpdate)` をラップ（updateFurniture が未配線の場合のみ）
   - Purpose: PATCH API との接続点
