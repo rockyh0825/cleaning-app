@@ -1,4 +1,4 @@
-import { clampWithin, findFreePosition, rectsOverlap, snapToGrid } from '../grid';
+import { clampWithin, findFreePosition, pxOffsetToGridDelta, rectsOverlap, snapToGrid } from '../grid';
 import type { Point, Rect } from '../grid';
 
 describe('snapToGrid', () => {
@@ -361,5 +361,82 @@ describe('findFreePosition', () => {
 
         // Assert
         expect(result).toEqual({ x: 7, y: 5 });
+    });
+});
+
+describe('pxOffsetToGridDelta', () => {
+    it('returns_one_cell_delta_when_offset_equals_cell_size', () => {
+        // Arrange
+        const offsetPx: Point = { x: 40, y: -40 };
+
+        // Act
+        const result = pxOffsetToGridDelta(offsetPx, 40, 1);
+
+        // Assert
+        expect(result).toEqual({ x: 1, y: -1 });
+    });
+
+    it('rounds_half_cell_offset_up_per_round_half_up_spec', () => {
+        // Arrange: セル半分ちょうど（20px / 40px）→ 四捨五入で 1 セル
+        const offsetPx: Point = { x: 20, y: 20 };
+
+        // Act
+        const result = pxOffsetToGridDelta(offsetPx, 40, 1);
+
+        // Assert
+        expect(result).toEqual({ x: 1, y: 1 });
+    });
+
+    it('rounds_below_half_cell_offset_to_zero', () => {
+        // Arrange: セル半分未満（19px / 40px）→ 0 セル
+        const offsetPx: Point = { x: 19, y: -19 };
+
+        // Act
+        const result = pxOffsetToGridDelta(offsetPx, 40, 1);
+
+        // Assert
+        expect(result).toEqual({ x: 0, y: -0 });
+    });
+
+    it('halves_px_conversion_when_zoomed_2x', () => {
+        // Arrange: ズーム2x では 1 セルが画面上 80px → 80px のドラッグで 1 セル
+        const offsetPx: Point = { x: 80, y: 80 };
+
+        // Act
+        const result = pxOffsetToGridDelta(offsetPx, 40, 2);
+
+        // Assert
+        expect(result).toEqual({ x: 1, y: 1 });
+    });
+
+    it('returns_zero_delta_when_cell_size_is_zero', () => {
+        // Arrange
+        const offsetPx: Point = { x: 100, y: 100 };
+
+        // Act
+        const result = pxOffsetToGridDelta(offsetPx, 0, 1);
+
+        // Assert
+        expect(result).toEqual({ x: 0, y: 0 });
+    });
+
+    it('returns_zero_delta_when_scale_is_zero_or_negative', () => {
+        // Arrange
+        const offsetPx: Point = { x: 100, y: 100 };
+
+        // Act & Assert
+        expect(pxOffsetToGridDelta(offsetPx, 40, 0)).toEqual({ x: 0, y: 0 });
+        expect(pxOffsetToGridDelta(offsetPx, 40, -1)).toEqual({ x: 0, y: 0 });
+    });
+
+    it('defaults_scale_to_1_when_omitted', () => {
+        // Arrange
+        const offsetPx: Point = { x: 40, y: 40 };
+
+        // Act
+        const result = pxOffsetToGridDelta(offsetPx, 40);
+
+        // Assert
+        expect(result).toEqual({ x: 1, y: 1 });
     });
 });

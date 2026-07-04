@@ -55,3 +55,18 @@ export function findFreePosition(
     }
     return null;
 }
+
+/**
+ * px単位の累積ドラッグオフセットをグリッド差分（整数セル数）に変換する。
+ * scale はズーム倍率（2x では画面上の 1 セルが 2*cellSize px になるため換算が 1/2 になる）。
+ * cellSize・scale が 0 以下または非有限値の場合は差分 0 を返す。
+ */
+export function pxOffsetToGridDelta(offsetPx: Point, cellSize: number, scale = 1): Point {
+    if (!Number.isFinite(cellSize) || cellSize <= 0) return { x: 0, y: 0 };
+    if (!Number.isFinite(scale) || scale <= 0) return { x: 0, y: 0 };
+    const effectiveCellSize = cellSize * scale;
+    return {
+        x: Math.round(offsetPx.x / effectiveCellSize),
+        y: Math.round(offsetPx.y / effectiveCellSize),
+    };
+}
