@@ -20,6 +20,9 @@ appId: com.cleaningapp.mobile
 - tapOn: "部屋を追加"
 - assertVisible: "部屋名"
 - inputText: "自分の部屋"
+# 単一行TextInputはreturnキーでblurされる。キーボードを閉じないと
+# モーダル下部の「追加」ボタンがキーボードに覆われてタップが吸われる
+- pressKey: Enter
 - tapOn: "その他"
 - takeScreenshot: .maestro/screenshots/02-room-type-selected
 
@@ -32,6 +35,7 @@ appId: com.cleaningapp.mobile
 - tapOn: "家具を追加"
 - assertVisible: "家具名"
 - inputText: "本棚"
+- pressKey: Enter
 - tapOn: "追加"
 - assertVisible: "本棚"
 - takeScreenshot: .maestro/screenshots/04-furniture-added
