@@ -31,3 +31,27 @@ export function clampWithin(child: Rect, parent: Rect): Rect {
     const y = Math.max(parent.y, Math.min(child.y, parent.y + parent.h - child.h));
     return { x, y, w: child.w, h: child.h };
 }
+
+/**
+ * bounds 内を左上から行優先で走査し、既存矩形と重ならない最初の位置を返す。
+ * 空きが無い場合や size が bounds に収まらない場合は null。
+ * 部屋追加時の自動空き配置に使う。
+ */
+export function findFreePosition(
+    size: { w: number; h: number },
+    obstacles: Rect[],
+    bounds: Rect,
+): Point | null {
+    const maxX = bounds.x + bounds.w - size.w;
+    const maxY = bounds.y + bounds.h - size.h;
+
+    for (let y = bounds.y; y <= maxY; y++) {
+        for (let x = bounds.x; x <= maxX; x++) {
+            const candidate: Rect = { x, y, w: size.w, h: size.h };
+            if (!obstacles.some((obstacle) => rectsOverlap(candidate, obstacle))) {
+                return { x, y };
+            }
+        }
+    }
+    return null;
+}
