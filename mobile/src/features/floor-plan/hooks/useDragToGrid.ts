@@ -1,11 +1,11 @@
-import { Gesture } from "react-native-gesture-handler";
+import { Gesture } from 'react-native-gesture-handler';
 import {
     runOnJS,
     useAnimatedStyle,
     useSharedValue,
-} from "react-native-reanimated";
-import type { Point, Rect } from "@/shared/utils/grid";
-import { clampWithin, pxOffsetToGridDelta } from "@/shared/utils/grid";
+} from 'react-native-reanimated';
+import type { Point, Rect } from '@/shared/utils/grid';
+import { clampWithin, pxOffsetToGridDelta } from '@/shared/utils/grid';
 
 export type CommitDragParams = {
     /** ドラッグ対象のグリッド単位の現在矩形 */
@@ -24,6 +24,10 @@ export type CommitDragParams = {
  * ドラッグ終了時の確定計算。px オフセットをグリッド差分に変換し、
  * bounds にクランプした矩形を返す。位置が変わらない場合は null。
  * Reanimated 非依存の純粋関数としてテストする。
+ *
+ * rect・差分ともグリッド整数座標のため snapToGrid は恒等変換になり省略している。
+ * rect が最初から bounds 外にある場合は、移動量 0 でもクランプ後の位置で
+ * commit される（不正データの自己修復として意図した挙動）。
  */
 export function commitDrag({
     rect,
