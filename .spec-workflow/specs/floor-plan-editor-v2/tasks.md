@@ -50,7 +50,7 @@
 
 ## フェーズ2: 動かせるようにする
 
-- [ ] 5. usecases: UpdateRoomUseCase（モバイル）
+- [x] 5. usecases: UpdateRoomUseCase（モバイル）
   - File: mobile/src/features/floor-plan/usecases/UpdateRoomUseCase.ts
   - 座標・サイズ更新をキャンバス境界（20×20）に `clampWithin` してから repository.updateRoom を呼ぶ。最小サイズ 1×1 を下回る入力は 1×1 に補正
   - Purpose: 部屋の移動・リサイズのビジネスルール（React非依存）
