@@ -139,7 +139,7 @@
   - _Leverage: mobile/src/shared/utils/grid.ts rectsOverlap_
   - _Requirements: 3_
 
-- [ ] 13. ResizeHandle コンポーネントと部屋リサイズ
+- [x] 13. ResizeHandle コンポーネントと部屋リサイズ
   - File: mobile/src/features/floor-plan/components/ResizeHandle.tsx, RoomShape.tsx（選択時に表示）
   - 選択中の部屋の右下にハンドルを表示し、ドラッグで gridW/gridH を変更（最小 1×1）。確定時に updateRoom.mutate。内包家具のはみ出しは UpdateRoomUseCase / サーバー仕様に従いクライアントでクランプ
   - Purpose: 部屋の広さ調整（Requirement 2）

@@ -179,4 +179,40 @@ describe('FloorPlanCanvas', () => {
         expect(screen.queryByTestId('room-overlap-warning-room-1')).toBeNull();
         expect(screen.queryByTestId('room-overlap-warning-room-2')).toBeNull();
     });
+
+    it('calls_onRoomDragEnd_with_resized_rect_when_selected_room_resize_commits', async () => {
+        // Arrange: 部屋を選択してリサイズハンドルを表示させる
+        const mockOnRoomDragEnd = jest.fn();
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onRoomDragEnd={mockOnRoomDragEnd}
+            />,
+        );
+        fireGestureHandler(getByGestureTestId('room-tap-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+        await waitFor(() => {
+            expect(screen.getByTestId('resize-handle-room-1')).toBeTruthy();
+        });
+
+        // Act: cellSize=40 で右へ 56px（1.4 セル分）→ 幅 5 → 6
+        fireGestureHandler(getByGestureTestId('room-resize-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 56, translationY: 0 },
+            { state: State.END, translationX: 56, translationY: 0 },
+        ]);
+
+        // Assert: 位置は不変・サイズのみ更新された矩形で確定する
+        await waitFor(() => {
+            expect(mockOnRoomDragEnd).toHaveBeenCalledWith('room-1', {
+                x: 0,
+                y: 0,
+                w: 6,
+                h: 4,
+            });
+        });
+    });
 });

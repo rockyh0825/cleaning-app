@@ -135,4 +135,62 @@ describe('RoomShape', () => {
         const shape = screen.getByTestId('room-shape-room-1');
         expect(shape).toBeTruthy();
     });
+
+    it('shows_resize_handle_when_selected', () => {
+        // Arrange & Act
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={true}
+                onPress={jest.fn()}
+                onResizeEnd={jest.fn()}
+            />,
+        );
+
+        // Assert
+        expect(screen.getByTestId('resize-handle-room-1')).toBeTruthy();
+    });
+
+    it('hides_resize_handle_when_not_selected', () => {
+        // Arrange & Act
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                onResizeEnd={jest.fn()}
+            />,
+        );
+
+        // Assert
+        expect(screen.queryByTestId('resize-handle-room-1')).toBeNull();
+    });
+
+    it('calls_onResizeEnd_with_new_size_when_resize_drag_commits', async () => {
+        // Arrange: cellSize=40 で右へ 56px（1.4 セル分）→ 幅 5 → 6
+        const mockOnResizeEnd = jest.fn();
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={true}
+                onPress={jest.fn()}
+                onResizeEnd={mockOnResizeEnd}
+            />,
+        );
+
+        // Act
+        fireGestureHandler(getByGestureTestId('room-resize-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 56, translationY: 0 },
+            { state: State.END, translationX: 56, translationY: 0 },
+        ]);
+
+        // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる
+        await waitFor(() => {
+            expect(mockOnResizeEnd).toHaveBeenCalledWith({ w: 6, h: 4 });
+        });
+    });
 });
