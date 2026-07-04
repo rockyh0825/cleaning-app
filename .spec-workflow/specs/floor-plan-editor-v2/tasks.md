@@ -105,7 +105,7 @@
   - _Leverage: mobile/src/shared/utils/grid.ts findFreePosition_
   - _Requirements: 3_
 
-- [ ] 10. hooks: useDragToGrid（共通ドラッグフック）
+- [x] 10. hooks: useDragToGrid（共通ドラッグフック）
   - File: mobile/src/features/floor-plan/hooks/useDragToGrid.ts
   - Gesture.Pan + Reanimated shared value でドラッグ中は transform プレビューのみ行い、onEnd で `pxOffsetToGridDelta` → `snapToGrid` → `clampWithin` を通した確定矩形を onCommit に渡す
   - Purpose: 部屋・家具・リサイズハンドルで共有するドラッグの心臓部（60fps 要件）
