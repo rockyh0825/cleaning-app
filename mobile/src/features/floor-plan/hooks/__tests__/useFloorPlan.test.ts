@@ -1,6 +1,10 @@
 import { QueryClient } from '@tanstack/react-query';
-import type { FloorPlan, Room, CreateRoomInput } from '../../types';
-import { buildFloorPlanQuery, buildAddRoomMutationOptions } from '../useFloorPlan';
+import type { FloorPlan, Room, CreateRoomInput, CreateFurnitureInput, Furniture } from '../../types';
+import {
+    buildFloorPlanQuery,
+    buildAddRoomMutationOptions,
+    buildAddFurnitureMutationOptions,
+} from '../useFloorPlan';
 
 const mockRoom: Room = {
     id: 'room-1',
@@ -84,6 +88,81 @@ describe('useFloorPlan', () => {
             const optimistic = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
             expect(optimistic?.rooms).toHaveLength(2);
             expect(optimistic?.rooms[1]?.name).toBe('キッチン');
+        });
+    });
+
+    describe('正常系: 家具追加時にキャッシュが楽観的更新される', () => {
+        const addFurnitureInput: CreateFurnitureInput = {
+            name: 'ソファ',
+            gridX: 1,
+            gridY: 1,
+            gridW: 2,
+            gridH: 1,
+        };
+
+        const addedFurniture: Furniture = {
+            id: 'furniture-1',
+            roomId: 'room-1',
+            name: 'ソファ',
+            gridX: 1,
+            gridY: 1,
+            gridW: 2,
+            gridH: 1,
+            createdAt: new Date('2024-01-02'),
+            updatedAt: new Date('2024-01-02'),
+        };
+
+        it('calls_usecase_with_userId_roomId_and_input', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(addedFurniture) };
+            const options = buildAddFurnitureMutationOptions(queryClient, 'user-1', mockUseCase);
+
+            // Act
+            await options.mutationFn!({ roomId: 'room-1', input: addFurnitureInput });
+
+            // Assert
+            expect(mockUseCase.execute).toHaveBeenCalledWith('user-1', 'room-1', addFurnitureInput);
+        });
+
+        it('updates_room_furniture_optimistically_when_adding_furniture', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(addedFurniture) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], mockFloorPlan);
+
+            // Act
+            const options = buildAddFurnitureMutationOptions(queryClient, 'user-1', mockUseCase);
+            await options.onMutate!({ roomId: 'room-1', input: addFurnitureInput });
+
+            // Assert
+            const optimistic = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            expect(optimistic?.rooms[0]?.furniture).toHaveLength(1);
+            expect(optimistic?.rooms[0]?.furniture[0]?.name).toBe('ソファ');
+        });
+
+        it('rolls_back_furniture_cache_when_mutation_fails', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockRejectedValue(new Error('network error')) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], mockFloorPlan);
+            const options = buildAddFurnitureMutationOptions(queryClient, 'user-1', mockUseCase);
+            const variables = { roomId: 'room-1', input: addFurnitureInput };
+
+            // Act
+            const context = await options.onMutate!(variables);
+            options.onError!(new Error('network error'), variables, context);
+
+            // Assert
+            const afterRollback = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            expect(afterRollback).toEqual(mockFloorPlan);
+            expect(afterRollback?.rooms[0]?.furniture).toHaveLength(0);
         });
     });
 
