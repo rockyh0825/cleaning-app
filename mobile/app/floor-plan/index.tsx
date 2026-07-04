@@ -19,7 +19,7 @@ export default function FloorPlanIndexScreen() {
   const userId = useUserId();
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  const { floorPlan, addRoom } = useFloorPlan(userId ?? "", repository);
+  const { floorPlan, addRoom, updateRoom } = useFloorPlan(userId ?? "", repository);
 
   const rooms = floorPlan.data?.rooms ?? [];
 
@@ -67,6 +67,12 @@ export default function FloorPlanIndexScreen() {
             <FloorPlanCanvas
               floorPlan={floorPlan.data!}
               onRoomPress={(roomId) => router.push(`/floor-plan/${roomId}`)}
+              onRoomDragEnd={(roomId, rect) =>
+                updateRoom.mutate({
+                  roomId,
+                  input: { gridX: rect.x, gridY: rect.y, gridW: rect.w, gridH: rect.h },
+                })
+              }
             />
           </ScrollView>
         </ScrollView>

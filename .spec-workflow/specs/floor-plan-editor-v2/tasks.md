@@ -117,7 +117,7 @@
   - _Leverage: mobile/src/shared/utils/grid.ts_
   - _Requirements: 1, 4_
 
-- [ ] 11. RoomShape のドラッグ移動対応
+- [x] 11. RoomShape のドラッグ移動対応
   - File: mobile/src/features/floor-plan/components/{RoomShape.tsx, FloorPlanCanvas.tsx}
   - RoomShape に useDragToGrid を組み込み（bounds = キャンバス 20×20）、onCommit で updateRoom.mutate を呼ぶ。TouchableOpacity は GestureDetector + Animated.View に置き換え、タップ選択は Gesture.Tap で維持
   - Purpose: 部屋を動かせるようにする（Requirement 1）

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import type { Rect } from '@/shared/utils/grid';
 import type { FloorPlan } from '../types';
 import { GRID_COLS, GRID_ROWS } from '../constants';
 import { FurnitureItem } from './FurnitureItem';
@@ -31,6 +32,8 @@ type Props = {
     cellSize?: number;
     onRoomPress?: (roomId: string) => void;
     onFurniturePress?: (furnitureId: string) => void;
+    /** 部屋のドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
+    onRoomDragEnd?: (roomId: string, rect: Rect) => void;
 };
 
 export function FloorPlanCanvas({
@@ -38,6 +41,7 @@ export function FloorPlanCanvas({
     cellSize = DEFAULT_CELL_SIZE,
     onRoomPress,
     onFurniturePress,
+    onRoomDragEnd,
 }: Props) {
     const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
     const [selectedFurnitureId, setSelectedFurnitureId] = useState<string | null>(null);
@@ -70,6 +74,7 @@ export function FloorPlanCanvas({
                         cellSize={cellSize}
                         selected={selectedRoomId === room.id}
                         onPress={() => handleRoomPress(room.id)}
+                        onDragEnd={(rect) => onRoomDragEnd?.(room.id, rect)}
                     />
                     {room.furniture.map((furn) => (
                         <FurnitureItem
