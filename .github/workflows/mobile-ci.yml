@@ -161,6 +161,14 @@ jobs:
           echo "Booting simulator: $UDID"
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
+          # inputText 直後に QuickPath（なぞり入力）のチュートリアルオーバーレイが
+          # 全画面に出現し、後続のタップを吸ってフローが失敗する（run 28698159722 の
+          # スクリーンショットで確認）。「表示済み」を事前に書き込んで抑止する。
+          # 予測変換・自動修正も inputText の入力内容を汚しうるため無効化する
+          xcrun simctl spawn "$UDID" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
+          xcrun simctl spawn "$UDID" defaults write com.apple.keyboard.preferences DidShowGestureKeyboardIntroduction -bool true
+          xcrun simctl spawn "$UDID" defaults write com.apple.Preferences KeyboardAutocorrection -bool false
+          xcrun simctl spawn "$UDID" defaults write com.apple.Preferences KeyboardPrediction -bool false
           echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
 
       # アプリの起動は Maestro フロー先頭の launchApp が行うため、install まででよい
