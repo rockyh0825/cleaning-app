@@ -3,6 +3,7 @@ import { StyleSheet, Text } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { GestureType } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
+import { useAppTheme } from '@/shared/theme/useAppTheme';
 import type { Rect } from '@/shared/utils/grid';
 import { useDragToGrid } from '../hooks/useDragToGrid';
 import type { Furniture } from '../types';
@@ -32,6 +33,7 @@ export function FurnitureItem({
     scale = 1,
     canvasPanGesture,
 }: Props) {
+    const theme = useAppTheme();
     const width = furniture.gridW * cellSize;
     const height = furniture.gridH * cellSize;
     const left = furniture.gridX * cellSize;
@@ -67,18 +69,26 @@ export function FurnitureItem({
                 testID={`furniture-item-${furniture.id}`}
                 style={[
                     styles.furniture,
+                    theme.elevation.card,
                     {
                         width,
                         height,
                         left,
                         top,
+                        backgroundColor: theme.colors.surface,
+                        borderRadius: theme.radius.sm,
                         borderWidth: selected ? 2 : 1,
-                        borderColor: selected ? '#E2720A' : '#666',
+                        borderColor: selected
+                            ? theme.colors.primary
+                            : theme.colors.outline,
                     },
                     animatedStyle,
                 ]}
             >
-                <Text style={styles.label} numberOfLines={1}>
+                <Text
+                    style={[styles.label, { color: theme.colors.textMuted }]}
+                    numberOfLines={1}
+                >
                     {furniture.name}
                 </Text>
             </Animated.View>
@@ -89,13 +99,10 @@ export function FurnitureItem({
 const styles = StyleSheet.create({
     furniture: {
         position: 'absolute',
-        backgroundColor: '#FFF9C4',
         justifyContent: 'center',
         alignItems: 'center',
-        borderRadius: 3,
     },
     label: {
         fontSize: 9,
-        color: '#333',
     },
 });

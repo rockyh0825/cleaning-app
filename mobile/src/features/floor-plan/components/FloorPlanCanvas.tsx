@@ -6,6 +6,8 @@ import Animated, {
     useAnimatedStyle,
     useSharedValue,
 } from 'react-native-reanimated';
+import { useAppTheme } from '@/shared/theme/useAppTheme';
+import type { AppTheme } from '@/shared/theme/tokens';
 import { rectsOverlap } from '@/shared/utils/grid';
 import type { Rect } from '@/shared/utils/grid';
 import type { FloorPlan, Room } from '../types';
@@ -66,6 +68,7 @@ export function FloorPlanCanvas({
     onRoomDragEnd,
     onFurnitureDragEnd,
 }: Props) {
+    const theme = useAppTheme();
     const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
     const [selectedFurnitureId, setSelectedFurnitureId] = useState<string | null>(null);
 
@@ -140,11 +143,15 @@ export function FloorPlanCanvas({
                     testID="floorPlan-canvas"
                     style={[
                         styles.container,
-                        { width: canvasWidth, height: canvasHeight },
+                        {
+                            width: canvasWidth,
+                            height: canvasHeight,
+                            backgroundColor: theme.colors.surface,
+                        },
                         canvasAnimatedStyle,
                     ]}
                 >
-                    {renderGrid(canvasWidth, canvasHeight, cellSize)}
+                    {renderGrid(canvasWidth, canvasHeight, cellSize, theme)}
 
                     {floorPlan.rooms.map((room) => (
                         <React.Fragment key={room.id}>
@@ -222,6 +229,7 @@ function renderGrid(
     canvasWidth: number,
     canvasHeight: number,
     cellSize: number,
+    theme: AppTheme,
 ): React.ReactNode {
     if (SkiaCanvas && SkiaGroup && SkiaLine) {
         const SC = SkiaCanvas;
@@ -237,7 +245,7 @@ function renderGrid(
                     key={`v-${c}`}
                     p1={{ x: c * cellSize, y: 0 }}
                     p2={{ x: c * cellSize, y: canvasHeight }}
-                    color="#DDD"
+                    color={theme.colors.gridLine}
                     strokeWidth={1}
                 />,
             );
@@ -248,7 +256,7 @@ function renderGrid(
                     key={`h-${r}`}
                     p1={{ x: 0, y: r * cellSize }}
                     p2={{ x: canvasWidth, y: r * cellSize }}
-                    color="#DDD"
+                    color={theme.colors.gridLine}
                     strokeWidth={1}
                 />,
             );
@@ -266,7 +274,11 @@ function renderGrid(
         <View
             style={[
                 StyleSheet.absoluteFillObject,
-                { backgroundColor: '#F8F8F8', borderWidth: 1, borderColor: '#DDD' },
+                {
+                    backgroundColor: theme.colors.surfaceAlt,
+                    borderWidth: 1,
+                    borderColor: theme.colors.gridLine,
+                },
             ]}
         />
     );

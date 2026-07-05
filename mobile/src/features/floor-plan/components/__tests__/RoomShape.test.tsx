@@ -5,6 +5,8 @@ import {
     fireGestureHandler,
     getByGestureTestId,
 } from 'react-native-gesture-handler/jest-utils';
+import { StyleSheet } from 'react-native';
+import { lightTheme } from '@/shared/theme/tokens';
 import { RoomShape } from '../RoomShape';
 import type { Room } from '../../types';
 
@@ -134,6 +136,72 @@ describe('RoomShape', () => {
         // Assert: selected な View が存在する
         const shape = screen.getByTestId('room-shape-room-1');
         expect(shape).toBeTruthy();
+    });
+
+    it('shows_room_type_icon_for_kitchen_room', () => {
+        // Arrange: KITCHEN の部屋
+        const kitchenRoom: Room = { ...testRoom, id: 'room-k', type: 'KITCHEN' };
+
+        // Act
+        render(
+            <RoomShape
+                room={kitchenRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+            />,
+        );
+
+        // Assert: 種別アイコン（絵文字）が表示される
+        const icon = screen.getByTestId('room-type-icon-room-k');
+        expect(icon).toHaveTextContent(lightTheme.roomAccents.KITCHEN.icon);
+    });
+
+    it('applies_selected_style_testid_when_selected', () => {
+        // Arrange & Act
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={true}
+                onPress={jest.fn()}
+            />,
+        );
+
+        // Assert: 選択スタイル用 testID が付与される
+        expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
+    });
+
+    it('does_not_apply_selected_style_testid_when_not_selected', () => {
+        // Arrange & Act
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+            />,
+        );
+
+        // Assert
+        expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
+    });
+
+    it('uses_room_accent_fill_token_for_background_color', () => {
+        // Arrange & Act: LIVING の部屋（リテラル色ではなくトークン参照であること）
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+            />,
+        );
+
+        // Assert
+        const shape = screen.getByTestId('room-shape-room-1');
+        const style = StyleSheet.flatten(shape.props.style);
+        expect(style.backgroundColor).toBe(lightTheme.roomAccents.LIVING.fill);
     });
 
     it('shows_resize_handle_when_selected', () => {

@@ -5,6 +5,8 @@ import {
     fireGestureHandler,
     getByGestureTestId,
 } from 'react-native-gesture-handler/jest-utils';
+import { StyleSheet } from 'react-native';
+import { lightTheme } from '@/shared/theme/tokens';
 import { FurnitureItem } from '../FurnitureItem';
 import type { Rect } from '@/shared/utils/grid';
 import type { Furniture } from '../../types';
@@ -39,6 +41,43 @@ describe('FurnitureItem', () => {
 
         // Assert
         expect(screen.getByText('ソファ')).toBeTruthy();
+    });
+
+    it('uses_surface_token_for_card_background_color', () => {
+        // Arrange & Act: サーフェス調カード（リテラル色ではなくトークン参照であること）
+        render(
+            <FurnitureItem
+                furniture={testFurniture}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                bounds={roomBounds}
+            />,
+        );
+
+        // Assert
+        const item = screen.getByTestId('furniture-item-furn-1');
+        const style = StyleSheet.flatten(item.props.style);
+        expect(style.backgroundColor).toBe(lightTheme.colors.surface);
+        expect(style.borderColor).toBe(lightTheme.colors.outline);
+    });
+
+    it('uses_primary_token_for_selected_border_color', () => {
+        // Arrange & Act
+        render(
+            <FurnitureItem
+                furniture={testFurniture}
+                cellSize={40}
+                selected={true}
+                onPress={jest.fn()}
+                bounds={roomBounds}
+            />,
+        );
+
+        // Assert
+        const item = screen.getByTestId('furniture-item-furn-1');
+        const style = StyleSheet.flatten(item.props.style);
+        expect(style.borderColor).toBe(lightTheme.colors.primary);
     });
 
     it('calls_onPress_when_tapped', async () => {

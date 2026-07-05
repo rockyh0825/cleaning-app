@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { GestureType } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
@@ -27,15 +27,6 @@ type Props = {
     canvasPanGesture?: GestureType;
 };
 
-const ROOM_COLORS: Record<string, string> = {
-    LIVING: '#B3D9FF',
-    KITCHEN: '#FFD9B3',
-    BEDROOM: '#D9FFB3',
-    BATHROOM: '#B3FFEE',
-    TOILET: '#E6B3FF',
-    OTHER: '#E0E0E0',
-};
-
 const CANVAS_BOUNDS: Rect = { x: 0, y: 0, w: GRID_COLS, h: GRID_ROWS };
 
 export function RoomShape({
@@ -54,7 +45,7 @@ export function RoomShape({
     const height = room.gridH * cellSize;
     const left = room.gridX * cellSize;
     const top = room.gridY * cellSize;
-    const backgroundColor = ROOM_COLORS[room.type] ?? '#E0E0E0';
+    const accent = theme.roomAccents[room.type] ?? theme.roomAccents.OTHER;
 
     const { gesture: panGesture, animatedStyle } = useDragToGrid({
         rect: { x: room.gridX, y: room.gridY, w: room.gridW, h: room.gridH },
@@ -81,24 +72,37 @@ export function RoomShape({
                 testID={`room-shape-${room.id}`}
                 style={[
                     styles.room,
+                    theme.elevation.card,
                     {
                         width,
                         height,
                         left,
                         top,
-                        backgroundColor,
-                        // 選択は枠色、重なりは警告アイコンとチャネルを分ける
-                        // （選択中でも重なりが分かり、選択フィードバックも消えない）
-                        borderWidth: selected || overlapping ? 2 : 1,
-                        borderColor: selected
-                            ? '#1A60C8'
-                            : overlapping
-                              ? theme.colors.danger
-                              : '#888',
+                        backgroundColor: accent.fill,
+                        borderRadius: theme.radius.md,
+                        // 重なりは警告チャネル（danger 枠）、選択は別オーバーレイで強調する
+                        borderWidth: overlapping ? 2 : 1,
+                        borderColor: overlapping
+                            ? theme.colors.danger
+                            : theme.colors.outline,
                     },
                     animatedStyle,
                 ]}
             >
+                {selected && (
+                    <View
+                        testID={`room-selected-${room.id}`}
+                        pointerEvents="none"
+                        style={[
+                            StyleSheet.absoluteFillObject,
+                            styles.selectedOutline,
+                            {
+                                borderColor: accent.accent,
+                                borderRadius: theme.radius.md,
+                            },
+                        ]}
+                    />
+                )}
                 {overlapping && (
                     <Text
                         testID={`room-overlap-warning-${room.id}`}
@@ -108,7 +112,17 @@ export function RoomShape({
                         ⚠️
                     </Text>
                 )}
-                <Text style={styles.label} numberOfLines={1}>
+                <Text testID={`room-type-icon-${room.id}`} style={styles.icon}>
+                    {accent.icon}
+                </Text>
+                <Text
+                    style={[
+                        styles.label,
+                        theme.typography.caption,
+                        { color: accent.accent },
+                    ]}
+                    numberOfLines={1}
+                >
                     {room.name}
                 </Text>
                 {selected && onResizeEnd && (
@@ -130,12 +144,15 @@ const styles = StyleSheet.create({
         position: 'absolute',
         justifyContent: 'center',
         alignItems: 'center',
-        borderRadius: 4,
+    },
+    selectedOutline: {
+        borderWidth: 2,
+    },
+    icon: {
+        fontSize: 16,
     },
     label: {
-        fontSize: 11,
-        color: '#333',
-        fontWeight: '500',
+        fontWeight: '600',
     },
     warningIcon: {
         position: 'absolute',
