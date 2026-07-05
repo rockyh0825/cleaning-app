@@ -1,10 +1,12 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
+import { render, screen, waitFor } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import {
     fireGestureHandler,
     getByGestureTestId,
 } from 'react-native-gesture-handler/jest-utils';
+import { lightTheme } from '@/shared/theme/tokens';
 import { ResizeHandle } from '../ResizeHandle';
 import type { Room } from '../../types';
 
@@ -20,6 +22,19 @@ describe('ResizeHandle', () => {
         createdAt: new Date('2024-01-01'),
         updatedAt: new Date('2024-01-01'),
     };
+
+    it('uses_theme_tokens_for_handle_colors', () => {
+        // Arrange & Act: リテラル色ではなくテーマトークン参照であること（ダークモード対応）
+        render(
+            <ResizeHandle room={testRoom} cellSize={40} onCommit={jest.fn()} />,
+        );
+
+        // Assert
+        const handle = screen.getByTestId('resize-handle-room-1');
+        const style = StyleSheet.flatten(handle.props.style);
+        expect(style.backgroundColor).toBe(lightTheme.colors.primary);
+        expect(style.borderColor).toBe(lightTheme.colors.surface);
+    });
 
     it('calls_onCommit_with_new_grid_size_when_resize_drag_commits', async () => {
         // Arrange: cellSize=40 で右へ 56px（1.4 セル分）→ 幅が 1 セル拡大

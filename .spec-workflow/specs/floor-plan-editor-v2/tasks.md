@@ -228,7 +228,7 @@
   - _Leverage: FloatingActionButton, mobile/src/shared/theme_
   - _Requirements: 6, 7_
 
-- [ ] 21. ダークモード対応の検証と調整
+- [x] 21. ダークモード対応の検証と調整
   - File: mobile/src/shared/theme/tokens.ts（調整）, 各コンポーネント（漏れ修正のみ）
   - ライト／ダーク両テーマで全画面を目視確認し、コントラスト不足・トークン参照漏れ（ハードコード色の残り）を潰す
   - Purpose: v1 Usability 要件「ダークモード対応」の完了（Requirement 6.2）
