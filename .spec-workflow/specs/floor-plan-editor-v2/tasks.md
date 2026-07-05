@@ -173,7 +173,7 @@
 
 ## フェーズ3: UIリッチ化
 
-- [ ] 16. FloorPlanCanvas / RoomShape / FurnitureItem のビジュアル刷新
+- [x] 16. FloorPlanCanvas / RoomShape / FurnitureItem のビジュアル刷新
   - File: mobile/src/features/floor-plan/components/{FloorPlanCanvas,RoomShape,FurnitureItem}.tsx
   - ハードコード色を全て useAppTheme のトークンに置換。部屋は種別アクセントの塗り＋アイコン＋角丸＋シャドウ、選択時はアクセント枠強調。グリッド線は淡色トークン。家具はサーフェス調のカード表現
   - Purpose: エディタ本体の見た目の底上げ（Requirement 6.1 / 6.3 / 7.4）
