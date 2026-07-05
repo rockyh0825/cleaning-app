@@ -29,7 +29,7 @@
 
 ## フェーズ2: 削除・リネームの導線
 
-- [ ] 3. components: SelectionActions（選択対象への操作バー）
+- [x] 3. components: SelectionActions（選択対象への操作バー）
   - File: mobile/src/features/floor-plan/components/SelectionActions.tsx
   - 選択中の対象名と「名称変更」「削除」ボタンを持つ操作バー。削除ボタンは danger トークン。テーマトークンのみ参照
   - Purpose: 削除・リネームへの2タップ以内の導線（Requirement 1, 2, 4 / NFR Usability）
