@@ -39,7 +39,7 @@
   - _Leverage: mobile/src/shared/theme_
   - _Requirements: 1, 2, 4_
 
-- [ ] 4. components: RenameSheet（名称編集ボトムシート）
+- [x] 4. components: RenameSheet（名称編集ボトムシート）
   - File: mobile/src/features/floor-plan/components/RenameSheet.tsx
   - BottomSheet ベース。initialName を初期値に表示し、空・空白のみの場合は確定ボタンを無効化
   - Purpose: 名称編集UI（Requirement 4）
