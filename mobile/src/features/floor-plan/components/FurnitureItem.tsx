@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import type { GestureType } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
 import type { Rect } from '@/shared/utils/grid';
 import { useDragToGrid } from '../hooks/useDragToGrid';
@@ -15,6 +16,10 @@ type Props = {
     bounds: Rect;
     /** ドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
     onDragEnd?: (rect: Rect) => void;
+    /** キャンバスのズーム倍率（px→グリッド変換に使用） */
+    scale?: number;
+    /** この家具のドラッグ判定が終わるまで待機させるキャンバスパン */
+    canvasPanGesture?: GestureType;
 };
 
 export function FurnitureItem({
@@ -24,6 +29,8 @@ export function FurnitureItem({
     onPress,
     bounds,
     onDragEnd,
+    scale = 1,
+    canvasPanGesture,
 }: Props) {
     const width = furniture.gridW * cellSize;
     const height = furniture.gridH * cellSize;
@@ -39,8 +46,10 @@ export function FurnitureItem({
         },
         bounds,
         cellSize,
+        scale,
         onCommit: (rect) => onDragEnd?.(rect),
         testID: `furniture-pan-${furniture.id}`,
+        blocksExternal: canvasPanGesture,
     });
 
     const tapGesture = Gesture.Tap()

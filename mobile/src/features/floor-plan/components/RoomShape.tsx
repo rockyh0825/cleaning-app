@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import type { GestureType } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
 import type { Rect } from '@/shared/utils/grid';
@@ -20,6 +21,10 @@ type Props = {
     overlapping?: boolean;
     /** リサイズ確定時にグリッド単位の新サイズを受け取る（選択中のみハンドル表示） */
     onResizeEnd?: (size: { w: number; h: number }) => void;
+    /** キャンバスのズーム倍率（px→グリッド変換に使用） */
+    scale?: number;
+    /** この部屋のドラッグ判定が終わるまで待機させるキャンバスパン */
+    canvasPanGesture?: GestureType;
 };
 
 const ROOM_COLORS: Record<string, string> = {
@@ -41,6 +46,8 @@ export function RoomShape({
     onDragEnd,
     overlapping = false,
     onResizeEnd,
+    scale = 1,
+    canvasPanGesture,
 }: Props) {
     const theme = useAppTheme();
     const width = room.gridW * cellSize;
@@ -53,8 +60,10 @@ export function RoomShape({
         rect: { x: room.gridX, y: room.gridY, w: room.gridW, h: room.gridH },
         bounds: CANVAS_BOUNDS,
         cellSize,
+        scale,
         onCommit: (rect) => onDragEnd?.(rect),
         testID: `room-pan-${room.id}`,
+        blocksExternal: canvasPanGesture,
     });
 
     const tapGesture = Gesture.Tap()
@@ -103,7 +112,13 @@ export function RoomShape({
                     {room.name}
                 </Text>
                 {selected && onResizeEnd && (
-                    <ResizeHandle room={room} cellSize={cellSize} onCommit={onResizeEnd} />
+                    <ResizeHandle
+                        room={room}
+                        cellSize={cellSize}
+                        scale={scale}
+                        blocksExternal={canvasPanGesture}
+                        onCommit={onResizeEnd}
+                    />
                 )}
             </Animated.View>
         </GestureDetector>

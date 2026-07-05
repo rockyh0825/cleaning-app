@@ -1,14 +1,37 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { ScrollView } from 'react-native';
+import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import {
     fireGestureHandler,
     getByGestureTestId,
 } from 'react-native-gesture-handler/jest-utils';
-import { FloorPlanCanvas } from '../FloorPlanCanvas';
+import { clampScale, FloorPlanCanvas } from '../FloorPlanCanvas';
 import type { FloorPlan } from '../../types';
 
 jest.mock('@shopify/react-native-skia');
+
+describe('clampScale', () => {
+    it('returns_value_unchanged_when_within_range', () => {
+        // Arrange & Act & Assert
+        expect(clampScale(1.5)).toBe(1.5);
+    });
+
+    it('clamps_to_min_scale_when_below_range', () => {
+        // Arrange & Act & Assert
+        expect(clampScale(0.3)).toBe(0.5);
+    });
+
+    it('clamps_to_max_scale_when_above_range', () => {
+        // Arrange & Act & Assert
+        expect(clampScale(3)).toBe(2);
+    });
+
+    it('returns_1_when_scale_is_not_finite', () => {
+        // Arrange & Act & Assert
+        expect(clampScale(Number.NaN)).toBe(1);
+    });
+});
 
 describe('FloorPlanCanvas', () => {
     const emptyFloorPlan: FloorPlan = { rooms: [] };
@@ -117,6 +140,55 @@ describe('FloorPlanCanvas', () => {
                 y: 0,
                 w: 2,
                 h: 1,
+            });
+        });
+    });
+
+    it('renders_canvas_and_rooms_without_scroll_view', () => {
+        // Arrange & Act: ScrollView 入れ子を廃止してもキャンバスと部屋・家具が描画される
+        render(<FloorPlanCanvas floorPlan={floorplanWithRoom} />);
+
+        // Assert
+        expect(screen.getByTestId('floorPlan-canvas')).toBeTruthy();
+        expect(screen.getByTestId('room-shape-room-1')).toBeTruthy();
+        expect(screen.getByTestId('furniture-item-furn-1')).toBeTruthy();
+        expect(screen.UNSAFE_queryAllByType(ScrollView)).toHaveLength(0);
+    });
+
+    it('applies_pinch_zoom_scale_to_drag_grid_conversion', async () => {
+        // Arrange: ピンチで 2x にズーム後、100px ドラッグ
+        // scale=2 では 100 / (40 * 2) = 1.25 → 1 セル移動（scale=1 なら 3 セルになる）
+        const mockOnRoomDragEnd = jest.fn();
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onRoomDragEnd={mockOnRoomDragEnd}
+            />,
+        );
+
+        // Act: ピンチズーム → 部屋ドラッグ
+        fireGestureHandler(getByGestureTestId('canvas-pinch'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, scale: 2 },
+            { state: State.END, scale: 2 },
+        ]);
+        // ズーム倍率は runOnJS 経由で state に反映されるため、反映を待ってからドラッグする
+        await act(async () => {
+            await new Promise((resolve) => setImmediate(resolve));
+        });
+        fireGestureHandler(getByGestureTestId('room-pan-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 100, translationY: 0 },
+            { state: State.END, translationX: 100, translationY: 0 },
+        ]);
+
+        // Assert: ズーム倍率を考慮したグリッド変換で確定する
+        await waitFor(() => {
+            expect(mockOnRoomDragEnd).toHaveBeenCalledWith('room-1', {
+                x: 1,
+                y: 0,
+                w: 5,
+                h: 4,
             });
         });
     });

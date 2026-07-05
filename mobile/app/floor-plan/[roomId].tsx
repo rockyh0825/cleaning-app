@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
 import { FloorPlanCanvas } from '@/features/floor-plan/components/FloorPlanCanvas';
@@ -48,24 +48,20 @@ export default function RoomDetailScreen() {
 
     return (
         <View style={styles.container}>
-            <ScrollView style={styles.canvasScroll}>
-                <ScrollView horizontal>
-                    <FloorPlanCanvas
-                        floorPlan={{ rooms: [room] }}
-                        onFurnitureDragEnd={(furnitureId, rect) =>
-                            updateFurniture.mutate({
-                                furnitureId,
-                                input: {
-                                    gridX: rect.x,
-                                    gridY: rect.y,
-                                    gridW: rect.w,
-                                    gridH: rect.h,
-                                },
-                            })
-                        }
-                    />
-                </ScrollView>
-            </ScrollView>
+            <FloorPlanCanvas
+                floorPlan={{ rooms: [room] }}
+                onFurnitureDragEnd={(furnitureId, rect) =>
+                    updateFurniture.mutate({
+                        furnitureId,
+                        input: {
+                            gridX: rect.x,
+                            gridY: rect.y,
+                            gridW: rect.w,
+                            gridH: rect.h,
+                        },
+                    })
+                }
+            />
 
             <TouchableOpacity
                 style={styles.addButton}
@@ -88,9 +84,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
-    },
-    canvasScroll: {
-        flex: 1,
     },
     notFound: {
         flex: 1,

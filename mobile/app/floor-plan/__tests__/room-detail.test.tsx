@@ -1,4 +1,5 @@
 import React from 'react';
+import { ScrollView } from 'react-native';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import {
@@ -138,6 +139,18 @@ describe('RoomDetailScreen', () => {
                 input: { gridX: 3, gridY: 3, gridW: 1, gridH: 1 },
             });
         });
+    });
+
+    it('renders_canvas_without_scroll_view', async () => {
+        // Arrange & Act: ScrollView 入れ子を廃止してもキャンバスと部屋が描画される
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+
+        // Assert
+        await waitFor(() => {
+            expect(screen.getByTestId('floorPlan-canvas')).toBeTruthy();
+        });
+        expect(screen.getByTestId('room-shape-room-1')).toBeTruthy();
+        expect(screen.UNSAFE_queryAllByType(ScrollView)).toHaveLength(0);
     });
 
     it('shows_not_found_message_when_room_does_not_exist', async () => {

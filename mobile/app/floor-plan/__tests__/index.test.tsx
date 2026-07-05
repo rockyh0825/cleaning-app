@@ -1,4 +1,5 @@
 import React from 'react';
+import { ScrollView } from 'react-native';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import {
@@ -208,6 +209,58 @@ describe('FloorPlanIndexScreen', () => {
                 expect.objectContaining({ gridX: 0, gridY: 0 }),
             );
         });
+    });
+
+    it('renders_canvas_and_all_rooms_without_scroll_view', async () => {
+        // Arrange: ScrollView 入れ子を廃止してもキャンバスと全部屋が描画される
+        mockUseLayout.mockReturnValue({
+            floorPlan: {
+                data: {
+                    rooms: [
+                        {
+                            id: 'room-1',
+                            name: 'リビング',
+                            type: 'LIVING',
+                            gridX: 0,
+                            gridY: 0,
+                            gridW: 6,
+                            gridH: 4,
+                            createdAt: new Date('2024-01-01'),
+                            updatedAt: new Date('2024-01-01'),
+                            furniture: [],
+                        },
+                        {
+                            id: 'room-2',
+                            name: 'キッチン',
+                            type: 'KITCHEN',
+                            gridX: 6,
+                            gridY: 0,
+                            gridW: 4,
+                            gridH: 4,
+                            createdAt: new Date('2024-01-01'),
+                            updatedAt: new Date('2024-01-01'),
+                            furniture: [],
+                        },
+                    ],
+                },
+                isLoading: false,
+                isError: false,
+            },
+            addRoom: { mutate: jest.fn() },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+
+        // Act
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+
+        // Assert
+        await waitFor(() => {
+            expect(screen.getByTestId('floorPlan-canvas')).toBeTruthy();
+        });
+        expect(screen.getByTestId('room-shape-room-1')).toBeTruthy();
+        expect(screen.getByTestId('room-shape-room-2')).toBeTruthy();
+        expect(screen.UNSAFE_queryAllByType(ScrollView)).toHaveLength(0);
     });
 
     it('mutates_update_room_with_snapped_rect_when_room_drag_commits', async () => {
