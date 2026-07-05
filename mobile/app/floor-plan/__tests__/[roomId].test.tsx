@@ -76,7 +76,7 @@ describe('RoomDetailScreen', () => {
 
         // Act
         render(<RoomDetailScreen />, { wrapper: createWrapper() });
-        fireEvent.press(screen.getByText('家具を追加'));
+        fireEvent.press(screen.getByTestId('fab'));
         fireEvent.changeText(screen.getByPlaceholderText('家具名'), '本棚');
         fireEvent.press(screen.getByText('追加'));
 

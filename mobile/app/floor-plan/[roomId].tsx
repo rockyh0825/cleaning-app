@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
 import { FloorPlanCanvas } from '@/features/floor-plan/components/FloorPlanCanvas';
@@ -7,6 +7,8 @@ import { AddFurnitureModal } from '@/features/floor-plan/components/AddFurniture
 import { FloorPlanRepository } from '@/features/floor-plan/repositories/FloorPlanRepository';
 import { useUserId } from '@/shared/hooks/useUserId';
 import { api } from '@/shared/app-root/providers/di';
+import { FloatingActionButton } from '@/shared/components/FloatingActionButton';
+import { useAppTheme } from '@/shared/theme/useAppTheme';
 import type { FloorPlan } from '@/features/floor-plan/types';
 
 const repository = new FloorPlanRepository(api);
@@ -14,6 +16,7 @@ const repository = new FloorPlanRepository(api);
 const EMPTY_FLOORPLAN: FloorPlan = { rooms: [] };
 
 export default function RoomDetailScreen() {
+    const theme = useAppTheme();
     const { roomId } = useLocalSearchParams<{ roomId: string }>();
     const userId = useUserId();
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -25,8 +28,13 @@ export default function RoomDetailScreen() {
 
     if (!room) {
         return (
-            <View testID="room-not-found" style={styles.notFound}>
-                <Text style={styles.notFoundText}>部屋が見つかりません</Text>
+            <View
+                testID="room-not-found"
+                style={[styles.notFound, { backgroundColor: theme.colors.background }]}
+            >
+                <Text style={[theme.typography.body, { color: theme.colors.textMuted }]}>
+                    部屋が見つかりません
+                </Text>
             </View>
         );
     }
@@ -48,7 +56,7 @@ export default function RoomDetailScreen() {
     }
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <FloorPlanCanvas
                 floorPlan={{ rooms: [room] }}
                 onFurnitureDragEnd={(furnitureId, rect) =>
@@ -64,12 +72,10 @@ export default function RoomDetailScreen() {
                 }
             />
 
-            <TouchableOpacity
-                style={styles.addButton}
+            <FloatingActionButton
+                accessibilityLabel="家具を追加"
                 onPress={() => setIsModalVisible(true)}
-            >
-                <Text style={styles.addButtonText}>家具を追加</Text>
-            </TouchableOpacity>
+            />
 
             <AddFurnitureModal
                 visible={isModalVisible}
@@ -84,28 +90,10 @@ export default function RoomDetailScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
     },
     notFound: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#fff',
-    },
-    notFoundText: {
-        fontSize: 16,
-        color: '#888',
-    },
-    addButton: {
-        margin: 16,
-        padding: 14,
-        backgroundColor: '#4A90E2',
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    addButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
     },
 });

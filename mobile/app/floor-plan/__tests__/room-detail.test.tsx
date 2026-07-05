@@ -100,12 +100,26 @@ describe('RoomDetailScreen', () => {
         expect(screen.getByText('リビング')).toBeTruthy();
     });
 
+    it('opens_add_furniture_modal_when_fab_is_pressed', async () => {
+        // Arrange
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        await screen.findByTestId('floorPlan-canvas');
+
+        // Act
+        fireEvent.press(screen.getByTestId('fab'));
+
+        // Assert: AddFurnitureModal（ボトムシート）が開く
+        await waitFor(() => {
+            expect(screen.getByPlaceholderText('家具名')).toBeTruthy();
+        });
+    });
+
     it('calls_addFurniture_with_roomId_when_furniture_modal_is_submitted', async () => {
         // Arrange
         render(<RoomDetailScreen />, { wrapper: createWrapper() });
 
         // Act
-        fireEvent.press(screen.getByText('家具を追加'));
+        fireEvent.press(screen.getByTestId('fab'));
         fireEvent.changeText(screen.getByPlaceholderText('家具名'), 'ソファ');
         fireEvent.press(screen.getByText('追加'));
 
@@ -123,7 +137,7 @@ describe('RoomDetailScreen', () => {
         render(<RoomDetailScreen />, { wrapper: createWrapper() });
 
         // Act: プリセットチップを選択して送信
-        fireEvent.press(screen.getByText('家具を追加'));
+        fireEvent.press(screen.getByTestId('fab'));
         fireEvent.press(screen.getByTestId('furniture-preset-chip-sofa'));
         fireEvent.press(screen.getByText('追加'));
 
