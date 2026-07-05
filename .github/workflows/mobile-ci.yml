@@ -197,6 +197,14 @@ jobs:
             mobile/screenshots/*.png
           if-no-files-found: warn
 
+      - name: Upload crash diagnostics
+        if: failure() && steps.filter.outputs.mobile == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-diagnostics
+          path: ~/Library/Logs/DiagnosticReports/
+          if-no-files-found: ignore
+
       - name: Upload E2E test report
         if: always() && steps.filter.outputs.mobile == 'true'
         uses: actions/upload-artifact@v4

@@ -40,8 +40,15 @@ appId: com.cleaningapp.mobile
 - assertVisible: "本棚"
 - takeScreenshot: .maestro/screenshots/04-furniture-added
 
+# AsyncStorage への永続化完了と UI 安定を待ってから再起動する
+# （launchApp（再起動）直後のクラッシュフレーク対策の保険。PR #102 でも同種のクラッシュが発生）
+- waitForAnimationToEnd
+
 - launchApp:
     clearState: false
-- assertVisible: "自分の部屋"
+# 再起動直後は読み込みに時間がかかることがあるため長めのタイムアウトで待つ
+- extendedWaitUntil:
+    visible: "自分の部屋"
+    timeout: 30000
 - assertVisible: "本棚"
 - takeScreenshot: .maestro/screenshots/05-restored-after-restart

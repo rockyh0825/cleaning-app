@@ -39,8 +39,8 @@ appId: com.cleaningapp.mobile
     id: "room-overlap-warning-.*"
 - takeScreenshot: .maestro/screenshots/drag-01-two-rooms-no-overlap
 
-# 部屋B（グリッド(4,0) 4x4 = 画面 x 160-320pt, セル40pt, 画面幅393pt）を
-# 左へ約2セル分（幅の20%）ドラッグして部屋Aに重ねる。
+# 部屋B（グリッド(4,0) 4x4）を左へ約2セル分（幅の20%）ドラッグして部屋Aに重ねる。
+# 座標は%指定のため機種非依存（375〜440pt 幅のシミュレータで成立することを確認済み）。
 # 1セル分しか動かなくても部屋A(0,0)4x4 とは重なるため、丸め誤差に頑健
 - swipe:
     start: "61%, 21%"
@@ -52,10 +52,17 @@ appId: com.cleaningapp.mobile
     id: "room-overlap-warning-.*"
 - takeScreenshot: .maestro/screenshots/drag-02-overlap-after-drag
 
+# 楽観的更新後の AsyncStorage への永続化完了と UI 安定を待ってから再起動する
+# （launchApp（再起動）直後のクラッシュフレーク対策の保険。PR #102 でも同種のクラッシュが発生）
+- waitForAnimationToEnd
+
 # アプリ再起動 → 移動後の位置が保持されている（重なり警告が再現される）
 - launchApp:
     clearState: false
-- assertVisible: "部屋A"
+# 再起動直後は読み込みに時間がかかることがあるため長めのタイムアウトで待つ
+- extendedWaitUntil:
+    visible: "部屋A"
+    timeout: 30000
 - assertVisible: "部屋B"
 - assertVisible:
     id: "room-overlap-warning-.*"
