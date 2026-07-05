@@ -6,7 +6,7 @@
 
 ## フェーズ1: mutation の補完
 
-- [ ] 1. hooks: useFloorPlan に deleteFurniture mutation（楽観的更新）
+- [x] 1. hooks: useFloorPlan に deleteFurniture mutation（楽観的更新）
   - File: mobile/src/features/floor-plan/hooks/useFloorPlan.ts
   - `buildDeleteFurnitureMutationOptions` を追加。キャッシュから該当家具を楽観的に除去し、失敗時ロールバック。既存の `DeleteFurnitureUseCase` / `FloorPlanRepository.deleteFurniture` を配線
   - Purpose: 家具削除の保存経路（Requirement 2）
