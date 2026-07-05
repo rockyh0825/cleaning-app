@@ -18,6 +18,7 @@ describe('theme tokens', () => {
         'danger',
         'outline',
         'gridLine',
+        'overlay',
     ] as const;
 
     it.each(themes)('defines_all_semantic_color_tokens_in_%s_theme', (_name, theme) => {
