@@ -176,12 +176,13 @@ jobs:
         if: steps.filter.outputs.mobile == 'true'
         run: xcrun simctl install "$SIMULATOR_UDID" mobile/ios/build/Build/Products/Release-iphonesimulator/*.app
 
-      - name: Run Maestro E2E flow
+      - name: Run Maestro E2E flows
         if: steps.filter.outputs.mobile == 'true'
         working-directory: mobile
         run: |
           mkdir -p .maestro/screenshots
-          maestro test .maestro/flows/floor-plan-onboarding.yaml --format junit --output .maestro/report.xml
+          # flows/ 配下の全フローを実行する（フロー追加時にワークフロー修正を不要にする）
+          maestro test .maestro/flows --format junit --output .maestro/report.xml
 
       - name: Upload E2E screenshots
         if: always() && steps.filter.outputs.mobile == 'true'
@@ -195,6 +196,14 @@ jobs:
             mobile/.maestro/screenshots/*.png
             mobile/screenshots/*.png
           if-no-files-found: warn
+
+      - name: Upload crash diagnostics
+        if: failure() && steps.filter.outputs.mobile == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-diagnostics
+          path: ~/Library/Logs/DiagnosticReports/
+          if-no-files-found: ignore
 
       - name: Upload E2E test report
         if: always() && steps.filter.outputs.mobile == 'true'
