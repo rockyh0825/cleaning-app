@@ -276,11 +276,7 @@ describe('useFloorPlan', () => {
             // Assert
             const optimistic = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
             const updated = optimistic?.rooms.find((r) => r.id === 'room-1');
-            expect(updated?.name).toBe('和室');
-            expect(updated?.gridX).toBe(mockRoom.gridX);
-            expect(updated?.gridY).toBe(mockRoom.gridY);
-            expect(updated?.gridW).toBe(mockRoom.gridW);
-            expect(updated?.gridH).toBe(mockRoom.gridH);
+            expect(updated).toEqual({ ...twoRoomFloorPlan.rooms[0], name: '和室' });
         });
 
         it('rolls_back_room_name_when_rename_fails', async () => {
@@ -299,6 +295,7 @@ describe('useFloorPlan', () => {
 
             // Assert
             const afterRollback = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            expect(afterRollback).toEqual(twoRoomFloorPlan);
             expect(afterRollback?.rooms.find((r) => r.id === 'room-1')?.name).toBe('リビング');
         });
 
@@ -405,11 +402,7 @@ describe('useFloorPlan', () => {
             // Assert
             const optimistic = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
             const updated = optimistic?.rooms[0]?.furniture.find((f) => f.id === 'furniture-1');
-            expect(updated?.name).toBe('ベッド');
-            expect(updated?.gridX).toBe(sofa.gridX);
-            expect(updated?.gridY).toBe(sofa.gridY);
-            expect(updated?.gridW).toBe(sofa.gridW);
-            expect(updated?.gridH).toBe(sofa.gridH);
+            expect(updated).toEqual({ ...sofa, name: 'ベッド' });
         });
 
         it('rolls_back_furniture_name_when_rename_fails', async () => {
@@ -428,6 +421,7 @@ describe('useFloorPlan', () => {
 
             // Assert
             const afterRollback = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            expect(afterRollback).toEqual(furnishedFloorPlan);
             expect(
                 afterRollback?.rooms[0]?.furniture.find((f) => f.id === 'furniture-1')?.name,
             ).toBe('ソファ');
