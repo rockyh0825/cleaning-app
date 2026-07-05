@@ -88,6 +88,7 @@ export function AddRoomModal({ visible, onSubmit, onCancel }: Props) {
                             key={rt.value}
                             testID={`room-type-card-${rt.value}`}
                             accessibilityRole="button"
+                            accessibilityLabel={rt.label}
                             accessibilityState={{ selected: isSelected }}
                             style={[
                                 styles.typeCard,

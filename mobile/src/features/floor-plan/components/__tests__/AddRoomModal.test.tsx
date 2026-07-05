@@ -147,6 +147,30 @@ describe('AddRoomModal', () => {
         ).toEqual(expect.objectContaining({ selected: false }));
     });
 
+    it('exposes_type_label_as_accessibility_label_on_each_type_card', () => {
+        // Arrange & Act
+        render(
+            <AddRoomModal
+                visible={true}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+
+        // Assert: 各種別カードが種別ラベルを accessibilityLabel として公開する
+        const labels = [
+            'リビング',
+            'キッチン',
+            '寝室',
+            'バスルーム',
+            'トイレ',
+            'その他',
+        ];
+        for (const label of labels) {
+            expect(screen.getByLabelText(label)).toBeTruthy();
+        }
+    });
+
     it('includes_type_in_onSubmit_call', () => {
         // Arrange
         render(
