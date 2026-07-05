@@ -55,6 +55,7 @@ export type AppTheme = {
         danger: string;
         outline: string;
         gridLine: string;
+        overlay: string;
     };
     roomAccents: Record<RoomType, RoomAccent>;
     spacing: { xs: number; sm: number; md: number; lg: number; xl: number };
@@ -95,6 +96,7 @@ export const lightTheme: AppTheme = {
         danger: palette.red500,
         outline: palette.gray200,
         gridLine: palette.gray200,
+        overlay: 'rgba(15, 23, 42, 0.45)',
     },
     roomAccents: {
         [RoomType.Living]: {
@@ -161,6 +163,7 @@ export const darkTheme: AppTheme = {
         danger: palette.red400,
         outline: palette.gray700,
         gridLine: palette.gray800,
+        overlay: 'rgba(2, 6, 23, 0.6)',
     },
     roomAccents: {
         [RoomType.Living]: {

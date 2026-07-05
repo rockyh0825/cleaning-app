@@ -184,7 +184,7 @@
   - _Leverage: mobile/src/shared/theme_
   - _Requirements: 6, 7_
 
-- [ ] 17. shared/components: BottomSheet と FloatingActionButton
+- [x] 17. shared/components: BottomSheet と FloatingActionButton
   - File: mobile/src/shared/components/{BottomSheet.tsx, FloatingActionButton.tsx}
   - 背景オーバーレイ＋下からのスライドイン（Reanimated）を持つ汎用ボトムシートと、右下固定のFAB。どちらもテーマトークンのみ参照
   - Purpose: モーダル・ボタン刷新の部品（他featureでも再利用）
