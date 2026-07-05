@@ -66,7 +66,10 @@ export default function FloorPlanIndexScreen() {
           testID="empty-state"
           style={[styles.emptyState, { padding: theme.spacing.xl }]}
         >
-          <Text testID="empty-state-illustration" style={styles.emptyIllustration}>
+          <Text
+            testID="empty-state-illustration"
+            style={[styles.emptyIllustration, { marginBottom: theme.spacing.lg }]}
+          >
             🏠
           </Text>
           <Text
@@ -90,6 +93,7 @@ export default function FloorPlanIndexScreen() {
             部屋を配置して、わが家の掃除マップを作りましょう
           </Text>
           <TouchableOpacity
+            accessibilityRole="button"
             style={{
               backgroundColor: theme.colors.primary,
               borderRadius: theme.radius.md,
@@ -142,6 +146,5 @@ const styles = StyleSheet.create({
   emptyIllustration: {
     fontSize: 64,
     lineHeight: 76,
-    marginBottom: 16,
   },
 });

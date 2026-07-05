@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import type { GestureType } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
+import { useAppTheme } from '@/shared/theme/useAppTheme';
 import { GRID_COLS, GRID_ROWS } from '../constants';
 import { useDragToGrid } from '../hooks/useDragToGrid';
 import type { Room } from '../types';
@@ -26,6 +27,7 @@ const HANDLE_SIZE = 20;
  * bounds でサイズを 1×1〜キャンバス残り幅・高さにクランプする。
  */
 export function ResizeHandle({ room, cellSize, onCommit, scale = 1, blocksExternal }: Props) {
+    const theme = useAppTheme();
     const { gesture, animatedStyle } = useDragToGrid({
         rect: { x: room.gridW, y: room.gridH, w: 0, h: 0 },
         bounds: {
@@ -46,7 +48,14 @@ export function ResizeHandle({ room, cellSize, onCommit, scale = 1, blocksExtern
             <Animated.View
                 testID={`resize-handle-${room.id}`}
                 accessibilityLabel="部屋のサイズを変更"
-                style={[styles.handle, animatedStyle]}
+                style={[
+                    styles.handle,
+                    {
+                        backgroundColor: theme.colors.primary,
+                        borderColor: theme.colors.surface,
+                    },
+                    animatedStyle,
+                ]}
             />
         </GestureDetector>
     );
@@ -60,8 +69,6 @@ const styles = StyleSheet.create({
         width: HANDLE_SIZE,
         height: HANDLE_SIZE,
         borderRadius: HANDLE_SIZE / 2,
-        backgroundColor: '#1A60C8',
         borderWidth: 2,
-        borderColor: '#FFF',
     },
 });
