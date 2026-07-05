@@ -9,6 +9,42 @@ type Props = {
     onDelete: () => void;
 };
 
+type ActionButtonProps = {
+    testID: string;
+    label: string;
+    color: string;
+    onPress: () => void;
+};
+
+/**
+ * 操作バー内のテキストボタン。
+ * 見た目はコンパクトなまま、縦方向の hitSlop でタッチターゲットを 44pt 以上確保する。
+ */
+function ActionButton({ testID, label, color, onPress }: ActionButtonProps) {
+    const theme = useAppTheme();
+
+    return (
+        <Pressable
+            testID={testID}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+            onPress={onPress}
+            hitSlop={{ top: theme.spacing.sm, bottom: theme.spacing.sm }}
+            style={({ pressed }) => [
+                styles.action,
+                {
+                    paddingHorizontal: theme.spacing.md,
+                    paddingVertical: theme.spacing.xs,
+                    borderRadius: theme.radius.sm,
+                    opacity: pressed ? 0.6 : 1,
+                },
+            ]}
+        >
+            <Text style={[theme.typography.label, { color }]}>{label}</Text>
+        </Pressable>
+    );
+}
+
 /**
  * 選択中の対象（部屋・家具）に対する操作バー。
  * 名称と「名称変更」「削除」ボタンを表示する。色はテーマトークンのみ参照する。
@@ -37,42 +73,18 @@ export function SelectionActions({ targetName, onRename, onDelete }: Props) {
             >
                 {targetName}
             </Text>
-            <Pressable
+            <ActionButton
                 testID="selection-rename"
-                accessibilityRole="button"
-                accessibilityLabel="名称変更"
+                label="名称変更"
+                color={theme.colors.primary}
                 onPress={onRename}
-                style={({ pressed }) => [
-                    styles.action,
-                    {
-                        paddingHorizontal: theme.spacing.md,
-                        paddingVertical: theme.spacing.xs,
-                        borderRadius: theme.radius.sm,
-                        opacity: pressed ? 0.6 : 1,
-                    },
-                ]}
-            >
-                <Text style={[theme.typography.label, { color: theme.colors.primary }]}>
-                    名称変更
-                </Text>
-            </Pressable>
-            <Pressable
+            />
+            <ActionButton
                 testID="selection-delete"
-                accessibilityRole="button"
-                accessibilityLabel="削除"
+                label="削除"
+                color={theme.colors.danger}
                 onPress={onDelete}
-                style={({ pressed }) => [
-                    styles.action,
-                    {
-                        paddingHorizontal: theme.spacing.md,
-                        paddingVertical: theme.spacing.xs,
-                        borderRadius: theme.radius.sm,
-                        opacity: pressed ? 0.6 : 1,
-                    },
-                ]}
-            >
-                <Text style={[theme.typography.label, { color: theme.colors.danger }]}>削除</Text>
-            </Pressable>
+            />
         </View>
     );
 }
