@@ -79,7 +79,9 @@ export default function RoomDetailScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="掃除を記録"
             >
-                <Text style={styles.logCleaningLabel}>掃除を記録</Text>
+                <Text style={[styles.logCleaningLabel, { color: theme.colors.surface }]}>
+                    掃除を記録
+                </Text>
             </TouchableOpacity>
 
             <FloatingActionButton
@@ -112,7 +114,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     logCleaningLabel: {
-        color: '#fff',
         fontSize: 15,
         fontWeight: '600',
     },

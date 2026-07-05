@@ -1,9 +1,9 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
 import { PartChecklist } from '@/features/cleaning-record/components/PartChecklist';
 import { useLogCleaning } from '@/features/cleaning-record/hooks/useLogCleaning';
+import { usePartList } from '@/features/cleaning-record/hooks/usePartList';
 import { CleaningRecordRepository } from '@/features/cleaning-record/repositories/CleaningRecordRepository';
 import { useUserId } from '@/shared/hooks/useUserId';
 import { api } from '@/shared/app-root/providers/di';
@@ -16,15 +16,11 @@ export default function AreaDetailScreen() {
     const { areaId } = useLocalSearchParams<{ areaId: string }>();
     const userId = useUserId();
 
-    const partsQuery = useQuery({
-        queryKey: ['parts', { userId }],
-        queryFn: () => repository.listParts(userId ?? ''),
-        enabled: userId != null,
-    });
+    const partList = usePartList(userId ?? '', areaId ?? '', repository);
 
     const { mutate, isPending } = useLogCleaning(userId ?? '', repository);
 
-    if (userId == null || partsQuery.isPending) {
+    if (userId == null || partList.isPending) {
         return (
             <View
                 testID="area-loading"
@@ -35,7 +31,20 @@ export default function AreaDetailScreen() {
         );
     }
 
-    const parts = (partsQuery.data ?? []).filter((part) => part.ownerId === areaId);
+    if (partList.isError) {
+        return (
+            <View
+                testID="error-state"
+                style={[styles.center, { backgroundColor: theme.colors.background }]}
+            >
+                <Text style={[theme.typography.body, { color: theme.colors.textMuted }]}>
+                    パーツの取得に失敗しました
+                </Text>
+            </View>
+        );
+    }
+
+    const parts = partList.parts;
 
     if (parts.length === 0) {
         return (

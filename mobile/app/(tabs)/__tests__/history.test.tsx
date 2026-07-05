@@ -92,6 +92,26 @@ describe('HistoryScreen', () => {
         });
     });
 
+    it('shows_error_state_when_history_fetch_fails', async () => {
+        // Arrange
+        mockUseCleaningHistory.mockReturnValue({
+            records: [],
+            isLoading: false,
+            error: new Error('network error'),
+            deleteRecord: { mutate: jest.fn() },
+            updateRecord: { mutate: jest.fn() },
+        });
+
+        // Act
+        render(<HistoryScreen />, { wrapper: createWrapper() });
+
+        // Assert
+        await waitFor(() => {
+            expect(screen.getByTestId('error-state')).toBeTruthy();
+        });
+        expect(screen.queryByTestId('empty-state')).toBeNull();
+    });
+
     it('calls_delete_record_mutation_when_delete_button_is_pressed', async () => {
         // Arrange
         const mockDeleteMutate = jest.fn();

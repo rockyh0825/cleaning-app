@@ -136,4 +136,18 @@ describe('AreaDetailScreen', () => {
             expect(screen.getByTestId('empty-state')).toBeTruthy();
         });
     });
+
+    it('shows_error_state_when_parts_fetch_fails', async () => {
+        // Arrange
+        mockListParts.mockRejectedValue(new Error('network error'));
+
+        // Act
+        render(<AreaDetailScreen />, { wrapper: createWrapper() });
+
+        // Assert
+        await waitFor(() => {
+            expect(screen.getByTestId('error-state')).toBeTruthy();
+        });
+        expect(screen.queryByTestId('empty-state')).toBeNull();
+    });
 });

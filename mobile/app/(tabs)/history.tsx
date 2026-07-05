@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { CleaningTimeline } from '@/features/cleaning-record/components/CleaningTimeline';
 import { useCleaningHistory } from '@/features/cleaning-record/hooks/useCleaningHistory';
 import { CleaningRecordRepository } from '@/features/cleaning-record/repositories/CleaningRecordRepository';
@@ -13,7 +13,7 @@ export default function HistoryScreen() {
     const theme = useAppTheme();
     const userId = useUserId();
 
-    const { records, isLoading, deleteRecord } = useCleaningHistory(
+    const { records, isLoading, error, deleteRecord } = useCleaningHistory(
         userId ?? '',
         {},
         repository,
@@ -26,6 +26,19 @@ export default function HistoryScreen() {
                 style={[styles.center, { backgroundColor: theme.colors.background }]}
             >
                 <ActivityIndicator color={theme.colors.primary} />
+            </View>
+        );
+    }
+
+    if (error != null) {
+        return (
+            <View
+                testID="error-state"
+                style={[styles.center, { backgroundColor: theme.colors.background }]}
+            >
+                <Text style={[theme.typography.body, { color: theme.colors.textMuted }]}>
+                    履歴の取得に失敗しました
+                </Text>
             </View>
         );
     }
