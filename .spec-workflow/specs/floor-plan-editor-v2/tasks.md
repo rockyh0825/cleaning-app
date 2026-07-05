@@ -206,7 +206,7 @@
   - _Leverage: BottomSheet, mobile/src/shared/theme_
   - _Requirements: 7_
 
-- [ ] 19. AddFurnitureModal のボトムシート化とプリセットピッカー刷新
+- [x] 19. AddFurnitureModal のボトムシート化とプリセットピッカー刷新
   - File: mobile/src/features/floor-plan/components/AddFurnitureModal.tsx
   - BottomSheet ベースに置き換え、プリセット家具をアイコン付きチップ／カードで選択。自由名称入力も維持
   - Purpose: 家具追加体験のリッチ化（Requirement 7.1）

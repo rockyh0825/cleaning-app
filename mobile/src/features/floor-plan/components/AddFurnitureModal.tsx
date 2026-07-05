@@ -1,115 +1,195 @@
 import React, { useState } from 'react';
 import {
-    Modal,
+    Pressable,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { BottomSheet } from '@/shared/components/BottomSheet';
+import { useAppTheme } from '@/shared/theme/useAppTheme';
+import { FURNITURE_PRESETS } from '../constants';
 
 type Props = {
     visible: boolean;
     roomId: string;
-    onSubmit: (input: { name: string }) => void;
+    onSubmit: (input: { name: string; presetKey?: string }) => void;
     onCancel: () => void;
 };
 
 export function AddFurnitureModal({ visible, onSubmit, onCancel }: Props) {
+    const theme = useAppTheme();
     const [name, setName] = useState('');
+    const [selectedPresetKey, setSelectedPresetKey] = useState<string | null>(null);
+
+    function reset() {
+        setName('');
+        setSelectedPresetKey(null);
+    }
+
+    function handleSelectPreset(key: string, label: string) {
+        setSelectedPresetKey(key);
+        setName(label);
+    }
+
+    function handleChangeName(value: string) {
+        // 手入力に切り替えたら自由名称扱い（presetKey を外す）
+        setSelectedPresetKey(null);
+        setName(value);
+    }
 
     function handleSubmit() {
         if (!name.trim()) {
             return;
         }
-        onSubmit({ name: name.trim() });
-        setName('');
+        onSubmit(
+            selectedPresetKey
+                ? { name: name.trim(), presetKey: selectedPresetKey }
+                : { name: name.trim() },
+        );
+        reset();
     }
 
     function handleCancel() {
-        setName('');
+        reset();
         onCancel();
     }
 
     return (
-        <Modal visible={visible} transparent animationType="slide">
-            <View style={styles.overlay}>
-                <View style={styles.container}>
-                    <Text style={styles.title}>家具を追加</Text>
+        <BottomSheet visible={visible} onClose={handleCancel}>
+            <Text
+                style={[
+                    theme.typography.title,
+                    { color: theme.colors.text, marginBottom: theme.spacing.lg },
+                ]}
+            >
+                家具を追加
+            </Text>
 
-                    <TextInput
-                        style={styles.input}
-                        placeholder="家具名"
-                        value={name}
-                        onChangeText={setName}
-                        autoFocus
-                    />
+            <TextInput
+                style={[
+                    theme.typography.body,
+                    {
+                        color: theme.colors.text,
+                        borderWidth: 1,
+                        borderColor: theme.colors.outline,
+                        borderRadius: theme.radius.md,
+                        padding: theme.spacing.md,
+                        marginBottom: theme.spacing.lg,
+                    },
+                ]}
+                placeholder="家具名"
+                placeholderTextColor={theme.colors.textMuted}
+                value={name}
+                onChangeText={handleChangeName}
+                autoFocus
+            />
 
-                    <View style={styles.buttonRow}>
-                        <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-                            <Text style={styles.cancelButtonText}>キャンセル</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                            <Text style={styles.submitButtonText}>追加</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+            <View
+                style={[
+                    styles.presetGrid,
+                    { gap: theme.spacing.sm, marginBottom: theme.spacing.xl },
+                ]}
+            >
+                {FURNITURE_PRESETS.map((preset) => {
+                    const isSelected = selectedPresetKey === preset.key;
+                    return (
+                        <Pressable
+                            key={preset.key}
+                            testID={`furniture-preset-chip-${preset.key}`}
+                            accessibilityRole="button"
+                            accessibilityLabel={preset.label}
+                            accessibilityState={{ selected: isSelected }}
+                            style={[
+                                styles.presetChip,
+                                {
+                                    backgroundColor: isSelected
+                                        ? theme.colors.surfaceAlt
+                                        : theme.colors.surface,
+                                    borderColor: isSelected
+                                        ? theme.colors.primary
+                                        : theme.colors.outline,
+                                    borderRadius: theme.radius.lg,
+                                    paddingVertical: theme.spacing.sm,
+                                    paddingHorizontal: theme.spacing.md,
+                                    gap: theme.spacing.xs,
+                                },
+                            ]}
+                            onPress={() => handleSelectPreset(preset.key, preset.label)}
+                        >
+                            <Text style={styles.presetIcon}>{preset.icon}</Text>
+                            <Text
+                                style={[
+                                    theme.typography.caption,
+                                    {
+                                        color: isSelected
+                                            ? theme.colors.primary
+                                            : theme.colors.textMuted,
+                                        fontWeight: isSelected ? '600' : '400',
+                                    },
+                                ]}
+                            >
+                                {preset.label}
+                            </Text>
+                        </Pressable>
+                    );
+                })}
             </View>
-        </Modal>
+
+            <View style={[styles.buttonRow, { gap: theme.spacing.md }]}>
+                <TouchableOpacity
+                    style={{
+                        borderWidth: 1,
+                        borderColor: theme.colors.outline,
+                        borderRadius: theme.radius.md,
+                        paddingVertical: theme.spacing.md,
+                        paddingHorizontal: theme.spacing.xl,
+                    }}
+                    onPress={handleCancel}
+                >
+                    <Text
+                        style={[theme.typography.label, { color: theme.colors.textMuted }]}
+                    >
+                        キャンセル
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={{
+                        backgroundColor: theme.colors.primary,
+                        borderRadius: theme.radius.md,
+                        paddingVertical: theme.spacing.md,
+                        paddingHorizontal: theme.spacing.xl,
+                    }}
+                    onPress={handleSubmit}
+                >
+                    <Text
+                        style={[theme.typography.label, { color: theme.colors.surface }]}
+                    >
+                        追加
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        </BottomSheet>
     );
 }
 
 const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
+    presetGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+    },
+    presetChip: {
+        flexDirection: 'row',
         alignItems: 'center',
-    },
-    container: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 24,
-        width: '85%',
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: '600',
-        marginBottom: 16,
-    },
-    input: {
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        padding: 10,
-        marginBottom: 20,
-        fontSize: 16,
+    },
+    presetIcon: {
+        fontSize: 18,
+        lineHeight: 24,
     },
     buttonRow: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
-        gap: 12,
-    },
-    cancelButton: {
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#ccc',
-    },
-    cancelButtonText: {
-        fontSize: 15,
-        color: '#555',
-    },
-    submitButton: {
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 8,
-        backgroundColor: '#4A90E2',
-    },
-    submitButtonText: {
-        fontSize: 15,
-        color: '#fff',
-        fontWeight: '600',
     },
 });

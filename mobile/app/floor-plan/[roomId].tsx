@@ -31,12 +31,13 @@ export default function RoomDetailScreen() {
         );
     }
 
-    function handleAddFurniture(input: { name: string }) {
+    function handleAddFurniture(input: { name: string; presetKey?: string }) {
         if (!room) return;
         addFurniture.mutate({
             roomId: room.id,
             input: {
                 name: input.name,
+                presetKey: input.presetKey,
                 gridX: room.gridX,
                 gridY: room.gridY,
                 gridW: 1,
