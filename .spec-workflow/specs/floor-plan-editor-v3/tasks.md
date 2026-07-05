@@ -17,7 +17,7 @@
   - _Leverage: buildDeleteRoomMutationOptions（deleteRoom）のパターン_
   - _Requirements: 2_
 
-- [ ] 2. hooks: name のみの部分更新の動作保証
+- [x] 2. hooks: name のみの部分更新の動作保証
   - File: mobile/src/features/floor-plan/hooks/useFloorPlan.ts（テスト追加のみの見込み）
   - `updateRoom` / `updateFurniture` に name のみの input を渡した場合、キャッシュの name が楽観的に差し替わり座標が保たれることをテストで保証する
   - Purpose: リネームの保存経路（Requirement 4）

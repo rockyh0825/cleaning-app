@@ -261,6 +261,44 @@ describe('useFloorPlan', () => {
             expect(optimistic?.rooms[0]?.gridX).toBe(5);
         });
 
+        it('updates_only_room_name_optimistically_and_keeps_coordinates', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(mockRoom) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], twoRoomFloorPlan);
+
+            // Act
+            const options = buildUpdateRoomMutationOptions(queryClient, 'user-1', mockUseCase);
+            await options.onMutate!({ roomId: 'room-1', input: { name: '和室' } });
+
+            // Assert
+            const optimistic = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            const updated = optimistic?.rooms.find((r) => r.id === 'room-1');
+            expect(updated).toEqual({ ...twoRoomFloorPlan.rooms[0], name: '和室' });
+        });
+
+        it('rolls_back_room_name_when_rename_fails', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockRejectedValue(new Error('network error')) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], twoRoomFloorPlan);
+            const options = buildUpdateRoomMutationOptions(queryClient, 'user-1', mockUseCase);
+            const variables = { roomId: 'room-1', input: { name: '和室' } };
+
+            // Act
+            const context = await options.onMutate!(variables);
+            options.onError!(new Error('network error'), variables, context);
+
+            // Assert
+            const afterRollback = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            expect(afterRollback).toEqual(twoRoomFloorPlan);
+            expect(afterRollback?.rooms.find((r) => r.id === 'room-1')?.name).toBe('リビング');
+        });
+
         it('rolls_back_to_previous_coordinates_when_update_fails', async () => {
             // Arrange
             const queryClient = new QueryClient({
@@ -347,6 +385,46 @@ describe('useFloorPlan', () => {
             expect(updated?.gridY).toBe(2);
             const untouched = optimistic?.rooms[0]?.furniture.find((f) => f.id === 'furniture-2');
             expect(untouched).toEqual(table);
+        });
+
+        it('updates_only_furniture_name_optimistically_and_keeps_coordinates', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(sofa) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], furnishedFloorPlan);
+
+            // Act
+            const options = buildUpdateFurnitureMutationOptions(queryClient, 'user-1', mockUseCase);
+            await options.onMutate!({ furnitureId: 'furniture-1', input: { name: 'ベッド' } });
+
+            // Assert
+            const optimistic = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            const updated = optimistic?.rooms[0]?.furniture.find((f) => f.id === 'furniture-1');
+            expect(updated).toEqual({ ...sofa, name: 'ベッド' });
+        });
+
+        it('rolls_back_furniture_name_when_rename_fails', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockRejectedValue(new Error('network error')) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], furnishedFloorPlan);
+            const options = buildUpdateFurnitureMutationOptions(queryClient, 'user-1', mockUseCase);
+            const variables = { furnitureId: 'furniture-1', input: { name: 'ベッド' } };
+
+            // Act
+            const context = await options.onMutate!(variables);
+            options.onError!(new Error('network error'), variables, context);
+
+            // Assert
+            const afterRollback = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            expect(afterRollback).toEqual(furnishedFloorPlan);
+            expect(
+                afterRollback?.rooms[0]?.furniture.find((f) => f.id === 'furniture-1')?.name,
+            ).toBe('ソファ');
         });
 
         it('rolls_back_furniture_coordinates_when_update_fails', async () => {
