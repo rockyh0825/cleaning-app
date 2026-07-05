@@ -161,7 +161,7 @@
   - _Leverage: useDragToGrid, useFloorPlan.updateFurniture_
   - _Requirements: 4_
 
-- [ ] 15. キャンバスのパン・ズーム
+- [x] 15. キャンバスのパン・ズーム
   - File: mobile/src/features/floor-plan/components/FloorPlanCanvas.tsx, mobile/app/floor-plan/index.tsx
   - ScrollView 入れ子を廃止し、Gesture.Pinch（0.5x〜2x）+ Gesture.Pan（背景）で置き換える。部屋・家具のドラッグ中はキャンバスパンを抑止（`blocksExternalGesture`）。ズーム倍率は useDragToGrid の px→グリッド変換に渡す
   - Purpose: 全体俯瞰と部分拡大（Requirement 5）

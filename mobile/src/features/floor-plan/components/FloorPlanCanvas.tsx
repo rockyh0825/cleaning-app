@@ -1,5 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+} from 'react-native-reanimated';
 import { rectsOverlap } from '@/shared/utils/grid';
 import type { Rect } from '@/shared/utils/grid';
 import type { FloorPlan, Room } from '../types';
@@ -28,6 +34,19 @@ try {
 
 const DEFAULT_CELL_SIZE = 40;
 
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 2;
+
+/**
+ * ピンチのズーム倍率を 0.5〜2 に収める。不正値（NaN・Infinity）は等倍に戻す。
+ * Reanimated 非依存の純粋関数としてテストする（UIスレッドでも呼ぶため worklet 指定）。
+ */
+export function clampScale(scale: number): number {
+    'worklet';
+    if (!Number.isFinite(scale)) return 1;
+    return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
+}
+
 type Props = {
     floorPlan: FloorPlan;
     cellSize?: number;
@@ -50,6 +69,52 @@ export function FloorPlanCanvas({
     const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
     const [selectedFurnitureId, setSelectedFurnitureId] = useState<string | null>(null);
 
+    const scale = useSharedValue(1);
+    const savedScale = useSharedValue(1);
+    const panX = useSharedValue(0);
+    const panY = useSharedValue(0);
+    const savedPanX = useSharedValue(0);
+    const savedPanY = useSharedValue(0);
+    // ドラッグ確定計算（JSスレッド・commitDrag）に渡す確定済みズーム倍率
+    const [gridScale, setGridScale] = useState(1);
+
+    const pinchGesture = Gesture.Pinch()
+        .onUpdate((event) => {
+            scale.value = clampScale(savedScale.value * event.scale);
+        })
+        .onEnd((event) => {
+            const next = clampScale(savedScale.value * event.scale);
+            scale.value = next;
+            savedScale.value = next;
+            runOnJS(setGridScale)(next);
+        })
+        .withTestId('canvas-pinch');
+
+    const canvasPanGesture = Gesture.Pan()
+        .onUpdate((event) => {
+            panX.value = savedPanX.value + event.translationX;
+            panY.value = savedPanY.value + event.translationY;
+        })
+        .onEnd(() => {
+            savedPanX.value = panX.value;
+            savedPanY.value = panY.value;
+        })
+        .withTestId('canvas-pan');
+
+    const canvasGesture = Gesture.Simultaneous(pinchGesture, canvasPanGesture);
+
+    // 依存配列は Babel プラグイン無しの環境（ts-jest でのテスト実行）でも動くよう明示する
+    const canvasAnimatedStyle = useAnimatedStyle(
+        () => ({
+            transform: [
+                { translateX: panX.value },
+                { translateY: panY.value },
+                { scale: scale.value },
+            ],
+        }),
+        [panX, panY, scale],
+    );
+
     const canvasWidth = GRID_COLS * cellSize;
     const canvasHeight = GRID_ROWS * cellSize;
     const overlappingRoomIds = useMemo(
@@ -69,52 +134,66 @@ export function FloorPlanCanvas({
     }
 
     return (
-        <View
-            testID="floorPlan-canvas"
-            style={[styles.container, { width: canvasWidth, height: canvasHeight }]}
-        >
-            {renderGrid(canvasWidth, canvasHeight, cellSize)}
+        <GestureDetector gesture={canvasGesture}>
+            <View testID="floorPlan-viewport" style={styles.viewport}>
+                <Animated.View
+                    testID="floorPlan-canvas"
+                    style={[
+                        styles.container,
+                        { width: canvasWidth, height: canvasHeight },
+                        canvasAnimatedStyle,
+                    ]}
+                >
+                    {renderGrid(canvasWidth, canvasHeight, cellSize)}
 
-            {floorPlan.rooms.map((room) => (
-                <React.Fragment key={room.id}>
-                    <RoomShape
-                        room={room}
-                        cellSize={cellSize}
-                        selected={selectedRoomId === room.id}
-                        onPress={() => handleRoomPress(room.id)}
-                        onDragEnd={(rect) => onRoomDragEnd?.(room.id, rect)}
-                        overlapping={overlappingRoomIds.has(room.id)}
-                        onResizeEnd={
-                            onRoomDragEnd
-                                ? (size) =>
-                                      onRoomDragEnd(room.id, {
-                                          x: room.gridX,
-                                          y: room.gridY,
-                                          w: size.w,
-                                          h: size.h,
-                                      })
-                                : undefined
-                        }
-                    />
-                    {room.furniture.map((furn) => (
-                        <FurnitureItem
-                            key={furn.id}
-                            furniture={furn}
-                            cellSize={cellSize}
-                            selected={selectedFurnitureId === furn.id}
-                            onPress={() => handleFurniturePress(furn.id)}
-                            bounds={{
-                                x: room.gridX,
-                                y: room.gridY,
-                                w: room.gridW,
-                                h: room.gridH,
-                            }}
-                            onDragEnd={(rect) => onFurnitureDragEnd?.(furn.id, rect)}
-                        />
+                    {floorPlan.rooms.map((room) => (
+                        <React.Fragment key={room.id}>
+                            <RoomShape
+                                room={room}
+                                cellSize={cellSize}
+                                scale={gridScale}
+                                canvasPanGesture={canvasPanGesture}
+                                selected={selectedRoomId === room.id}
+                                onPress={() => handleRoomPress(room.id)}
+                                onDragEnd={(rect) => onRoomDragEnd?.(room.id, rect)}
+                                overlapping={overlappingRoomIds.has(room.id)}
+                                onResizeEnd={
+                                    onRoomDragEnd
+                                        ? (size) =>
+                                              onRoomDragEnd(room.id, {
+                                                  x: room.gridX,
+                                                  y: room.gridY,
+                                                  w: size.w,
+                                                  h: size.h,
+                                              })
+                                        : undefined
+                                }
+                            />
+                            {room.furniture.map((furn) => (
+                                <FurnitureItem
+                                    key={furn.id}
+                                    furniture={furn}
+                                    cellSize={cellSize}
+                                    scale={gridScale}
+                                    canvasPanGesture={canvasPanGesture}
+                                    selected={selectedFurnitureId === furn.id}
+                                    onPress={() => handleFurniturePress(furn.id)}
+                                    bounds={{
+                                        x: room.gridX,
+                                        y: room.gridY,
+                                        w: room.gridW,
+                                        h: room.gridH,
+                                    }}
+                                    onDragEnd={(rect) =>
+                                        onFurnitureDragEnd?.(furn.id, rect)
+                                    }
+                                />
+                            ))}
+                        </React.Fragment>
                     ))}
-                </React.Fragment>
-            ))}
-        </View>
+                </Animated.View>
+            </View>
+        </GestureDetector>
     );
 }
 
@@ -194,6 +273,10 @@ function renderGrid(
 }
 
 const styles = StyleSheet.create({
+    viewport: {
+        flex: 1,
+        overflow: 'hidden',
+    },
     container: {
         position: 'relative',
         overflow: 'hidden',

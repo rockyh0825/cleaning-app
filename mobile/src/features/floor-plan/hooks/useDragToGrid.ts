@@ -1,4 +1,5 @@
 import { Gesture } from 'react-native-gesture-handler';
+import type { GestureType } from 'react-native-gesture-handler';
 import {
     runOnJS,
     useAnimatedStyle,
@@ -57,6 +58,8 @@ export type UseDragToGridParams = {
     onCommit: (rect: Rect) => void;
     /** jest-utils の getByGestureTestId で参照するテストID */
     testID?: string;
+    /** このドラッグの判定が終わるまで待機させる外部ジェスチャー（キャンバスパン等） */
+    blocksExternal?: GestureType;
 };
 
 /**
@@ -71,6 +74,7 @@ export function useDragToGrid({
     scale = 1,
     onCommit,
     testID,
+    blocksExternal,
 }: UseDragToGridParams) {
     const translationX = useSharedValue(0);
     const translationY = useSharedValue(0);
@@ -93,6 +97,7 @@ export function useDragToGrid({
             translationY.value = 0;
         });
     if (testID) gesture.withTestId(testID);
+    if (blocksExternal) gesture.blocksExternalGesture(blocksExternal);
 
     // 依存配列は Babel プラグイン無しの環境（ts-jest でのテスト実行）でも動くよう明示する
     const animatedStyle = useAnimatedStyle(

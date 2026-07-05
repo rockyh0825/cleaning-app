@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
+import type { GestureType } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import { GRID_COLS, GRID_ROWS } from '../constants';
 import { useDragToGrid } from '../hooks/useDragToGrid';
@@ -11,6 +12,10 @@ type Props = {
     cellSize: number;
     /** リサイズ確定時にグリッド単位の新サイズを受け取る */
     onCommit: (size: { w: number; h: number }) => void;
+    /** キャンバスのズーム倍率（px→グリッド変換に使用） */
+    scale?: number;
+    /** このリサイズの判定が終わるまで待機させるキャンバスパン */
+    blocksExternal?: GestureType;
 };
 
 const HANDLE_SIZE = 20;
@@ -20,7 +25,7 @@ const HANDLE_SIZE = 20;
  * useDragToGrid をサイズ空間（x=gridW, y=gridH）に読み替えて再利用する。
  * bounds でサイズを 1×1〜キャンバス残り幅・高さにクランプする。
  */
-export function ResizeHandle({ room, cellSize, onCommit }: Props) {
+export function ResizeHandle({ room, cellSize, onCommit, scale = 1, blocksExternal }: Props) {
     const { gesture, animatedStyle } = useDragToGrid({
         rect: { x: room.gridW, y: room.gridH, w: 0, h: 0 },
         bounds: {
@@ -30,8 +35,10 @@ export function ResizeHandle({ room, cellSize, onCommit }: Props) {
             h: GRID_ROWS - room.gridY - 1,
         },
         cellSize,
+        scale,
         onCommit: (rect) => onCommit({ w: rect.x, h: rect.y }),
         testID: `room-resize-${room.id}`,
+        blocksExternal,
     });
 
     return (
