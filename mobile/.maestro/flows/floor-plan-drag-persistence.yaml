@@ -1,0 +1,62 @@
+appId: com.cleaningapp.mobile
+---
+# floor-plan-editor-v2 E2E（tasks.md フェーズ4 Task22 / Requirements 1, 3）
+#
+# 検証フロー: 部屋追加 → 2部屋目が重ならず自動配置 → ドラッグ移動で重ねると警告表示
+#            → アプリ再起動後も移動後の位置が保持される
+#
+# 前提: floor-plan-onboarding.yaml と同じ
+# - バックエンド未起動（Mock fallback）で起動し、EXPO_PUBLIC_MOCK_START_EMPTY=true でビルド済み
+#
+# 位置検証の方法: Maestro は要素座標を直接アサートできないため、
+# 「部屋Bを部屋Aへドラッグ → 重なり警告 testID（room-overlap-warning-*）の出現」を
+# 位置変更のシグナルとし、再起動後も警告が再現されることで永続化を確認する。
+
+- launchApp:
+    clearState: true
+
+- assertVisible:
+    id: "empty-state"
+
+# 部屋A を追加（4x4 が (0,0) に自動配置される）
+- tapOn: "部屋を追加"
+- assertVisible: "部屋名"
+- inputText: "部屋A"
+- pressKey: Enter
+- tapOn: "追加"
+- assertVisible: "部屋A"
+
+# 部屋B を追加（findFreePosition により (4,0) に重ならず自動配置）
+- tapOn: "部屋を追加"
+- assertVisible: "部屋名"
+- inputText: "部屋B"
+- pressKey: Enter
+- tapOn: "追加"
+- assertVisible: "部屋B"
+
+# 重ならず配置されている（警告なし）
+- assertNotVisible:
+    id: "room-overlap-warning-.*"
+- takeScreenshot: .maestro/screenshots/drag-01-two-rooms-no-overlap
+
+# 部屋B（グリッド(4,0) 4x4 = 画面 x 160-320pt, セル40pt, 画面幅393pt）を
+# 左へ約2セル分（幅の20%）ドラッグして部屋Aに重ねる。
+# 1セル分しか動かなくても部屋A(0,0)4x4 とは重なるため、丸め誤差に頑健
+- swipe:
+    start: "61%, 21%"
+    end: "41%, 21%"
+    duration: 1500
+
+# ドラッグ確定（スナップ・保存）で重なり警告が表示される
+- assertVisible:
+    id: "room-overlap-warning-.*"
+- takeScreenshot: .maestro/screenshots/drag-02-overlap-after-drag
+
+# アプリ再起動 → 移動後の位置が保持されている（重なり警告が再現される）
+- launchApp:
+    clearState: false
+- assertVisible: "部屋A"
+- assertVisible: "部屋B"
+- assertVisible:
+    id: "room-overlap-warning-.*"
+- takeScreenshot: .maestro/screenshots/drag-03-position-persisted-after-restart
