@@ -18,7 +18,7 @@ export default function RoomDetailScreen() {
     const userId = useUserId();
     const [isModalVisible, setIsModalVisible] = useState(false);
 
-    const { floorPlan, addFurniture } = useFloorPlan(userId ?? '', repository);
+    const { floorPlan, addFurniture, updateFurniture } = useFloorPlan(userId ?? '', repository);
 
     const floorPlanData = floorPlan.data ?? EMPTY_FLOORPLAN;
     const room = floorPlanData.rooms.find((r) => r.id === roomId);
@@ -50,7 +50,20 @@ export default function RoomDetailScreen() {
         <View style={styles.container}>
             <ScrollView style={styles.canvasScroll}>
                 <ScrollView horizontal>
-                    <FloorPlanCanvas floorPlan={{ rooms: [room] }} />
+                    <FloorPlanCanvas
+                        floorPlan={{ rooms: [room] }}
+                        onFurnitureDragEnd={(furnitureId, rect) =>
+                            updateFurniture.mutate({
+                                furnitureId,
+                                input: {
+                                    gridX: rect.x,
+                                    gridY: rect.y,
+                                    gridW: rect.w,
+                                    gridH: rect.h,
+                                },
+                            })
+                        }
+                    />
                 </ScrollView>
             </ScrollView>
 

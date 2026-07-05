@@ -1,5 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { State } from 'react-native-gesture-handler';
+import {
+    fireGestureHandler,
+    getByGestureTestId,
+} from 'react-native-gesture-handler/jest-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RoomDetailScreen from '../[roomId]';
@@ -33,7 +38,19 @@ const mockFloorPlan: FloorPlan = {
             gridH: 4,
             createdAt: new Date('2024-01-01'),
             updatedAt: new Date('2024-01-01'),
-            furniture: [],
+            furniture: [
+                {
+                    id: 'furn-1',
+                    roomId: 'room-1',
+                    name: 'ソファ',
+                    gridX: 2,
+                    gridY: 3,
+                    gridW: 1,
+                    gridH: 1,
+                    createdAt: new Date('2024-01-01'),
+                    updatedAt: new Date('2024-01-01'),
+                },
+            ],
         },
     ],
 };
@@ -56,6 +73,7 @@ function createWrapper() {
 
 describe('RoomDetailScreen', () => {
     const mockAddFurnitureMutate = jest.fn();
+    const mockUpdateFurnitureMutate = jest.fn();
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -65,6 +83,7 @@ describe('RoomDetailScreen', () => {
             floorPlan: { data: mockFloorPlan, isLoading: false, isError: false },
             addRoom: { mutate: jest.fn() },
             addFurniture: { mutate: mockAddFurnitureMutate },
+            updateFurniture: { mutate: mockUpdateFurnitureMutate },
             deleteRoom: { mutate: jest.fn() },
         });
     });
@@ -94,6 +113,29 @@ describe('RoomDetailScreen', () => {
             expect(mockAddFurnitureMutate).toHaveBeenCalledWith({
                 roomId: 'room-1',
                 input: expect.objectContaining({ name: 'ソファ' }),
+            });
+        });
+    });
+
+    it('calls_updateFurniture_with_clamped_grid_rect_when_furniture_drag_commits', async () => {
+        // Arrange: cellSize=40 で 56px（1.4 セル分）右へドラッグ → 1 セル移動
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        await waitFor(() => {
+            expect(screen.getByTestId('furniture-item-furn-1')).toBeTruthy();
+        });
+
+        // Act
+        fireGestureHandler(getByGestureTestId('furniture-pan-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 56, translationY: 0 },
+            { state: State.END, translationX: 56, translationY: 0 },
+        ]);
+
+        // Assert: スナップ済みグリッド座標で updateFurniture が呼ばれる
+        await waitFor(() => {
+            expect(mockUpdateFurnitureMutate).toHaveBeenCalledWith({
+                furnitureId: 'furn-1',
+                input: { gridX: 3, gridY: 3, gridW: 1, gridH: 1 },
             });
         });
     });

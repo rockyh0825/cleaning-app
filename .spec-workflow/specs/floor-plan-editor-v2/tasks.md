@@ -150,7 +150,7 @@
   - _Leverage: useDragToGrid_
   - _Requirements: 2_
 
-- [ ] 14. FurnitureItem のドラッグ移動対応（部屋詳細画面）
+- [x] 14. FurnitureItem のドラッグ移動対応（部屋詳細画面）
   - File: mobile/src/features/floor-plan/components/FurnitureItem.tsx, mobile/app/floor-plan/[roomId].tsx
   - FurnitureItem に useDragToGrid を組み込み（bounds = 所属部屋の矩形）、onCommit で updateFurniture.mutate を呼ぶ
   - Purpose: 家具を動かせるようにする（Requirement 4）

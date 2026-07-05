@@ -93,6 +93,34 @@ describe('FloorPlanCanvas', () => {
         });
     });
 
+    it('calls_onFurnitureDragEnd_with_furniture_id_and_rect_when_furniture_drag_commits', async () => {
+        // Arrange: cellSize=40 で 56px（1.4 セル分）右へドラッグ → 1 セル移動
+        const mockOnFurnitureDragEnd = jest.fn();
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onFurnitureDragEnd={mockOnFurnitureDragEnd}
+            />,
+        );
+
+        // Act
+        fireGestureHandler(getByGestureTestId('furniture-pan-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 56, translationY: 0 },
+            { state: State.END, translationX: 56, translationY: 0 },
+        ]);
+
+        // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる
+        await waitFor(() => {
+            expect(mockOnFurnitureDragEnd).toHaveBeenCalledWith('furn-1', {
+                x: 1,
+                y: 0,
+                w: 2,
+                h: 1,
+            });
+        });
+    });
+
     it('renders_with_custom_cell_size', () => {
         // Arrange & Act & Assert
         const { toJSON } = render(
