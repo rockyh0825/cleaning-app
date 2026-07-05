@@ -9,7 +9,7 @@ jest.mock('react-native-reanimated', () => ({
     runOnJS: (fn: unknown) => fn,
 }));
 
-import { commitDrag } from '../useDragToGrid';
+import { commitDrag, previewOffset } from '../useDragToGrid';
 
 describe('commitDrag', () => {
     const bounds = { x: 0, y: 0, w: 20, h: 20 };
@@ -73,5 +73,50 @@ describe('commitDrag', () => {
 
         // Assert
         expect(result).toEqual({ x: 3, y: 2, w: 4, h: 4 });
+    });
+});
+
+describe('previewOffset', () => {
+    it('returns_offset_unchanged_when_scale_is_one', () => {
+        // Arrange
+        const offsetPx = { x: 80, y: -40 };
+
+        // Act
+        const result = previewOffset(offsetPx, 1);
+
+        // Assert
+        expect(result).toEqual({ x: 80, y: -40 });
+    });
+
+    it('halves_offset_when_scale_is_two_so_preview_matches_finger', () => {
+        // Arrange: scale 変換の外側で指が 80px 動くと、内側では 40px が見かけ 80px になる
+        const offsetPx = { x: 80, y: -40 };
+
+        // Act
+        const result = previewOffset(offsetPx, 2);
+
+        // Assert
+        expect(result).toEqual({ x: 40, y: -20 });
+    });
+
+    it('doubles_offset_when_scale_is_half', () => {
+        // Arrange
+        const offsetPx = { x: 80, y: -40 };
+
+        // Act
+        const result = previewOffset(offsetPx, 0.5);
+
+        // Assert
+        expect(result).toEqual({ x: 160, y: -80 });
+    });
+
+    it('treats_zero_or_non_finite_scale_as_identity', () => {
+        // Arrange
+        const offsetPx = { x: 80, y: -40 };
+
+        // Act & Assert: ゼロ除算・NaN を返さず等倍として扱う
+        expect(previewOffset(offsetPx, 0)).toEqual({ x: 80, y: -40 });
+        expect(previewOffset(offsetPx, NaN)).toEqual({ x: 80, y: -40 });
+        expect(previewOffset(offsetPx, Infinity)).toEqual({ x: 80, y: -40 });
     });
 });

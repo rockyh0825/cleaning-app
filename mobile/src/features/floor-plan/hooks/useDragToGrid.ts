@@ -49,6 +49,22 @@ export function commitDrag({
     return clamped;
 }
 
+/**
+ * ドラッグ中のプレビュー用オフセット変換。対象の Animated.View は scale transform の
+ * 掛かったキャンバス内側にあるため、スクリーン px の translation をそのまま入れると
+ * 見かけの移動量が scale 倍になる。scale で割って指の移動に一致させる。
+ * scale が 0 以下・非有限の場合は等倍として扱う（0 除算・NaN を防ぐ）。
+ * Reanimated 非依存の純粋関数としてテストする（UIスレッドでも呼ぶため worklet 指定）。
+ */
+export function previewOffset(offsetPx: Point, scale: number): Point {
+    'worklet';
+    const effectiveScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+    return {
+        x: offsetPx.x / effectiveScale,
+        y: offsetPx.y / effectiveScale,
+    };
+}
+
 export type UseDragToGridParams = {
     rect: Rect;
     bounds: Rect;
@@ -86,8 +102,12 @@ export function useDragToGrid({
 
     const gesture = Gesture.Pan()
         .onUpdate((event) => {
-            translationX.value = event.translationX;
-            translationY.value = event.translationY;
+            const preview = previewOffset(
+                { x: event.translationX, y: event.translationY },
+                scale,
+            );
+            translationX.value = preview.x;
+            translationY.value = preview.y;
         })
         .onEnd((event) => {
             runOnJS(commit)({ x: event.translationX, y: event.translationY });
