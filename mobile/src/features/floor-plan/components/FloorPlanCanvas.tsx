@@ -35,6 +35,8 @@ type Props = {
     onFurniturePress?: (furnitureId: string) => void;
     /** 部屋のドラッグ・リサイズ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
     onRoomDragEnd?: (roomId: string, rect: Rect) => void;
+    /** 家具のドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
+    onFurnitureDragEnd?: (furnitureId: string, rect: Rect) => void;
 };
 
 export function FloorPlanCanvas({
@@ -43,6 +45,7 @@ export function FloorPlanCanvas({
     onRoomPress,
     onFurniturePress,
     onRoomDragEnd,
+    onFurnitureDragEnd,
 }: Props) {
     const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
     const [selectedFurnitureId, setSelectedFurnitureId] = useState<string | null>(null);
@@ -100,6 +103,13 @@ export function FloorPlanCanvas({
                             cellSize={cellSize}
                             selected={selectedFurnitureId === furn.id}
                             onPress={() => handleFurniturePress(furn.id)}
+                            bounds={{
+                                x: room.gridX,
+                                y: room.gridY,
+                                w: room.gridW,
+                                h: room.gridH,
+                            }}
+                            onDragEnd={(rect) => onFurnitureDragEnd?.(furn.id, rect)}
                         />
                     ))}
                 </React.Fragment>
