@@ -15,7 +15,7 @@ const mockUseCleaningHistory = useCleaningHistory as jest.Mock;
 function createWrapper() {
     const queryClient = new QueryClient({
         defaultOptions: {
-            queries: { retry: false },
+            queries: { retry: false, gcTime: 0 },
             mutations: { retry: false },
         },
     });
@@ -110,6 +110,28 @@ describe('HistoryScreen', () => {
             expect(screen.getByTestId('error-state')).toBeTruthy();
         });
         expect(screen.queryByTestId('empty-state')).toBeNull();
+    });
+
+    it('shows_error_banner_and_keeps_timeline_when_delete_record_fails', async () => {
+        // Arrange: 削除 mutation が失敗した状態
+        mockUseCleaningHistory.mockReturnValue({
+            records: RECORDS,
+            isLoading: false,
+            error: null,
+            deleteRecord: { mutate: jest.fn(), isError: true },
+            updateRecord: { mutate: jest.fn() },
+        });
+
+        // Act
+        render(<HistoryScreen />, { wrapper: createWrapper() });
+
+        // Assert: エラーバナーが表示され、タイムラインは表示・操作可能なまま残る
+        await waitFor(() => {
+            expect(screen.getByTestId('delete-record-error')).toBeTruthy();
+        });
+        expect(screen.getByText('削除に失敗しました')).toBeTruthy();
+        expect(screen.getAllByTestId('timeline-item')).toHaveLength(2);
+        expect(screen.getByTestId('delete-button-record-1')).toBeTruthy();
     });
 
     it('calls_delete_record_mutation_when_delete_button_is_pressed', async () => {

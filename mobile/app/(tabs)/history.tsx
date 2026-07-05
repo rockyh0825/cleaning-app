@@ -45,6 +45,13 @@ export default function HistoryScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            {deleteRecord.isError && (
+                <View testID="delete-record-error" style={styles.errorBanner}>
+                    <Text style={[theme.typography.body, { color: theme.colors.danger }]}>
+                        削除に失敗しました
+                    </Text>
+                </View>
+            )}
             <CleaningTimeline
                 records={records}
                 onDelete={(recordId) => deleteRecord.mutate(recordId)}
@@ -61,5 +68,10 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    errorBanner: {
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
 });
