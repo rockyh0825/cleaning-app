@@ -1,5 +1,6 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import { lightTheme } from '@/shared/theme/tokens';
 import { AddRoomModal } from '../AddRoomModal';
 
 describe('AddRoomModal', () => {
@@ -81,6 +82,69 @@ describe('AddRoomModal', () => {
 
         // Assert
         expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    it('calls_onSubmit_with_selected_type_when_type_card_is_pressed', () => {
+        // Arrange
+        render(
+            <AddRoomModal
+                visible={true}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+
+        // Act: 種別カードをタップして名前を入力し送信
+        fireEvent.press(screen.getByTestId('room-type-card-KITCHEN'));
+        fireEvent.changeText(screen.getByPlaceholderText('部屋名'), 'キッチン');
+        fireEvent.press(screen.getByText('追加'));
+
+        // Assert
+        expect(mockOnSubmit).toHaveBeenCalledWith({
+            name: 'キッチン',
+            type: 'KITCHEN',
+        });
+    });
+
+    it('renders_type_icon_on_each_type_card', () => {
+        // Arrange & Act
+        render(
+            <AddRoomModal
+                visible={true}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+
+        // Assert: 全種別カードにアイコン（絵文字）が表示される
+        for (const type of ['LIVING', 'KITCHEN', 'BEDROOM', 'BATHROOM', 'TOILET', 'OTHER'] as const) {
+            const card = screen.getByTestId(`room-type-card-${type}`);
+            expect(
+                within(card).getByText(lightTheme.roomAccents[type].icon),
+            ).toBeTruthy();
+        }
+    });
+
+    it('marks_pressed_type_card_as_selected', () => {
+        // Arrange
+        render(
+            <AddRoomModal
+                visible={true}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+
+        // Act
+        fireEvent.press(screen.getByTestId('room-type-card-BEDROOM'));
+
+        // Assert: accessibilityState.selected で選択状態が示される
+        expect(
+            screen.getByTestId('room-type-card-BEDROOM').props.accessibilityState,
+        ).toEqual(expect.objectContaining({ selected: true }));
+        expect(
+            screen.getByTestId('room-type-card-LIVING').props.accessibilityState,
+        ).toEqual(expect.objectContaining({ selected: false }));
     });
 
     it('includes_type_in_onSubmit_call', () => {

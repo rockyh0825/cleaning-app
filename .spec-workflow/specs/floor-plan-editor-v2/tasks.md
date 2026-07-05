@@ -195,7 +195,7 @@
   - _Leverage: mobile/src/shared/theme_
   - _Requirements: 7_
 
-- [ ] 18. AddRoomModal のボトムシート化と種別ピッカー刷新
+- [x] 18. AddRoomModal のボトムシート化と種別ピッカー刷新
   - File: mobile/src/features/floor-plan/components/AddRoomModal.tsx
   - BottomSheet ベースに置き換え、部屋種別をアイコン＋アクセントカラーのカードグリッドで選択できるようにする（既存の onSubmit インターフェースは維持）
   - Purpose: 追加体験のリッチ化（Requirement 7.1）

@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import {
-    Modal,
+    Pressable,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { BottomSheet } from '@/shared/components/BottomSheet';
+import { useAppTheme } from '@/shared/theme/useAppTheme';
 import type { RoomType } from '../types';
 
 type Props = {
@@ -25,149 +27,158 @@ const ROOM_TYPES: { label: string; value: RoomType }[] = [
 ];
 
 export function AddRoomModal({ visible, onSubmit, onCancel }: Props) {
+    const theme = useAppTheme();
     const [name, setName] = useState('');
     const [selectedType, setSelectedType] = useState<RoomType>('LIVING');
+
+    function reset() {
+        setName('');
+        setSelectedType('LIVING');
+    }
 
     function handleSubmit() {
         if (!name.trim()) {
             return;
         }
         onSubmit({ name: name.trim(), type: selectedType });
-        setName('');
-        setSelectedType('LIVING');
+        reset();
     }
 
     function handleCancel() {
-        setName('');
-        setSelectedType('LIVING');
+        reset();
         onCancel();
     }
 
     return (
-        <Modal visible={visible} transparent animationType="slide">
-            <View style={styles.overlay}>
-                <View style={styles.container}>
-                    <Text style={styles.title}>部屋を追加</Text>
+        <BottomSheet visible={visible} onClose={handleCancel}>
+            <Text
+                style={[
+                    theme.typography.title,
+                    { color: theme.colors.text, marginBottom: theme.spacing.lg },
+                ]}
+            >
+                部屋を追加
+            </Text>
 
-                    <TextInput
-                        style={styles.input}
-                        placeholder="部屋名"
-                        value={name}
-                        onChangeText={setName}
-                        autoFocus
-                    />
+            <TextInput
+                style={[
+                    theme.typography.body,
+                    {
+                        color: theme.colors.text,
+                        borderWidth: 1,
+                        borderColor: theme.colors.outline,
+                        borderRadius: theme.radius.md,
+                        padding: theme.spacing.md,
+                        marginBottom: theme.spacing.lg,
+                    },
+                ]}
+                placeholder="部屋名"
+                placeholderTextColor={theme.colors.textMuted}
+                value={name}
+                onChangeText={setName}
+                autoFocus
+            />
 
-                    <View style={styles.typeContainer}>
-                        {ROOM_TYPES.map((rt) => (
-                            <TouchableOpacity
-                                key={rt.value}
+            <View style={[styles.typeGrid, { marginBottom: theme.spacing.xl }]}>
+                {ROOM_TYPES.map((rt) => {
+                    const accent = theme.roomAccents[rt.value];
+                    const isSelected = selectedType === rt.value;
+                    return (
+                        <Pressable
+                            key={rt.value}
+                            testID={`room-type-card-${rt.value}`}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: isSelected }}
+                            style={[
+                                styles.typeCard,
+                                {
+                                    backgroundColor: isSelected
+                                        ? accent.fill
+                                        : theme.colors.surfaceAlt,
+                                    borderColor: isSelected
+                                        ? accent.accent
+                                        : theme.colors.outline,
+                                    borderRadius: theme.radius.md,
+                                    paddingVertical: theme.spacing.md,
+                                    gap: theme.spacing.xs,
+                                },
+                            ]}
+                            onPress={() => setSelectedType(rt.value)}
+                        >
+                            <Text style={styles.typeIcon}>{accent.icon}</Text>
+                            <Text
                                 style={[
-                                    styles.typeButton,
-                                    selectedType === rt.value && styles.typeButtonSelected,
+                                    theme.typography.caption,
+                                    {
+                                        color: isSelected
+                                            ? accent.accent
+                                            : theme.colors.textMuted,
+                                        fontWeight: isSelected ? '600' : '400',
+                                    },
                                 ]}
-                                onPress={() => setSelectedType(rt.value)}
                             >
-                                <Text
-                                    style={[
-                                        styles.typeButtonText,
-                                        selectedType === rt.value && styles.typeButtonTextSelected,
-                                    ]}
-                                >
-                                    {rt.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-
-                    <View style={styles.buttonRow}>
-                        <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-                            <Text style={styles.cancelButtonText}>キャンセル</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                            <Text style={styles.submitButtonText}>追加</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+                                {rt.label}
+                            </Text>
+                        </Pressable>
+                    );
+                })}
             </View>
-        </Modal>
+
+            <View style={[styles.buttonRow, { gap: theme.spacing.md }]}>
+                <TouchableOpacity
+                    style={{
+                        borderWidth: 1,
+                        borderColor: theme.colors.outline,
+                        borderRadius: theme.radius.md,
+                        paddingVertical: theme.spacing.md,
+                        paddingHorizontal: theme.spacing.xl,
+                    }}
+                    onPress={handleCancel}
+                >
+                    <Text
+                        style={[theme.typography.label, { color: theme.colors.textMuted }]}
+                    >
+                        キャンセル
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={{
+                        backgroundColor: theme.colors.primary,
+                        borderRadius: theme.radius.md,
+                        paddingVertical: theme.spacing.md,
+                        paddingHorizontal: theme.spacing.xl,
+                    }}
+                    onPress={handleSubmit}
+                >
+                    <Text
+                        style={[theme.typography.label, { color: theme.colors.surface }]}
+                    >
+                        追加
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        </BottomSheet>
     );
 }
 
 const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    container: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 24,
-        width: '85%',
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: '600',
-        marginBottom: 16,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        padding: 10,
-        marginBottom: 16,
-        fontSize: 16,
-    },
-    typeContainer: {
+    typeGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
-        marginBottom: 20,
     },
-    typeButton: {
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 16,
+    typeCard: {
+        width: '30%',
+        flexGrow: 1,
+        alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#ccc',
     },
-    typeButtonSelected: {
-        backgroundColor: '#4A90E2',
-        borderColor: '#4A90E2',
-    },
-    typeButtonText: {
-        fontSize: 13,
-        color: '#555',
-    },
-    typeButtonTextSelected: {
-        color: '#fff',
+    typeIcon: {
+        fontSize: 24,
+        lineHeight: 30,
     },
     buttonRow: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
-        gap: 12,
-    },
-    cancelButton: {
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#ccc',
-    },
-    cancelButtonText: {
-        fontSize: 15,
-        color: '#555',
-    },
-    submitButton: {
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 8,
-        backgroundColor: '#4A90E2',
-    },
-    submitButtonText: {
-        fontSize: 15,
-        color: '#fff',
-        fontWeight: '600',
     },
 });

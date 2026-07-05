@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { KeyboardAvoidingView, Text } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { BottomSheet } from '../BottomSheet';
 
@@ -26,6 +26,18 @@ describe('BottomSheet', () => {
 
         // Assert
         expect(screen.queryByText('シートの中身')).toBeNull();
+    });
+
+    it('wraps_sheet_in_keyboard_avoiding_view', () => {
+        // Arrange & Act: TextInput を載せたときキーボードにシートが隠れないための構造
+        render(
+            <BottomSheet visible={true} onClose={jest.fn()}>
+                <Text>シートの中身</Text>
+            </BottomSheet>,
+        );
+
+        // Assert
+        expect(screen.UNSAFE_getByType(KeyboardAvoidingView)).toBeTruthy();
     });
 
     it('calls_onClose_when_overlay_is_pressed', () => {
