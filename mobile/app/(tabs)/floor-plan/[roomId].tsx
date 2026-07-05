@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
 import { FloorPlanCanvas } from '@/features/floor-plan/components/FloorPlanCanvas';
 import { AddFurnitureModal } from '@/features/floor-plan/components/AddFurnitureModal';
@@ -72,6 +72,18 @@ export default function RoomDetailScreen() {
                 }
             />
 
+            <TouchableOpacity
+                testID="log-cleaning-button"
+                style={[styles.logCleaningButton, { backgroundColor: theme.colors.primary }]}
+                onPress={() => router.push(`/area/${room.id}`)}
+                accessibilityRole="button"
+                accessibilityLabel="掃除を記録"
+            >
+                <Text style={[styles.logCleaningLabel, { color: theme.colors.surface }]}>
+                    掃除を記録
+                </Text>
+            </TouchableOpacity>
+
             <FloatingActionButton
                 accessibilityLabel="家具を追加"
                 onPress={() => setIsModalVisible(true)}
@@ -90,6 +102,20 @@ export default function RoomDetailScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    logCleaningButton: {
+        position: 'absolute',
+        left: 16,
+        bottom: 24,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    logCleaningLabel: {
+        fontSize: 15,
+        fontWeight: '600',
     },
     notFound: {
         flex: 1,

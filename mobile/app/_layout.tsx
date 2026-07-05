@@ -19,8 +19,8 @@ function ThemedStack() {
                 contentStyle: { backgroundColor: theme.colors.background },
             }}
         >
-            <Stack.Screen name="floor-plan/index" options={{ title: '間取り' }} />
-            <Stack.Screen name="floor-plan/[roomId]" options={{ title: '部屋詳細' }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="area/[areaId]" options={{ title: 'エリア詳細' }} />
         </Stack>
     );
 }

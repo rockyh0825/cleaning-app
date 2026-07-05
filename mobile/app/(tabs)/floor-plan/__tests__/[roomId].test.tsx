@@ -9,12 +9,14 @@ jest.mock('@/features/floor-plan/hooks/useFloorPlan', () => ({
 
 jest.mock('expo-router', () => ({
     useLocalSearchParams: () => ({ roomId: 'room-1' }),
+    router: { push: jest.fn() },
 }));
 
 jest.mock('@/shared/hooks/useUserId', () => ({
     useUserId: () => 'user-1',
 }));
 
+import { router } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
 const mockUseFloorPlan = useFloorPlan as jest.Mock;
 
@@ -84,6 +86,24 @@ describe('RoomDetailScreen', () => {
         expect(mutate).toHaveBeenCalledWith({
             roomId: 'room-1',
             input: expect.objectContaining({ name: '本棚' }),
+        });
+    });
+
+    it('navigates_to_area_detail_when_log_cleaning_button_is_pressed', async () => {
+        // Arrange
+        mockUseFloorPlan.mockReturnValue({
+            floorPlan: { data: { rooms: [targetRoom] }, isLoading: false, isError: false },
+            addFurniture: { mutate: jest.fn() },
+        });
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        await screen.findByTestId('room-shape-room-1');
+
+        // Act
+        fireEvent.press(screen.getByText('掃除を記録'));
+
+        // Assert
+        await waitFor(() => {
+            expect(router.push).toHaveBeenCalledWith('/area/room-1');
         });
     });
 });
