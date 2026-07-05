@@ -1,5 +1,11 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import {
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    StyleSheet,
+} from 'react-native';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
 
@@ -24,7 +30,10 @@ export function BottomSheet({ visible, onClose, children }: Props) {
             animationType="none"
             onRequestClose={onClose}
         >
-            <View style={styles.root}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={styles.root}
+            >
                 <Animated.View
                     entering={FadeIn}
                     style={[
@@ -55,7 +64,7 @@ export function BottomSheet({ visible, onClose, children }: Props) {
                 >
                     {children}
                 </Animated.View>
-            </View>
+            </KeyboardAvoidingView>
         </Modal>
     );
 }
