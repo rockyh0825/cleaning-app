@@ -1,5 +1,6 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
+import { FURNITURE_PRESETS } from '../../constants';
 import { AddFurnitureModal } from '../AddFurnitureModal';
 
 describe('AddFurnitureModal', () => {
@@ -64,6 +65,93 @@ describe('AddFurnitureModal', () => {
         // Assert
         expect(mockOnCancel).toHaveBeenCalledTimes(1);
         expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    it('calls_onSubmit_with_presetKey_when_preset_chip_selected_and_submitted', () => {
+        // Arrange
+        render(
+            <AddFurnitureModal
+                visible={true}
+                roomId={testRoomId}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+
+        // Act: プリセットチップを選択して送信
+        fireEvent.press(screen.getByTestId('furniture-preset-chip-sofa'));
+        fireEvent.press(screen.getByText('追加'));
+
+        // Assert: プリセット名と presetKey 付きで送信される
+        expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+        expect(mockOnSubmit).toHaveBeenCalledWith({
+            name: 'ソファ',
+            presetKey: 'sofa',
+        });
+    });
+
+    it('calls_onSubmit_without_presetKey_when_free_name_entered_after_preset_selection', () => {
+        // Arrange
+        render(
+            <AddFurnitureModal
+                visible={true}
+                roomId={testRoomId}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+
+        // Act: プリセット選択後に名前を書き換えると自由名称扱いになる
+        fireEvent.press(screen.getByTestId('furniture-preset-chip-sofa'));
+        fireEvent.changeText(screen.getByPlaceholderText('家具名'), '観葉植物');
+        fireEvent.press(screen.getByText('追加'));
+
+        // Assert: presetKey は付かない
+        expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+        expect(mockOnSubmit).toHaveBeenCalledWith({ name: '観葉植物' });
+    });
+
+    it('renders_icon_and_accessibility_label_on_each_preset_chip', () => {
+        // Arrange & Act
+        render(
+            <AddFurnitureModal
+                visible={true}
+                roomId={testRoomId}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+
+        // Assert: 全プリセットチップにアイコンが表示され、
+        // ラベルが accessibilityLabel として公開される（E2E のテキストマッチ用）
+        for (const preset of FURNITURE_PRESETS) {
+            const chip = screen.getByTestId(`furniture-preset-chip-${preset.key}`);
+            expect(within(chip).getByText(preset.icon)).toBeTruthy();
+            expect(chip.props.accessibilityLabel).toBe(preset.label);
+        }
+    });
+
+    it('marks_selected_preset_chip_as_selected', () => {
+        // Arrange
+        render(
+            <AddFurnitureModal
+                visible={true}
+                roomId={testRoomId}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+
+        // Act
+        fireEvent.press(screen.getByTestId('furniture-preset-chip-bed'));
+
+        // Assert
+        expect(
+            screen.getByTestId('furniture-preset-chip-bed').props.accessibilityState,
+        ).toEqual(expect.objectContaining({ selected: true }));
+        expect(
+            screen.getByTestId('furniture-preset-chip-sofa').props.accessibilityState,
+        ).toEqual(expect.objectContaining({ selected: false }));
     });
 
     it('does_not_submit_when_name_is_empty', () => {

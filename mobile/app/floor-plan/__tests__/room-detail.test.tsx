@@ -118,6 +118,27 @@ describe('RoomDetailScreen', () => {
         });
     });
 
+    it('calls_addFurniture_with_presetKey_when_preset_chip_is_submitted', async () => {
+        // Arrange
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+
+        // Act: プリセットチップを選択して送信
+        fireEvent.press(screen.getByText('家具を追加'));
+        fireEvent.press(screen.getByTestId('furniture-preset-chip-sofa'));
+        fireEvent.press(screen.getByText('追加'));
+
+        // Assert: presetKey がそのまま addFurniture に渡る
+        await waitFor(() => {
+            expect(mockAddFurnitureMutate).toHaveBeenCalledWith({
+                roomId: 'room-1',
+                input: expect.objectContaining({
+                    name: 'ソファ',
+                    presetKey: 'sofa',
+                }),
+            });
+        });
+    });
+
     it('calls_updateFurniture_with_clamped_grid_rect_when_furniture_drag_commits', async () => {
         // Arrange: cellSize=40 で 56px（1.4 セル分）右へドラッグ → 1 セル移動
         render(<RoomDetailScreen />, { wrapper: createWrapper() });
