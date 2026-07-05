@@ -137,6 +137,28 @@ describe('AreaDetailScreen', () => {
         });
     });
 
+    it('shows_error_banner_and_keeps_checklist_when_log_cleaning_fails', async () => {
+        // Arrange: 掃除記録の mutation が失敗した状態
+        mockUseLogCleaning.mockReturnValue({
+            mutate: jest.fn(),
+            isPending: false,
+            error: new Error('network error'),
+        });
+
+        // Act
+        render(<AreaDetailScreen />, { wrapper: createWrapper() });
+
+        // Assert: エラーバナーが表示され、チェックリストと記録ボタンは操作可能なまま残る
+        await waitFor(() => {
+            expect(screen.getByTestId('log-cleaning-error')).toBeTruthy();
+        });
+        expect(
+            screen.getByText('記録に失敗しました。再試行してください'),
+        ).toBeTruthy();
+        expect(screen.getByText('エアコンフィルター')).toBeTruthy();
+        expect(screen.getByTestId('record-button')).toBeTruthy();
+    });
+
     it('shows_error_state_when_parts_fetch_fails', async () => {
         // Arrange
         mockListParts.mockRejectedValue(new Error('network error'));

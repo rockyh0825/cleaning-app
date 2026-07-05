@@ -18,7 +18,7 @@ export default function AreaDetailScreen() {
 
     const partList = usePartList(userId ?? '', areaId ?? '', repository);
 
-    const { mutate, isPending } = useLogCleaning(userId ?? '', repository);
+    const { mutate, isPending, error: logCleaningError } = useLogCleaning(userId ?? '', repository);
 
     if (userId == null || partList.isPending) {
         return (
@@ -61,6 +61,13 @@ export default function AreaDetailScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            {logCleaningError != null && (
+                <View testID="log-cleaning-error" style={styles.errorBanner}>
+                    <Text style={[theme.typography.body, { color: theme.colors.danger }]}>
+                        記録に失敗しました。再試行してください
+                    </Text>
+                </View>
+            )}
             <PartChecklist
                 parts={parts}
                 onLogCleaning={(partIds) => mutate({ partIds })}
@@ -79,5 +86,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         padding: 32,
+    },
+    errorBanner: {
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
 });
