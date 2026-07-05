@@ -217,7 +217,7 @@
   - _Leverage: BottomSheet, mobile/src/shared/theme_
   - _Requirements: 7_
 
-- [ ] 20. 画面クローム刷新（FAB・empty state・テーマ適用）
+- [x] 20. 画面クローム刷新（FAB・empty state・テーマ適用）
   - File: mobile/app/floor-plan/{index.tsx, [roomId].tsx}, mobile/app/_layout.tsx（ThemeProvider 配線）
   - 全幅「部屋を追加」ボタンを FAB に置換。empty state をイラスト（SVG/絵文字）＋説明＋CTA構成に刷新。画面背景・ヘッダーをテーマトークンに置換し、ThemeProvider をアプリルートに配線
   - Purpose: 画面全体の仕上げ（Requirement 6.2 / 7.2 / 7.3）

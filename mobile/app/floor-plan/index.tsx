@@ -9,6 +9,8 @@ import type { CreateRoomInput } from "@/features/floor-plan/types";
 import { GRID_COLS, GRID_ROWS } from "@/features/floor-plan/constants";
 import { useUserId } from "@/shared/hooks/useUserId";
 import { api } from "@/shared/app-root/providers/di";
+import { FloatingActionButton } from "@/shared/components/FloatingActionButton";
+import { useAppTheme } from "@/shared/theme/useAppTheme";
 import { findFreePosition } from "@/shared/utils/grid";
 
 const repository = new FloorPlanRepository(api);
@@ -16,6 +18,7 @@ const repository = new FloorPlanRepository(api);
 const DEFAULT_ROOM_SIZE = { w: 4, h: 4 };
 
 export default function FloorPlanIndexScreen() {
+  const theme = useAppTheme();
   const userId = useUserId();
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -57,13 +60,48 @@ export default function FloorPlanIndexScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {rooms.length === 0 ? (
-        <View testID="empty-state" style={styles.emptyState}>
-          <Text style={styles.emptyText}>まだ間取りがありません</Text>
-          <Text style={styles.emptySubText}>
-            「部屋を追加」ボタンで始めましょう
+        <View
+          testID="empty-state"
+          style={[styles.emptyState, { padding: theme.spacing.xl }]}
+        >
+          <Text testID="empty-state-illustration" style={styles.emptyIllustration}>
+            🏠
           </Text>
+          <Text
+            style={[
+              theme.typography.title,
+              { color: theme.colors.text, marginBottom: theme.spacing.sm },
+            ]}
+          >
+            まだ間取りがありません
+          </Text>
+          <Text
+            style={[
+              theme.typography.body,
+              {
+                color: theme.colors.textMuted,
+                textAlign: "center",
+                marginBottom: theme.spacing.xl,
+              },
+            ]}
+          >
+            部屋を配置して、わが家の掃除マップを作りましょう
+          </Text>
+          <TouchableOpacity
+            style={{
+              backgroundColor: theme.colors.primary,
+              borderRadius: theme.radius.md,
+              paddingVertical: theme.spacing.md,
+              paddingHorizontal: theme.spacing.xl,
+            }}
+            onPress={() => setIsModalVisible(true)}
+          >
+            <Text style={[theme.typography.label, { color: theme.colors.surface }]}>
+              最初の部屋を追加
+            </Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FloorPlanCanvas
@@ -78,12 +116,10 @@ export default function FloorPlanIndexScreen() {
         />
       )}
 
-      <TouchableOpacity
-        style={styles.addButton}
+      <FloatingActionButton
+        accessibilityLabel="部屋を追加"
         onPress={() => setIsModalVisible(true)}
-      >
-        <Text style={styles.addButtonText}>部屋を追加</Text>
-      </TouchableOpacity>
+      />
 
       <AddRoomModal
         visible={isModalVisible}
@@ -97,35 +133,15 @@ export default function FloorPlanIndexScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 32,
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
-  emptySubText: {
-    fontSize: 14,
-    color: "#888",
-    textAlign: "center",
-  },
-  addButton: {
-    margin: 16,
-    padding: 14,
-    backgroundColor: "#4A90E2",
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  addButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  emptyIllustration: {
+    fontSize: 64,
+    lineHeight: 76,
+    marginBottom: 16,
   },
 });

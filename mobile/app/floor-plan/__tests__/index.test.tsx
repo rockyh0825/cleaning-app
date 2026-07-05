@@ -65,6 +65,66 @@ describe('FloorPlanIndexScreen', () => {
         });
     });
 
+    it('shows_empty_state_with_illustration_and_cta_when_no_rooms', async () => {
+        // Arrange
+        mockUseLayout.mockReturnValue({
+            floorPlan: { data: { rooms: [] }, isLoading: false, isError: false },
+            addRoom: { mutate: jest.fn() },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+
+        // Act
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+
+        // Assert: イラスト（絵文字）と CTA が表示される
+        await waitFor(() => {
+            expect(screen.getByTestId('empty-state')).toBeTruthy();
+        });
+        expect(screen.getByTestId('empty-state-illustration')).toBeTruthy();
+        expect(screen.getByText('最初の部屋を追加')).toBeTruthy();
+    });
+
+    it('opens_add_room_modal_when_empty_state_cta_is_pressed', async () => {
+        // Arrange
+        mockUseLayout.mockReturnValue({
+            floorPlan: { data: { rooms: [] }, isLoading: false, isError: false },
+            addRoom: { mutate: jest.fn() },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        await screen.findByTestId('empty-state');
+
+        // Act
+        fireEvent.press(screen.getByText('最初の部屋を追加'));
+
+        // Assert: AddRoomModal（ボトムシート）が開く
+        await waitFor(() => {
+            expect(screen.getByPlaceholderText('部屋名')).toBeTruthy();
+        });
+    });
+
+    it('opens_add_room_modal_when_fab_is_pressed', async () => {
+        // Arrange
+        mockUseLayout.mockReturnValue({
+            floorPlan: { data: { rooms: [] }, isLoading: false, isError: false },
+            addRoom: { mutate: jest.fn() },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        await screen.findByTestId('empty-state');
+
+        // Act
+        fireEvent.press(screen.getByTestId('fab'));
+
+        // Assert: AddRoomModal（ボトムシート）が開く
+        await waitFor(() => {
+            expect(screen.getByPlaceholderText('部屋名')).toBeTruthy();
+        });
+    });
+
     it('navigates_to_room_detail_when_room_is_pressed', async () => {
         // Arrange
         mockUseLayout.mockReturnValue({
@@ -156,7 +216,7 @@ describe('FloorPlanIndexScreen', () => {
         render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
 
         // Act
-        fireEvent.press(screen.getByText('部屋を追加'));
+        fireEvent.press(screen.getByTestId('fab'));
         fireEvent.changeText(screen.getByPlaceholderText('部屋名'), 'キッチン');
         fireEvent.press(screen.getByText('追加'));
 
@@ -199,7 +259,7 @@ describe('FloorPlanIndexScreen', () => {
         render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
 
         // Act
-        fireEvent.press(screen.getByText('部屋を追加'));
+        fireEvent.press(screen.getByTestId('fab'));
         fireEvent.changeText(screen.getByPlaceholderText('部屋名'), '物置');
         fireEvent.press(screen.getByText('追加'));
 
