@@ -1,5 +1,13 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import {
+    act,
+    render,
+    screen,
+    fireEvent,
+    waitFor,
+    within,
+} from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RoomDetailScreen from '../[roomId]';
 
@@ -30,6 +38,36 @@ const targetRoom = {
     gridH: 4,
     furniture: [],
 };
+
+const sofa = {
+    id: 'furn-1',
+    roomId: 'room-1',
+    name: 'ソファ',
+    presetKey: 'sofa',
+    gridX: 0,
+    gridY: 0,
+    gridW: 1,
+    gridH: 1,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+};
+
+/** 指定した家具を持つ部屋で useFloorPlan をモックする（mutate は差し替え可能） */
+function mockHookWithFurniture(
+    furniture: Array<Record<string, unknown>>,
+    mutations: { updateFurniture?: jest.Mock; deleteFurniture?: jest.Mock } = {},
+) {
+    mockUseFloorPlan.mockReturnValue({
+        floorPlan: {
+            data: { rooms: [{ ...targetRoom, furniture }] },
+            isLoading: false,
+            isError: false,
+        },
+        addFurniture: { mutate: jest.fn() },
+        updateFurniture: { mutate: mutations.updateFurniture ?? jest.fn() },
+        deleteFurniture: { mutate: mutations.deleteFurniture ?? jest.fn() },
+    });
+}
 
 function createWrapper() {
     const queryClient = new QueryClient({
@@ -105,5 +143,255 @@ describe('RoomDetailScreen', () => {
         await waitFor(() => {
             expect(router.push).toHaveBeenCalledWith('/area/room-1');
         });
+    });
+
+    it('shows_selection_actions_when_furniture_is_pressed', async () => {
+        // Arrange
+        mockHookWithFurniture([sofa]);
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+
+        // Act: 家具をタップして選択する
+        fireEvent.press(await screen.findByText('ソファ'));
+
+        // Assert: 家具名付きの操作バーと各操作ボタンが表示される
+        const actions = screen.getByTestId('selection-actions');
+        expect(within(actions).getByText('ソファ')).toBeTruthy();
+        expect(screen.getByTestId('selection-rename')).toBeTruthy();
+        expect(screen.getByTestId('selection-delete')).toBeTruthy();
+    });
+
+    it('shows_irreversible_confirmation_when_furniture_delete_is_pressed', async () => {
+        // Arrange
+        const alertSpy = jest.spyOn(Alert, 'alert');
+        mockHookWithFurniture([sofa]);
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+
+        // Act
+        fireEvent.press(screen.getByTestId('selection-delete'));
+
+        // Assert: 取り消せない旨を明示する確認ダイアログが破壊的スタイルで出る
+        expect(alertSpy).toHaveBeenCalledTimes(1);
+        const [title, message, buttons] = alertSpy.mock.calls[0];
+        expect(title).toMatch(/ソファ/);
+        expect(`${title}${message}`).toMatch(/取り消せません/);
+        const destructiveButton = buttons?.find((b) => b.style === 'destructive');
+        expect(destructiveButton).toBeTruthy();
+    });
+
+    it('mutates_delete_furniture_when_deletion_is_confirmed', async () => {
+        // Arrange
+        const alertSpy = jest.spyOn(Alert, 'alert');
+        const mockDeleteMutate = jest.fn();
+        mockHookWithFurniture([sofa], { deleteFurniture: mockDeleteMutate });
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+        fireEvent.press(screen.getByTestId('selection-delete'));
+
+        // Act: 確認ダイアログの破壊的ボタンで確定する
+        const buttons = alertSpy.mock.calls[0][2];
+        const destructiveButton = buttons?.find((b) => b.style === 'destructive');
+        act(() => {
+            destructiveButton?.onPress?.();
+        });
+
+        // Assert
+        expect(mockDeleteMutate).toHaveBeenCalledWith('furn-1');
+    });
+
+    it('does_not_delete_furniture_when_only_confirmation_is_shown', async () => {
+        // Arrange
+        jest.spyOn(Alert, 'alert');
+        const mockDeleteMutate = jest.fn();
+        mockHookWithFurniture([sofa], { deleteFurniture: mockDeleteMutate });
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+
+        // Act: 削除ボタンを押すだけで確定はしない
+        fireEvent.press(screen.getByTestId('selection-delete'));
+
+        // Assert
+        expect(mockDeleteMutate).not.toHaveBeenCalled();
+    });
+
+    it('mutates_update_furniture_with_new_name_when_rename_is_confirmed', async () => {
+        // Arrange
+        const mockUpdateMutate = jest.fn();
+        mockHookWithFurniture([sofa], { updateFurniture: mockUpdateMutate });
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+
+        // Act: 名称変更 → シートで新しい名前を入力して確定
+        fireEvent.press(screen.getByTestId('selection-rename'));
+        fireEvent.changeText(screen.getByTestId('rename-input'), 'テレビ台');
+        fireEvent.press(screen.getByTestId('rename-submit'));
+
+        // Assert: name のみの部分更新が呼ばれ、シートが閉じる
+        expect(mockUpdateMutate).toHaveBeenCalledWith({
+            furnitureId: 'furn-1',
+            input: { name: 'テレビ台' },
+        });
+        await waitFor(() => {
+            expect(screen.queryByTestId('rename-input')).toBeNull();
+        });
+    });
+
+    it('closes_rename_sheet_without_mutation_when_cancel_is_pressed', async () => {
+        // Arrange: 家具を選択して名称変更シートを開く
+        const mockUpdateMutate = jest.fn();
+        mockHookWithFurniture([sofa], { updateFurniture: mockUpdateMutate });
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+        fireEvent.press(screen.getByTestId('selection-rename'));
+        expect(screen.getByTestId('rename-input')).toBeTruthy();
+
+        // Act
+        fireEvent.press(screen.getByTestId('rename-cancel'));
+
+        // Assert: シートが閉じ、更新 mutation は呼ばれない
+        await waitFor(() => {
+            expect(screen.queryByTestId('rename-input')).toBeNull();
+        });
+        expect(mockUpdateMutate).not.toHaveBeenCalled();
+    });
+
+    it('hides_selection_actions_when_room_is_pressed', async () => {
+        // Arrange: 家具を選択して操作バーを表示する
+        mockHookWithFurniture([sofa]);
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+        expect(screen.getByTestId('selection-actions')).toBeTruthy();
+
+        // Act: 部屋をタップする
+        fireEvent.press(
+            within(screen.getByTestId('room-shape-room-1')).getByText('リビング'),
+        );
+
+        // Assert: 家具の選択が解除され操作バーが消える
+        expect(screen.queryByTestId('selection-actions')).toBeNull();
+    });
+
+    it('does_not_show_room_selection_outline_when_room_is_pressed', async () => {
+        // Arrange: 詳細画面には部屋選択の解除導線が無いため常に非選択とする
+        mockHookWithFurniture([sofa]);
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        await screen.findByTestId('room-shape-room-1');
+
+        // Act: 家具解除のために部屋をタップする
+        fireEvent.press(
+            within(screen.getByTestId('room-shape-room-1')).getByText('リビング'),
+        );
+
+        // Assert: 部屋の選択枠は出ない（制御下で常に非選択）
+        expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
+    });
+
+    it('closes_rename_sheet_without_mutation_when_room_is_pressed_while_renaming', async () => {
+        // Arrange: 家具を選択して名称変更シートを開く
+        const mockUpdateMutate = jest.fn();
+        mockHookWithFurniture([sofa], { updateFurniture: mockUpdateMutate });
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+        fireEvent.press(screen.getByTestId('selection-rename'));
+        expect(screen.getByTestId('rename-input')).toBeTruthy();
+
+        // Act: シート表示中に部屋をタップする
+        fireEvent.press(
+            within(screen.getByTestId('room-shape-room-1')).getByText('リビング'),
+        );
+
+        // Assert: シートが閉じ、更新 mutation は呼ばれない
+        await waitFor(() => {
+            expect(screen.queryByTestId('rename-input')).toBeNull();
+        });
+        expect(mockUpdateMutate).not.toHaveBeenCalled();
+    });
+
+    it('switches_selection_actions_target_name_when_another_furniture_is_pressed', async () => {
+        // Arrange: 家具A（ソファ）を選択して操作バーを表示する
+        const table = {
+            id: 'furn-2',
+            roomId: 'room-1',
+            name: 'テーブル',
+            presetKey: 'table',
+            gridX: 1,
+            gridY: 1,
+            gridW: 1,
+            gridH: 1,
+            createdAt: new Date('2024-01-01'),
+            updatedAt: new Date('2024-01-01'),
+        };
+        mockHookWithFurniture([sofa, table]);
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+        expect(
+            within(screen.getByTestId('selection-actions')).getByText('ソファ'),
+        ).toBeTruthy();
+
+        // Act: 別の家具B（テーブル）をタップする
+        fireEvent.press(screen.getByText('テーブル'));
+
+        // Assert: 操作バーの対象名がBに切り替わる
+        const actions = screen.getByTestId('selection-actions');
+        expect(within(actions).getByText('テーブル')).toBeTruthy();
+        expect(within(actions).queryByText('ソファ')).toBeNull();
+    });
+
+    it('hides_selection_actions_when_dismiss_is_pressed', async () => {
+        // Arrange: 家具を選択して操作バーを表示する
+        mockHookWithFurniture([sofa]);
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+        expect(screen.getByTestId('selection-actions')).toBeTruthy();
+
+        // Act: 選択解除ボタンを押す
+        fireEvent.press(screen.getByTestId('selection-dismiss'));
+
+        // Assert
+        expect(screen.queryByTestId('selection-actions')).toBeNull();
+    });
+
+    it('hides_selection_actions_when_selected_furniture_is_removed_from_data', async () => {
+        // Arrange: 家具を選択して操作バーを表示する
+        mockHookWithFurniture([sofa]);
+        const view = render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+        expect(screen.getByTestId('selection-actions')).toBeTruthy();
+
+        // Act: 楽観的削除で家具がキャッシュから消えた状態を再現する
+        mockHookWithFurniture([]);
+        view.rerender(<RoomDetailScreen />);
+
+        // Assert: 存在しない家具の操作バーは表示しない
+        expect(screen.queryByTestId('selection-actions')).toBeNull();
+    });
+
+    it('does_not_reopen_rename_sheet_for_next_selection_after_target_furniture_disappears', async () => {
+        // Arrange: 家具Aを選択して名称変更シートを開く
+        mockHookWithFurniture([sofa]);
+        const view = render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+        fireEvent.press(screen.getByTestId('selection-rename'));
+        expect(screen.getByTestId('rename-input')).toBeTruthy();
+
+        // Act: 対象の家具Aがデータから消えたあと、別の家具Bを選択する
+        const table = {
+            id: 'furn-2',
+            roomId: 'room-1',
+            name: 'テーブル',
+            presetKey: 'table',
+            gridX: 1,
+            gridY: 1,
+            gridW: 1,
+            gridH: 1,
+            createdAt: new Date('2024-01-01'),
+            updatedAt: new Date('2024-01-01'),
+        };
+        mockHookWithFurniture([table]);
+        view.rerender(<RoomDetailScreen />);
+        fireEvent.press(screen.getByText('テーブル'));
+
+        // Assert: 家具Bの選択でシートが勝手に開かない
+        expect(screen.queryByTestId('rename-input')).toBeNull();
     });
 });

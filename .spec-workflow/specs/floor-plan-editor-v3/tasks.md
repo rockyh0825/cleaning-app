@@ -68,7 +68,7 @@
   - _Leverage: SelectionActions, RenameSheet, useFloorPlan.deleteRoom_
   - _Requirements: 1, 4_
 
-- [ ] 6. 部屋詳細画面: 家具の削除・リネーム組み込み
+- [x] 6. 部屋詳細画面: 家具の削除・リネーム組み込み
   - File: mobile/app/(tabs)/floor-plan/[roomId].tsx
   - 家具選択時に SelectionActions を表示。削除は Alert 確認 → deleteFurniture.mutate、リネームは RenameSheet → updateFurniture.mutate
   - Purpose: 家具の削除・リネーム完成（Requirement 2, 4）
