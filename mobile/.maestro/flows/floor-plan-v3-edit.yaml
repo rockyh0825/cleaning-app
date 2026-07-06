@@ -157,10 +157,15 @@ appId: com.cleaningapp.mobile
 - assertNotVisible: "編集部屋"
 - takeScreenshot: .maestro/screenshots/v3-10-restored-after-restart
 
-# 詳細へ再遷移して家具（リサイズ済み）が保持されていることを確認する
-- tapOn: "改名部屋"
+# 詳細へ再遷移して家具（リサイズ済み）が保持されていることを確認する。
+# 再起動後は部屋に家具（ベッド）が復元され、家具が部屋名ラベルの上に重なって
+# 描画されるため、部屋名テキストのタップは家具に吸われる。部屋シェイプの中心
+# （家具のない部屋中央）をタップして確実に部屋を選択する。
+- tapOn:
+    id: "room-shape-.*"
 - assertVisible:
     id: "selection-actions"
+# 選択中の部屋を再タップして詳細へ遷移
 - tapOn:
     id: "room-shape-.*"
 # detail 固有の FAB「家具を追加」で詳細画面到達を保証してから家具を検証する
