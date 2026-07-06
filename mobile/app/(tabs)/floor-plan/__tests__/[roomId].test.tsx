@@ -396,6 +396,42 @@ describe('RoomDetailScreen', () => {
         expect(screen.queryByTestId('room-not-found')).toBeNull();
     });
 
+    it('keeps_rendering_the_room_when_background_refetch_fails_with_stale_data', () => {
+        // Arrange: 初回取得済みの stale データが残ったまま背景 refetch が失敗した状態を再現する
+        mockUseFloorPlan.mockReturnValue({
+            floorPlan: {
+                data: { rooms: [targetRoom] },
+                isLoading: false,
+                isError: true,
+            },
+            addFurniture: { mutate: jest.fn() },
+            updateFurniture: { mutate: jest.fn() },
+            deleteFurniture: { mutate: jest.fn() },
+        });
+
+        // Act
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+
+        // Assert: 閲覧中の部屋を描画し続け、エラー全画面には切り替えない
+        expect(screen.getByTestId('room-shape-room-1')).toBeTruthy();
+        expect(screen.queryByTestId('room-error')).toBeNull();
+    });
+
+    it('shows_loading_indicator_over_error_when_both_flags_are_true_without_the_room', () => {
+        // Arrange: 該当部屋が無い状態で isLoading と isError が同時に真になる状況を再現する
+        mockUseFloorPlan.mockReturnValue({
+            floorPlan: { data: undefined, isLoading: true, isError: true },
+            addFurniture: { mutate: jest.fn() },
+        });
+
+        // Act
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+
+        // Assert: ローディングを優先し、エラー画面は出さない
+        expect(screen.getByTestId('room-loading')).toBeTruthy();
+        expect(screen.queryByTestId('room-error')).toBeNull();
+    });
+
     it('shows_not_found_only_after_load_completes_without_the_room', () => {
         // Arrange: 取得完了かつ該当部屋（room-1）が存在しない状態を再現する
         mockUseFloorPlan.mockReturnValue({

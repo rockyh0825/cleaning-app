@@ -72,37 +72,39 @@ export default function RoomDetailScreen() {
         setRenamingFurnitureId(null);
     }
 
+    // 表示できる room があれば通常描画を優先し、背景 refetch 失敗（isError）でも
+    // 閲覧中の部屋を消さない。room が無いときだけ状態を出し分ける。
     // 取得完了前に room を判定すると実在の部屋でも not-found に落ちるため、
-    // ローディング → エラー → not-found の順に出し分ける
-    if (floorPlan.isLoading) {
-        return (
-            <View
-                testID="room-loading"
-                style={[styles.notFound, { backgroundColor: theme.colors.background }]}
-            >
-                <ActivityIndicator color={theme.colors.primary} />
-            </View>
-        );
-    }
-
-    if (floorPlan.isError) {
-        return (
-            <View
-                testID="room-error"
-                style={[styles.notFound, { backgroundColor: theme.colors.background }]}
-            >
-                <Text style={[theme.typography.body, { color: theme.colors.danger }]}>
-                    読み込みに失敗しました
-                </Text>
-            </View>
-        );
-    }
-
+    // ローディング → エラー → not-found の順に出し分ける。
     if (!room) {
+        if (floorPlan.isLoading) {
+            return (
+                <View
+                    testID="room-loading"
+                    style={[styles.centered, { backgroundColor: theme.colors.background }]}
+                >
+                    <ActivityIndicator color={theme.colors.primary} />
+                </View>
+            );
+        }
+
+        if (floorPlan.isError) {
+            return (
+                <View
+                    testID="room-error"
+                    style={[styles.centered, { backgroundColor: theme.colors.background }]}
+                >
+                    <Text style={[theme.typography.body, { color: theme.colors.danger }]}>
+                        読み込みに失敗しました
+                    </Text>
+                </View>
+            );
+        }
+
         return (
             <View
                 testID="room-not-found"
-                style={[styles.notFound, { backgroundColor: theme.colors.background }]}
+                style={[styles.centered, { backgroundColor: theme.colors.background }]}
             >
                 <Text style={[theme.typography.body, { color: theme.colors.textMuted }]}>
                     部屋が見つかりません
@@ -232,7 +234,7 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '600',
     },
-    notFound: {
+    centered: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
