@@ -82,7 +82,7 @@
 
 ## フェーズ3: 家具のリサイズ
 
-- [ ] 7. FurnitureItem に ResizeHandle を組み込み
+- [x] 7. FurnitureItem に ResizeHandle を組み込み
   - File: mobile/src/features/floor-plan/components/FurnitureItem.tsx, FloorPlanCanvas.tsx
   - 選択中の家具の右下に ResizeHandle を表示（bounds = 所属部屋の相対矩形、最小 1×1）。確定時に onResizeEnd でスナップ済みサイズを親へ渡し、updateFurniture.mutate を呼ぶ
   - Purpose: 家具の大きさ調整（Requirement 3）

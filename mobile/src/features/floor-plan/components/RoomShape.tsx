@@ -127,11 +127,17 @@ export function RoomShape({
                 </Text>
                 {selected && onResizeEnd && (
                     <ResizeHandle
-                        room={room}
+                        position={{ x: room.gridX, y: room.gridY }}
+                        size={{ w: room.gridW, h: room.gridH }}
+                        maxRight={GRID_COLS}
+                        maxBottom={GRID_ROWS}
                         cellSize={cellSize}
                         scale={scale}
                         blocksExternal={canvasPanGesture}
                         onCommit={onResizeEnd}
+                        handleTestID={`resize-handle-${room.id}`}
+                        dragTestID={`room-resize-${room.id}`}
+                        accessibilityLabel="部屋のサイズを変更"
                     />
                 )}
             </Animated.View>

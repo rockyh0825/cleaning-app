@@ -4,12 +4,17 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import type { GestureType } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
-import { GRID_COLS, GRID_ROWS } from '../constants';
 import { useDragToGrid } from '../hooks/useDragToGrid';
-import type { Room } from '../types';
 
 type Props = {
-    room: Room;
+    /** 対象の左上グリッド絶対座標 */
+    position: { x: number; y: number };
+    /** 対象の現在グリッドサイズ */
+    size: { w: number; h: number };
+    /** 広げられる右端のグリッド座標（部屋なら GRID_COLS、家具なら所属部屋の右端） */
+    maxRight: number;
+    /** 広げられる下端のグリッド座標（部屋なら GRID_ROWS、家具なら所属部屋の下端） */
+    maxBottom: number;
     cellSize: number;
     /** リサイズ確定時にグリッド単位の新サイズを受け取る */
     onCommit: (size: { w: number; h: number }) => void;
@@ -17,37 +22,55 @@ type Props = {
     scale?: number;
     /** このリサイズの判定が終わるまで待機させるキャンバスパン */
     blocksExternal?: GestureType;
+    /** Animated.View に付与するテストID（部屋・家具で使い分ける） */
+    handleTestID: string;
+    /** ジェスチャーに付与するテストID（jest-utils の参照用） */
+    dragTestID: string;
+    /** アクセシビリティ用ラベル */
+    accessibilityLabel?: string;
 };
 
 const HANDLE_SIZE = 20;
 
 /**
- * 選択中の部屋の右下に表示するリサイズ用ハンドル。
+ * 選択中の対象（部屋・家具）の右下に表示するリサイズ用ハンドル。
  * useDragToGrid をサイズ空間（x=gridW, y=gridH）に読み替えて再利用する。
- * bounds でサイズを 1×1〜キャンバス残り幅・高さにクランプする。
+ * bounds でサイズを 1×1〜可動域（maxRight/maxBottom）にクランプする。
  */
-export function ResizeHandle({ room, cellSize, onCommit, scale = 1, blocksExternal }: Props) {
+export function ResizeHandle({
+    position,
+    size,
+    maxRight,
+    maxBottom,
+    cellSize,
+    onCommit,
+    scale = 1,
+    blocksExternal,
+    handleTestID,
+    dragTestID,
+    accessibilityLabel = 'サイズを変更',
+}: Props) {
     const theme = useAppTheme();
     const { gesture, animatedStyle } = useDragToGrid({
-        rect: { x: room.gridW, y: room.gridH, w: 0, h: 0 },
+        rect: { x: size.w, y: size.h, w: 0, h: 0 },
         bounds: {
             x: 1,
             y: 1,
-            w: GRID_COLS - room.gridX - 1,
-            h: GRID_ROWS - room.gridY - 1,
+            w: maxRight - position.x - 1,
+            h: maxBottom - position.y - 1,
         },
         cellSize,
         scale,
         onCommit: (rect) => onCommit({ w: rect.x, h: rect.y }),
-        testID: `room-resize-${room.id}`,
+        testID: dragTestID,
         blocksExternal,
     });
 
     return (
         <GestureDetector gesture={gesture}>
             <Animated.View
-                testID={`resize-handle-${room.id}`}
-                accessibilityLabel="部屋のサイズを変更"
+                testID={handleTestID}
+                accessibilityLabel={accessibilityLabel}
                 style={[
                     styles.handle,
                     {
