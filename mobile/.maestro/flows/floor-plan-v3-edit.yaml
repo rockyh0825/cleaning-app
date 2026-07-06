@@ -91,8 +91,9 @@ appId: com.cleaningapp.mobile
 # 既存の名称を消してから新しい名称を入力する
 - eraseText
 - inputText: "改名部屋"
-- tapOn:
-    id: "rename-submit"
+# 確定は onSubmitEditing（returnKeyType=done）で行う。rename-submit ボタンは
+# キーボードに覆われてタップが吸われうるため、Enter で確実に確定させる
+- pressKey: Enter
 - assertVisible: "改名部屋"
 - assertNotVisible: "編集部屋"
 - takeScreenshot: .maestro/screenshots/v3-06-room-renamed
