@@ -581,6 +581,74 @@ describe('useFloorPlan', () => {
         });
     });
 
+    describe('#74: userId 未解決時はクエリを実行しない', () => {
+        it('disables_query_when_userId_is_empty', () => {
+            const query = buildFloorPlanQuery('', mockRepository as never);
+
+            expect(query.enabled).toBe(false);
+        });
+
+        it('enables_query_when_userId_is_resolved', () => {
+            const query = buildFloorPlanQuery('u1', mockRepository as never);
+
+            expect(query.enabled).toBe(true);
+        });
+    });
+
+    describe('#76: 同一ミリ秒の連続追加でも楽観的IDが衝突しない', () => {
+        it('generates_unique_optimistic_ids_when_adding_rooms_in_same_millisecond', async () => {
+            // Arrange
+            const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(addedRoom) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], mockFloorPlan);
+            const options = buildAddRoomMutationOptions(queryClient, 'user-1', mockUseCase);
+
+            // Act
+            await options.onMutate!(addRoomInput);
+            await options.onMutate!(addRoomInput);
+
+            // Assert
+            const optimistic = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            const ids = optimistic!.rooms.map((room) => room.id);
+            expect(new Set(ids).size).toBe(ids.length);
+
+            nowSpy.mockRestore();
+        });
+
+        it('generates_unique_optimistic_ids_when_adding_furniture_in_same_millisecond', async () => {
+            // Arrange
+            const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+            const addFurnitureInput: CreateFurnitureInput = {
+                name: 'ソファ',
+                gridX: 1,
+                gridY: 1,
+                gridW: 2,
+                gridH: 1,
+            };
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(mockRoom) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], mockFloorPlan);
+            const options = buildAddFurnitureMutationOptions(queryClient, 'user-1', mockUseCase);
+
+            // Act
+            await options.onMutate!({ roomId: 'room-1', input: addFurnitureInput });
+            await options.onMutate!({ roomId: 'room-1', input: addFurnitureInput });
+
+            // Assert
+            const optimistic = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            const ids = optimistic!.rooms[0]!.furniture.map((furniture) => furniture.id);
+            expect(ids).toHaveLength(2);
+            expect(new Set(ids).size).toBe(ids.length);
+
+            nowSpy.mockRestore();
+        });
+    });
+
     describe('正常系: 家具追加時にユースケースを実行しキャッシュを再取得する', () => {
         it('executes_use_case_with_user_and_room_id_and_invalidates_cache_on_settle', async () => {
             const queryClient = new QueryClient({
