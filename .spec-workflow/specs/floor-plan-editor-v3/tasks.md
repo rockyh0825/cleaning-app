@@ -96,7 +96,7 @@
 
 ## フェーズ4: 追加時サイズ指定・空き配置
 
-- [ ] 8. AddRoomModal にサイズステッパー追加
+- [x] 8. AddRoomModal にサイズステッパー追加
   - File: mobile/src/features/floor-plan/components/AddRoomModal.tsx
   - 幅・高さのステッパー（1〜キャンバス上限、既定 4×4）を追加し、onSubmit のペイロードに gridW/gridH を含める
   - Purpose: 部屋の追加時サイズ指定（Requirement 5.1 / 5.2）
