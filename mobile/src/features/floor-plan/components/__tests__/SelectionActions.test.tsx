@@ -49,6 +49,35 @@ describe('SelectionActions', () => {
         expect(mockOnDelete).toHaveBeenCalledTimes(1);
     });
 
+    it('calls_onDismiss_when_dismiss_button_pressed', () => {
+        // Arrange
+        const mockOnDismiss = jest.fn();
+        render(
+            <SelectionActions
+                targetName="リビング"
+                onRename={jest.fn()}
+                onDelete={jest.fn()}
+                onDismiss={mockOnDismiss}
+            />,
+        );
+
+        // Act
+        fireEvent.press(screen.getByTestId('selection-dismiss'));
+
+        // Assert
+        expect(mockOnDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('does_not_render_dismiss_button_when_onDismiss_is_not_provided', () => {
+        // Arrange & Act
+        render(
+            <SelectionActions targetName="リビング" onRename={jest.fn()} onDelete={jest.fn()} />,
+        );
+
+        // Assert
+        expect(screen.queryByTestId('selection-dismiss')).toBeNull();
+    });
+
     it('exposes_accessible_buttons_for_rename_and_delete', () => {
         // Arrange & Act
         render(

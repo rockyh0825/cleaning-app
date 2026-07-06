@@ -27,6 +27,12 @@
     - 異常系: 保存失敗時に元の name にロールバック
   - _Requirements: 4_
 
+- [ ] 12. hooks: deleteRoom の楽観的更新＋失敗時ロールバック・通知
+  - File: mobile/src/features/floor-plan/hooks/useFloorPlan.ts
+  - 現状の deleteRoom は mutationFn + invalidate のみで、Requirement 1.4（削除失敗時のロールバックと通知）を満たさない。buildDeleteFurnitureMutationOptions と同型の buildDeleteRoomMutationOptions を追加し、キャッシュからの楽観的除去・onError ロールバック・失敗通知を実装する（PR #114 レビュー指摘のフォロー）
+  - _Leverage: buildDeleteFurnitureMutationOptions_
+  - _Requirements: 1_
+
 ## フェーズ2: 削除・リネームの導線
 
 - [x] 3. components: SelectionActions（選択対象への操作バー）
@@ -50,8 +56,8 @@
   - _Leverage: mobile/src/shared/components/BottomSheet_
   - _Requirements: 4_
 
-- [ ] 5. 間取り画面: 部屋の削除・リネーム組み込み
-  - File: mobile/app/floor-plan/index.tsx
+- [x] 5. 間取り画面: 部屋の削除・リネーム組み込み
+  - File: mobile/app/(tabs)/floor-plan/index.tsx
   - 部屋選択時に SelectionActions を表示。削除は `Alert.alert`（カスケード削除の明示文言＋破壊的スタイル）を挟んで deleteRoom.mutate、リネームは RenameSheet → updateRoom.mutate
   - Purpose: 部屋の削除・リネーム完成（Requirement 1, 4）
   - **Red**: `app/floor-plan/__tests__/index.test.tsx` にケースを追加し失敗を確認
@@ -63,7 +69,7 @@
   - _Requirements: 1, 4_
 
 - [ ] 6. 部屋詳細画面: 家具の削除・リネーム組み込み
-  - File: mobile/app/floor-plan/[roomId].tsx
+  - File: mobile/app/(tabs)/floor-plan/[roomId].tsx
   - 家具選択時に SelectionActions を表示。削除は Alert 確認 → deleteFurniture.mutate、リネームは RenameSheet → updateFurniture.mutate
   - Purpose: 家具の削除・リネーム完成（Requirement 2, 4）
   - **Red**: `app/floor-plan/__tests__/[roomId].test.tsx` にケースを追加し失敗を確認

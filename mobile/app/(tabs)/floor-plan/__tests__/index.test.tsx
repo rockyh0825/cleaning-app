@@ -1,6 +1,13 @@
 import React from 'react';
-import { ScrollView } from 'react-native';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { Alert, ScrollView } from 'react-native';
+import {
+    act,
+    render,
+    screen,
+    fireEvent,
+    waitFor,
+    within,
+} from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import {
     fireGestureHandler,
@@ -22,6 +29,7 @@ jest.mock('@/features/floor-plan/hooks/useFloorPlan', () => ({
 
 import { router } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
+import type { Furniture } from '@/features/floor-plan/types';
 const mockUseLayout = useFloorPlan as jest.Mock;
 
 function createWrapper() {
@@ -38,6 +46,42 @@ function createWrapper() {
             </QueryClientProvider>
         );
     };
+}
+
+/** リビング1部屋のフロアプランで useFloorPlan をモックする（mutate・家具は差し替え可能） */
+function mockHookWithLivingRoom(
+    mutations: {
+        addRoom?: jest.Mock;
+        updateRoom?: jest.Mock;
+        deleteRoom?: jest.Mock;
+    } = {},
+    furniture: Furniture[] = [],
+) {
+    mockUseLayout.mockReturnValue({
+        floorPlan: {
+            data: {
+                rooms: [
+                    {
+                        id: 'room-1',
+                        name: 'リビング',
+                        type: 'LIVING',
+                        gridX: 0,
+                        gridY: 0,
+                        gridW: 6,
+                        gridH: 4,
+                        createdAt: new Date('2024-01-01'),
+                        updatedAt: new Date('2024-01-01'),
+                        furniture,
+                    },
+                ],
+            },
+            isLoading: false,
+            isError: false,
+        },
+        addRoom: { mutate: mutations.addRoom ?? jest.fn() },
+        updateRoom: { mutate: mutations.updateRoom ?? jest.fn() },
+        deleteRoom: { mutate: mutations.deleteRoom ?? jest.fn() },
+    });
 }
 
 describe('FloorPlanIndexScreen', () => {
@@ -125,8 +169,76 @@ describe('FloorPlanIndexScreen', () => {
         });
     });
 
-    it('navigates_to_room_detail_when_room_is_pressed', async () => {
+    it('selects_room_without_navigating_when_room_is_pressed', async () => {
         // Arrange
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+
+        // Act: 初回タップは選択のみ
+        fireEvent.press(await screen.findByText('リビング'));
+
+        // Assert: 操作バーが表示され、詳細画面へは遷移しない
+        expect(screen.getByTestId('selection-actions')).toBeTruthy();
+        expect(router.push).not.toHaveBeenCalled();
+    });
+
+    it('navigates_to_room_detail_when_selected_room_is_pressed_again', async () => {
+        // Arrange: 初回タップで選択済みの状態にする
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+
+        // Act: 選択中の部屋をもう一度タップ
+        fireEvent.press(
+            within(screen.getByTestId('room-shape-room-1')).getByText('リビング'),
+        );
+
+        // Assert
+        await waitFor(() => {
+            expect(router.push).toHaveBeenCalledWith('/floor-plan/room-1');
+        });
+    });
+
+    it('shows_selection_actions_with_room_name_when_room_is_pressed', async () => {
+        // Arrange
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+
+        // Act
+        fireEvent.press(await screen.findByText('リビング'));
+
+        // Assert: 操作バーに選択中の部屋名と操作ボタンが表示される
+        const actions = screen.getByTestId('selection-actions');
+        expect(within(actions).getByText('リビング')).toBeTruthy();
+        expect(screen.getByTestId('selection-rename')).toBeTruthy();
+        expect(screen.getByTestId('selection-delete')).toBeTruthy();
+    });
+
+    it('shows_cascade_delete_confirmation_when_delete_is_pressed', async () => {
+        // Arrange
+        const alertSpy = jest.spyOn(Alert, 'alert');
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+
+        // Act
+        fireEvent.press(screen.getByTestId('selection-delete'));
+
+        // Assert: カスケード削除を明示する確認ダイアログが破壊的スタイルで出る
+        expect(alertSpy).toHaveBeenCalledTimes(1);
+        const [title, message, buttons] = alertSpy.mock.calls[0];
+        expect(title).toMatch(/リビング/);
+        expect(`${title}${message}`).toMatch(/家具・パーツ・掃除記録/);
+        const destructiveButton = buttons?.find((b) => b.style === 'destructive');
+        expect(destructiveButton).toBeTruthy();
+    });
+
+    it('switches_selection_without_navigating_when_another_room_is_pressed', async () => {
+        // Arrange: 重ならない2部屋を用意して room-1 を選択する
         mockUseLayout.mockReturnValue({
             floorPlan: {
                 data: {
@@ -143,25 +255,280 @@ describe('FloorPlanIndexScreen', () => {
                             updatedAt: new Date('2024-01-01'),
                             furniture: [],
                         },
+                        {
+                            id: 'room-2',
+                            name: 'キッチン',
+                            type: 'KITCHEN',
+                            gridX: 6,
+                            gridY: 0,
+                            gridW: 4,
+                            gridH: 4,
+                            createdAt: new Date('2024-01-01'),
+                            updatedAt: new Date('2024-01-01'),
+                            furniture: [],
+                        },
                     ],
                 },
                 isLoading: false,
                 isError: false,
             },
             addRoom: { mutate: jest.fn() },
-            addFurniture: { mutate: jest.fn() },
+            updateRoom: { mutate: jest.fn() },
             deleteRoom: { mutate: jest.fn() },
         });
         (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
         render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
-
-        // Act
         fireEvent.press(await screen.findByText('リビング'));
 
-        // Assert
+        // Act: 別の部屋をタップする
+        fireEvent.press(screen.getByText('キッチン'));
+
+        // Assert: 選択が切り替わるだけで詳細画面へは遷移しない
+        const actions = screen.getByTestId('selection-actions');
+        expect(within(actions).getByText('キッチン')).toBeTruthy();
+        expect(router.push).not.toHaveBeenCalled();
+    });
+
+    it('closes_rename_sheet_without_mutation_when_cancel_is_pressed', async () => {
+        // Arrange: 部屋を選択して名称変更シートを開く
+        const mockUpdateMutate = jest.fn();
+        mockHookWithLivingRoom({ updateRoom: mockUpdateMutate });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        fireEvent.press(screen.getByTestId('selection-rename'));
+        expect(screen.getByTestId('rename-input')).toBeTruthy();
+
+        // Act: キャンセルする
+        fireEvent.press(screen.getByTestId('rename-cancel'));
+
+        // Assert: シートが閉じ、更新 mutation は呼ばれない
         await waitFor(() => {
-            expect(router.push).toHaveBeenCalledWith('/floor-plan/room-1');
+            expect(screen.queryByTestId('rename-input')).toBeNull();
         });
+        expect(mockUpdateMutate).not.toHaveBeenCalled();
+    });
+
+    it('mutates_delete_room_when_deletion_is_confirmed', async () => {
+        // Arrange
+        const alertSpy = jest.spyOn(Alert, 'alert');
+        const mockDeleteMutate = jest.fn();
+        mockHookWithLivingRoom({ deleteRoom: mockDeleteMutate });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        fireEvent.press(screen.getByTestId('selection-delete'));
+
+        // Act: 確認ダイアログの破壊的ボタンで確定する
+        const buttons = alertSpy.mock.calls[0][2];
+        const destructiveButton = buttons?.find((b) => b.style === 'destructive');
+        act(() => {
+            destructiveButton?.onPress?.();
+        });
+
+        // Assert
+        expect(mockDeleteMutate).toHaveBeenCalledWith('room-1');
+    });
+
+    it('does_not_delete_room_when_only_confirmation_is_shown', async () => {
+        // Arrange
+        jest.spyOn(Alert, 'alert');
+        const mockDeleteMutate = jest.fn();
+        mockHookWithLivingRoom({ deleteRoom: mockDeleteMutate });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+
+        // Act: 削除ボタンを押すだけで確定はしない
+        fireEvent.press(screen.getByTestId('selection-delete'));
+
+        // Assert
+        expect(mockDeleteMutate).not.toHaveBeenCalled();
+    });
+
+    it('mutates_update_room_with_new_name_when_rename_is_confirmed', async () => {
+        // Arrange
+        const mockUpdateMutate = jest.fn();
+        mockHookWithLivingRoom({ updateRoom: mockUpdateMutate });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+
+        // Act: 名称変更 → シートで新しい名前を入力して確定
+        fireEvent.press(screen.getByTestId('selection-rename'));
+        fireEvent.changeText(screen.getByTestId('rename-input'), '和室');
+        fireEvent.press(screen.getByTestId('rename-submit'));
+
+        // Assert: name のみの部分更新が呼ばれ、シートが閉じる
+        expect(mockUpdateMutate).toHaveBeenCalledWith({
+            roomId: 'room-1',
+            input: { name: '和室' },
+        });
+        await waitFor(() => {
+            expect(screen.queryByTestId('rename-input')).toBeNull();
+        });
+    });
+
+    it('hides_selection_actions_when_selected_room_is_removed_from_data', async () => {
+        // Arrange: 部屋を選択して操作バーを表示する
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        const view = render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        expect(screen.getByTestId('selection-actions')).toBeTruthy();
+
+        // Act: 楽観的更新で部屋がキャッシュから消えた状態を再現する
+        mockUseLayout.mockReturnValue({
+            floorPlan: { data: { rooms: [] }, isLoading: false, isError: false },
+            addRoom: { mutate: jest.fn() },
+            updateRoom: { mutate: jest.fn() },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        view.rerender(<FloorPlanIndexScreen />);
+
+        // Assert: 存在しない部屋の操作バーは表示しない
+        expect(screen.queryByTestId('selection-actions')).toBeNull();
+    });
+
+    it('hides_selection_actions_when_dismiss_is_pressed', async () => {
+        // Arrange: 部屋を選択して操作バーを表示する
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        expect(screen.getByTestId('selection-actions')).toBeTruthy();
+
+        // Act: 選択解除ボタンを押す
+        fireEvent.press(screen.getByTestId('selection-dismiss'));
+
+        // Assert: 操作バーが消える
+        expect(screen.queryByTestId('selection-actions')).toBeNull();
+    });
+
+    it('clears_room_selection_when_furniture_is_pressed', async () => {
+        // Arrange: 家具付きの部屋を選択して操作バーを表示する
+        mockHookWithLivingRoom({}, [
+            {
+                id: 'furn-1',
+                roomId: 'room-1',
+                name: 'ソファ',
+                presetKey: 'sofa',
+                gridX: 0,
+                gridY: 0,
+                gridW: 1,
+                gridH: 1,
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-01'),
+            },
+        ]);
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        expect(screen.getByTestId('selection-actions')).toBeTruthy();
+
+        // Act: 家具をタップする
+        fireEvent.press(screen.getByText('ソファ'));
+
+        // Assert: 部屋を対象にした操作バーは消える（誤削除防止）
+        expect(screen.queryByTestId('selection-actions')).toBeNull();
+    });
+
+    it('shows_room_selection_outline_when_room_is_selected', async () => {
+        // Arrange
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+
+        // Act: 部屋を選択する
+        fireEvent.press(await screen.findByText('リビング'));
+
+        // Assert: キャンバス内に選択枠が表示される
+        expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
+    });
+
+    it('hides_room_selection_outline_when_dismiss_is_pressed', async () => {
+        // Arrange: 部屋を選択して選択枠を表示する
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
+
+        // Act: 選択解除ボタンを押す
+        fireEvent.press(screen.getByTestId('selection-dismiss'));
+
+        // Assert: 操作バーと同時にキャンバス内の選択枠も消える
+        expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
+    });
+
+    it('hides_room_selection_outline_when_furniture_is_pressed', async () => {
+        // Arrange: 家具付きの部屋を選択して選択枠を表示する
+        mockHookWithLivingRoom({}, [
+            {
+                id: 'furn-1',
+                roomId: 'room-1',
+                name: 'ソファ',
+                presetKey: 'sofa',
+                gridX: 0,
+                gridY: 0,
+                gridW: 1,
+                gridH: 1,
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-01'),
+            },
+        ]);
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
+
+        // Act: 家具をタップする
+        fireEvent.press(screen.getByText('ソファ'));
+
+        // Assert: バーと同時にキャンバス内の選択枠も消える
+        expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
+    });
+
+    it('does_not_reopen_rename_sheet_for_next_selection_after_target_room_disappears', async () => {
+        // Arrange: 部屋Aを選択して名称変更シートを開く
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        const view = render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        fireEvent.press(screen.getByTestId('selection-rename'));
+        expect(screen.getByTestId('rename-input')).toBeTruthy();
+
+        // Act: 対象の部屋Aがデータから消えたあと、別の部屋Bを選択する
+        mockUseLayout.mockReturnValue({
+            floorPlan: {
+                data: {
+                    rooms: [
+                        {
+                            id: 'room-2',
+                            name: 'キッチン',
+                            type: 'KITCHEN',
+                            gridX: 6,
+                            gridY: 0,
+                            gridW: 4,
+                            gridH: 4,
+                            createdAt: new Date('2024-01-01'),
+                            updatedAt: new Date('2024-01-01'),
+                            furniture: [],
+                        },
+                    ],
+                },
+                isLoading: false,
+                isError: false,
+            },
+            addRoom: { mutate: jest.fn() },
+            updateRoom: { mutate: jest.fn() },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        view.rerender(<FloorPlanIndexScreen />);
+        fireEvent.press(screen.getByText('キッチン'));
+
+        // Assert: 部屋Bの選択でシートが勝手に開かない
+        expect(screen.queryByTestId('rename-input')).toBeNull();
     });
 
     it('saves_new_uuid_to_async_storage_when_no_uuid_exists', async () => {
