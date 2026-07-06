@@ -280,6 +280,61 @@ describe('FloorPlanCanvas', () => {
         expect(screen.queryByTestId('room-overlap-warning-room-2')).toBeNull();
     });
 
+    it('drives_room_selection_from_prop_when_selectedRoomId_is_controlled', () => {
+        // Arrange & Act: 制御プロップで room-1 を選択状態にする
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                selectedRoomId="room-1"
+            />,
+        );
+
+        // Assert: 内部タップ無しでも選択枠が表示される
+        expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
+    });
+
+    it('hides_room_selection_when_controlled_prop_is_null', () => {
+        // Arrange & Act: 制御モードで未選択（null）
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                selectedRoomId={null}
+                onRoomPress={jest.fn()}
+            />,
+        );
+        // タップしても親が state を持つため内部では選択枠を出さない
+        fireGestureHandler(getByGestureTestId('room-tap-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+
+        // Assert: 制御プロップが null のままなら選択枠は表示されない
+        expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
+    });
+
+    it('selects_room_via_internal_state_when_prop_is_omitted', async () => {
+        // Arrange: 非制御（後方互換）
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onRoomPress={jest.fn()}
+            />,
+        );
+
+        // Act: タップで内部 state が選択を管理する
+        fireGestureHandler(getByGestureTestId('room-tap-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+
+        // Assert: 内部 state 駆動で選択枠が表示される
+        await waitFor(() => {
+            expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
+        });
+    });
+
     it('calls_onRoomDragEnd_with_resized_rect_when_selected_room_resize_commits', async () => {
         // Arrange: 部屋を選択してリサイズハンドルを表示させる
         const mockOnRoomDragEnd = jest.fn();

@@ -59,6 +59,8 @@ export default function FloorPlanIndexScreen() {
           onPress: () => {
             deleteRoom.mutate(roomId);
             setSelectedRoomId(null);
+            // 選択解除の各経路（✕・家具タップ）と揃えてリネーム対象も破棄する
+            setRenamingRoomId(null);
           },
         },
       ],
@@ -101,7 +103,9 @@ export default function FloorPlanIndexScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       {rooms.length === 0 ? (
         <View
           testID="empty-state"
@@ -109,7 +113,10 @@ export default function FloorPlanIndexScreen() {
         >
           <Text
             testID="empty-state-illustration"
-            style={[styles.emptyIllustration, { marginBottom: theme.spacing.lg }]}
+            style={[
+              styles.emptyIllustration,
+              { marginBottom: theme.spacing.lg },
+            ]}
           >
             🏠
           </Text>
@@ -143,7 +150,9 @@ export default function FloorPlanIndexScreen() {
             }}
             onPress={() => setIsModalVisible(true)}
           >
-            <Text style={[theme.typography.label, { color: theme.colors.surface }]}>
+            <Text
+              style={[theme.typography.label, { color: theme.colors.surface }]}
+            >
               最初の部屋を追加
             </Text>
           </TouchableOpacity>
@@ -151,6 +160,8 @@ export default function FloorPlanIndexScreen() {
       ) : (
         <FloorPlanCanvas
           floorPlan={floorPlan.data!}
+          // 選択状態を単一の source にする（バーと選択枠・ハンドルを同時に制御）
+          selectedRoomId={selectedRoomId}
           onRoomPress={handleRoomPress}
           // 間取り一覧では家具への操作は提供しないため、部屋の選択解除のみ行う（誤削除防止）
           onFurniturePress={() => {
@@ -160,7 +171,12 @@ export default function FloorPlanIndexScreen() {
           onRoomDragEnd={(roomId, rect) =>
             updateRoom.mutate({
               roomId,
-              input: { gridX: rect.x, gridY: rect.y, gridW: rect.w, gridH: rect.h },
+              input: {
+                gridX: rect.x,
+                gridY: rect.y,
+                gridW: rect.w,
+                gridH: rect.h,
+              },
             })
           }
         />

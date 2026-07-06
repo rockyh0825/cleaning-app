@@ -54,6 +54,12 @@ type Props = {
     cellSize?: number;
     onRoomPress?: (roomId: string) => void;
     onFurniturePress?: (furnitureId: string) => void;
+    /**
+     * 部屋の選択状態を親から制御する（選択枠・リサイズハンドルの表示を駆動）。
+     * 渡された場合はこの値が真実の源となり内部 state を使わない。
+     * 未指定（undefined）なら従来どおり内部 state で選択を管理する（後方互換）。
+     */
+    selectedRoomId?: string | null;
     /** 部屋のドラッグ・リサイズ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
     onRoomDragEnd?: (roomId: string, rect: Rect) => void;
     /** 家具のドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
@@ -67,9 +73,17 @@ export function FloorPlanCanvas({
     onFurniturePress,
     onRoomDragEnd,
     onFurnitureDragEnd,
+    selectedRoomId,
 }: Props) {
     const theme = useAppTheme();
-    const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+    // 制御プロップが渡された場合は親が真実の源。未指定なら内部 state で管理する（後方互換）
+    const isRoomSelectionControlled = selectedRoomId !== undefined;
+    const [internalSelectedRoomId, setInternalSelectedRoomId] = useState<string | null>(
+        null,
+    );
+    const resolvedSelectedRoomId = isRoomSelectionControlled
+        ? selectedRoomId
+        : internalSelectedRoomId;
     const [selectedFurnitureId, setSelectedFurnitureId] = useState<string | null>(null);
 
     const scale = useSharedValue(1);
@@ -126,7 +140,10 @@ export function FloorPlanCanvas({
     );
 
     function handleRoomPress(roomId: string) {
-        setSelectedRoomId(roomId);
+        // 制御モードでは親が selectedRoomId を更新するため内部 state は触らない
+        if (!isRoomSelectionControlled) {
+            setInternalSelectedRoomId(roomId);
+        }
         setSelectedFurnitureId(null);
         onRoomPress?.(roomId);
     }
@@ -160,7 +177,7 @@ export function FloorPlanCanvas({
                                 cellSize={cellSize}
                                 scale={gridScale}
                                 canvasPanGesture={canvasPanGesture}
-                                selected={selectedRoomId === room.id}
+                                selected={resolvedSelectedRoomId === room.id}
                                 onPress={() => handleRoomPress(room.id)}
                                 onDragEnd={(rect) => onRoomDragEnd?.(room.id, rect)}
                                 overlapping={overlappingRoomIds.has(room.id)}

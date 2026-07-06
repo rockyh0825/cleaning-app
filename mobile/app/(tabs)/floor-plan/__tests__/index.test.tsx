@@ -433,6 +433,62 @@ describe('FloorPlanIndexScreen', () => {
         expect(screen.queryByTestId('selection-actions')).toBeNull();
     });
 
+    it('shows_room_selection_outline_when_room_is_selected', async () => {
+        // Arrange
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+
+        // Act: 部屋を選択する
+        fireEvent.press(await screen.findByText('リビング'));
+
+        // Assert: キャンバス内に選択枠が表示される
+        expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
+    });
+
+    it('hides_room_selection_outline_when_dismiss_is_pressed', async () => {
+        // Arrange: 部屋を選択して選択枠を表示する
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
+
+        // Act: 選択解除ボタンを押す
+        fireEvent.press(screen.getByTestId('selection-dismiss'));
+
+        // Assert: 操作バーと同時にキャンバス内の選択枠も消える
+        expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
+    });
+
+    it('hides_room_selection_outline_when_furniture_is_pressed', async () => {
+        // Arrange: 家具付きの部屋を選択して選択枠を表示する
+        mockHookWithLivingRoom({}, [
+            {
+                id: 'furn-1',
+                roomId: 'room-1',
+                name: 'ソファ',
+                presetKey: 'sofa',
+                gridX: 0,
+                gridY: 0,
+                gridW: 1,
+                gridH: 1,
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-01'),
+            },
+        ]);
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
+
+        // Act: 家具をタップする
+        fireEvent.press(screen.getByText('ソファ'));
+
+        // Assert: バーと同時にキャンバス内の選択枠も消える
+        expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
+    });
+
     it('does_not_reopen_rename_sheet_for_next_selection_after_target_room_disappears', async () => {
         // Arrange: 部屋Aを選択して名称変更シートを開く
         mockHookWithLivingRoom();
