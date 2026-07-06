@@ -17,8 +17,6 @@ import { findFreePosition } from "@/shared/utils/grid";
 
 const repository = new FloorPlanRepository(api);
 
-const DEFAULT_ROOM_SIZE = { w: 4, h: 4 };
-
 export default function FloorPlanIndexScreen() {
   const theme = useAppTheme();
   const userId = useUserId();
@@ -76,6 +74,8 @@ export default function FloorPlanIndexScreen() {
   function handleAddRoom(input: {
     name: string;
     type: CreateRoomInput["type"];
+    gridW: number;
+    gridH: number;
   }) {
     // 既存部屋と重ならない位置を探索する。満杯なら (0,0) に置き、重なり警告に委ねる
     const obstacles = rooms.map((room) => ({
@@ -84,20 +84,24 @@ export default function FloorPlanIndexScreen() {
       w: room.gridW,
       h: room.gridH,
     }));
-    const freePosition = findFreePosition(DEFAULT_ROOM_SIZE, obstacles, {
-      x: 0,
-      y: 0,
-      w: GRID_COLS,
-      h: GRID_ROWS,
-    });
+    const freePosition = findFreePosition(
+      { w: input.gridW, h: input.gridH },
+      obstacles,
+      {
+        x: 0,
+        y: 0,
+        w: GRID_COLS,
+        h: GRID_ROWS,
+      },
+    );
 
     addRoom.mutate({
       name: input.name,
       type: input.type,
       gridX: freePosition?.x ?? 0,
       gridY: freePosition?.y ?? 0,
-      gridW: DEFAULT_ROOM_SIZE.w,
-      gridH: DEFAULT_ROOM_SIZE.h,
+      gridW: input.gridW,
+      gridH: input.gridH,
     });
     setIsModalVisible(false);
   }

@@ -9,13 +9,21 @@ import {
 } from 'react-native';
 import { BottomSheet } from '@/shared/components/BottomSheet';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
+import { GRID_COLS, GRID_ROWS } from '../constants';
 import type { RoomType } from '../types';
 
 type Props = {
     visible: boolean;
-    onSubmit: (input: { name: string; type: RoomType }) => void;
+    onSubmit: (input: {
+        name: string;
+        type: RoomType;
+        gridW: number;
+        gridH: number;
+    }) => void;
     onCancel: () => void;
 };
+
+const DEFAULT_SIZE = 4;
 
 const ROOM_TYPES: { label: string; value: RoomType }[] = [
     { label: 'リビング', value: 'LIVING' },
@@ -30,17 +38,21 @@ export function AddRoomModal({ visible, onSubmit, onCancel }: Props) {
     const theme = useAppTheme();
     const [name, setName] = useState('');
     const [selectedType, setSelectedType] = useState<RoomType>('LIVING');
+    const [gridW, setGridW] = useState(DEFAULT_SIZE);
+    const [gridH, setGridH] = useState(DEFAULT_SIZE);
 
     function reset() {
         setName('');
         setSelectedType('LIVING');
+        setGridW(DEFAULT_SIZE);
+        setGridH(DEFAULT_SIZE);
     }
 
     function handleSubmit() {
         if (!name.trim()) {
             return;
         }
-        onSubmit({ name: name.trim(), type: selectedType });
+        onSubmit({ name: name.trim(), type: selectedType, gridW, gridH });
         reset();
     }
 
@@ -125,6 +137,25 @@ export function AddRoomModal({ visible, onSubmit, onCancel }: Props) {
                 })}
             </View>
 
+            <View style={[styles.sizeRow, { marginBottom: theme.spacing.xl }]}>
+                <SizeStepper
+                    label="幅"
+                    idPrefix="room-width"
+                    value={gridW}
+                    min={1}
+                    max={GRID_COLS}
+                    onChange={setGridW}
+                />
+                <SizeStepper
+                    label="高さ"
+                    idPrefix="room-height"
+                    value={gridH}
+                    min={1}
+                    max={GRID_ROWS}
+                    onChange={setGridH}
+                />
+            </View>
+
             <View style={[styles.buttonRow, { gap: theme.spacing.md }]}>
                 <TouchableOpacity
                     style={{
@@ -162,6 +193,95 @@ export function AddRoomModal({ visible, onSubmit, onCancel }: Props) {
     );
 }
 
+type SizeStepperProps = {
+    label: string;
+    idPrefix: string;
+    value: number;
+    min: number;
+    max: number;
+    onChange: (next: number) => void;
+};
+
+function SizeStepper({
+    label,
+    idPrefix,
+    value,
+    min,
+    max,
+    onChange,
+}: SizeStepperProps) {
+    const theme = useAppTheme();
+    const canDecrement = value > min;
+    const canIncrement = value < max;
+
+    return (
+        <View style={styles.sizeStepper}>
+            <Text
+                style={[
+                    theme.typography.caption,
+                    { color: theme.colors.textMuted, marginBottom: theme.spacing.xs },
+                ]}
+            >
+                {label}
+            </Text>
+            <View style={[styles.stepperRow, { gap: theme.spacing.sm }]}>
+                <TouchableOpacity
+                    testID={`${idPrefix}-stepper-dec`}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${label}を減らす`}
+                    disabled={!canDecrement}
+                    onPress={() => onChange(Math.max(min, value - 1))}
+                    style={[
+                        styles.stepperButton,
+                        {
+                            borderColor: theme.colors.outline,
+                            borderRadius: theme.radius.md,
+                            opacity: canDecrement ? 1 : 0.4,
+                        },
+                    ]}
+                >
+                    <Text
+                        style={[theme.typography.title, { color: theme.colors.text }]}
+                    >
+                        −
+                    </Text>
+                </TouchableOpacity>
+                <Text
+                    testID={`${idPrefix}-value`}
+                    style={[
+                        theme.typography.title,
+                        { color: theme.colors.text, minWidth: theme.spacing.xl },
+                        styles.stepperValue,
+                    ]}
+                >
+                    {value}
+                </Text>
+                <TouchableOpacity
+                    testID={`${idPrefix}-stepper-inc`}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${label}を増やす`}
+                    disabled={!canIncrement}
+                    onPress={() => onChange(Math.min(max, value + 1))}
+                    style={[
+                        styles.stepperButton,
+                        {
+                            borderColor: theme.colors.outline,
+                            borderRadius: theme.radius.md,
+                            opacity: canIncrement ? 1 : 0.4,
+                        },
+                    ]}
+                >
+                    <Text
+                        style={[theme.typography.title, { color: theme.colors.text }]}
+                    >
+                        ＋
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+}
+
 const styles = StyleSheet.create({
     typeGrid: {
         flexDirection: 'row',
@@ -181,5 +301,26 @@ const styles = StyleSheet.create({
     buttonRow: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
+    },
+    sizeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+    },
+    sizeStepper: {
+        alignItems: 'center',
+    },
+    stepperRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    stepperButton: {
+        width: 40,
+        height: 40,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    stepperValue: {
+        textAlign: 'center',
     },
 });

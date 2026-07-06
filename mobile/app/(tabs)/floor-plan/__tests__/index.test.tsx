@@ -595,6 +595,35 @@ describe('FloorPlanIndexScreen', () => {
         });
     });
 
+    it('adds_room_with_size_selected_in_modal_steppers', async () => {
+        // Arrange: 空のキャンバスでモーダルからサイズを変更して追加する
+        const mockMutate = jest.fn();
+        mockUseLayout.mockReturnValue({
+            floorPlan: { data: { rooms: [] }, isLoading: false, isError: false },
+            addRoom: { mutate: mockMutate },
+            updateRoom: { mutate: jest.fn() },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        await screen.findByTestId('empty-state');
+
+        // Act: モーダルを開き、幅を 4→6、高さを 4→5 に変更して送信
+        fireEvent.press(screen.getByTestId('fab'));
+        fireEvent.press(screen.getByTestId('room-width-stepper-inc'));
+        fireEvent.press(screen.getByTestId('room-width-stepper-inc'));
+        fireEvent.press(screen.getByTestId('room-height-stepper-inc'));
+        fireEvent.changeText(screen.getByPlaceholderText('部屋名'), '寝室');
+        fireEvent.press(screen.getByText('追加'));
+
+        // Assert: モーダルで選んだサイズが mutate に反映される
+        await waitFor(() => {
+            expect(mockMutate).toHaveBeenCalledWith(
+                expect.objectContaining({ gridW: 6, gridH: 5 }),
+            );
+        });
+    });
+
     it('adds_room_at_origin_without_crashing_when_canvas_is_full', async () => {
         // Arrange: キャンバス(20x20)全面を占有する部屋 → 空きなし → (0,0) に配置
         const mockMutate = jest.fn();
