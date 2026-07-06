@@ -71,9 +71,10 @@ appId: com.cleaningapp.mobile
     id: "selection-actions"
 - tapOn:
     id: "selection-delete"
-# Alert 本文の固定文言（部屋名を含まない一意語）を assert し、Alert が前面に出たことを確定させてから
-# 「削除」ボタンを押す。これで Alert 描画前に背景の「削除」文言へ ^削除$ が二重マッチするのを防ぐ
-- assertVisible: "この操作は取り消せません"
+# Alert の「キャンセル」ボタンで前面表示を確定してから「削除」を押す。
+# （Maestro は iOS UIAlertController の message 本文をテキストとして読めないため、
+#  確実に読めるボタン文言を使う。「キャンセル」は操作バーに無く、モーダルも閉じているため一意）
+- assertVisible: "キャンセル"
 # Alert のボタン「削除」（タイトル・本文の「削除」を避けて完全一致で押す）
 - tapOn:
     text: "^削除$"
