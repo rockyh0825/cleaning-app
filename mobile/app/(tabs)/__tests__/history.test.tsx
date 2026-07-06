@@ -137,6 +137,99 @@ describe('HistoryScreen', () => {
         expect(screen.getByTestId('delete-button-record-1')).toBeTruthy();
     });
 
+    it('calls_update_record_mutation_when_note_is_saved', async () => {
+        // Arrange
+        const mockUpdateMutateAsync = jest.fn().mockResolvedValue(undefined);
+        mockUseCleaningHistory.mockReturnValue({
+            records: RECORDS,
+            isLoading: false,
+            error: null,
+            deleteRecord: { mutate: jest.fn() },
+            updateRecord: { mutateAsync: mockUpdateMutateAsync },
+        });
+        render(<HistoryScreen />, { wrapper: createWrapper() });
+        await screen.findAllByTestId('timeline-item');
+
+        // Act
+        fireEvent.press(screen.getByTestId('edit-button-record-2'));
+        fireEvent.changeText(
+            screen.getByTestId('note-input-record-2'),
+            'フィルター交換と換気扇掃除',
+        );
+        fireEvent.press(screen.getByTestId('save-note-button-record-2'));
+
+        // Assert: 保存で mutateAsync が呼ばれ、成功後に編集UIが閉じる
+        await waitFor(() => {
+            expect(mockUpdateMutateAsync).toHaveBeenCalledWith({
+                recordId: 'record-2',
+                input: { note: 'フィルター交換と換気扇掃除' },
+            });
+        });
+        // クローズは mutateAsync の解決後（非同期）に起きるため、CI の遅い環境でも
+        // タイムアウトしないよう待ち時間を長めに取る。
+        await waitFor(
+            () => {
+                expect(screen.queryByTestId('note-input-record-2')).toBeNull();
+            },
+            { timeout: 5000 },
+        );
+    });
+
+    it('keeps_edit_ui_with_draft_when_update_record_mutation_fails', async () => {
+        // Arrange: 更新 mutation が失敗（reject）するケース
+        const mockUpdateMutateAsync = jest
+            .fn()
+            .mockRejectedValue(new Error('update failed'));
+        mockUseCleaningHistory.mockReturnValue({
+            records: RECORDS,
+            isLoading: false,
+            error: null,
+            deleteRecord: { mutate: jest.fn() },
+            updateRecord: { mutateAsync: mockUpdateMutateAsync, isError: true },
+        });
+        render(<HistoryScreen />, { wrapper: createWrapper() });
+        await screen.findAllByTestId('timeline-item');
+
+        // Act
+        fireEvent.press(screen.getByTestId('edit-button-record-2'));
+        fireEvent.changeText(
+            screen.getByTestId('note-input-record-2'),
+            '打ち直したくないメモ',
+        );
+        fireEvent.press(screen.getByTestId('save-note-button-record-2'));
+
+        // Assert: 失敗時は編集UIとドラフトが残り、バナーで通知される
+        await waitFor(() => {
+            expect(mockUpdateMutateAsync).toHaveBeenCalledTimes(1);
+        });
+        const input = screen.getByTestId('note-input-record-2');
+        expect(input).toBeTruthy();
+        expect(input.props.value).toBe('打ち直したくないメモ');
+        expect(screen.getByTestId('update-record-error')).toBeTruthy();
+        expect(screen.getByText('修正に失敗しました')).toBeTruthy();
+    });
+
+    it('shows_error_banner_when_update_record_fails', async () => {
+        // Arrange: 修正 mutation が失敗した状態
+        mockUseCleaningHistory.mockReturnValue({
+            records: RECORDS,
+            isLoading: false,
+            error: null,
+            deleteRecord: { mutate: jest.fn() },
+            updateRecord: { mutate: jest.fn(), isError: true },
+        });
+
+        // Act
+        render(<HistoryScreen />, { wrapper: createWrapper() });
+
+        // Assert: エラーバナーが表示され、タイムラインは残る
+        await waitFor(() => {
+            expect(screen.getByTestId('update-record-error')).toBeTruthy();
+        });
+        expect(screen.getByText('修正に失敗しました')).toBeTruthy();
+        expect(screen.getAllByTestId('timeline-item')).toHaveLength(2);
+    });
+
     it('calls_delete_record_mutation_when_delete_button_is_pressed', async () => {
         // Arrange
         const mockDeleteMutate = jest.fn();

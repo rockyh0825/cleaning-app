@@ -86,6 +86,66 @@ describe("MockDefaultApi", () => {
     });
   });
 
+  describe("createRoom parts seeding", () => {
+    it("seeds_a_floor_part_for_a_room_created_after_startup", async () => {
+      // Arrange
+      const mock = new MockDefaultApi();
+
+      // Act
+      const created = await mock.createRoom({
+        xUserId: userId,
+        roomCreate: {
+          name: "後から作った部屋",
+          type: "OTHER" as never,
+          gridX: 10,
+          gridY: 10,
+          gridW: 2,
+          gridH: 2,
+        },
+      });
+
+      // Assert
+      const parts = await mock.listParts({
+        xUserId: userId,
+        ownerId: created.id,
+      });
+      expect(parts).toHaveLength(1);
+      expect(parts[0]).toMatchObject({
+        name: "床",
+        ownerType: "ROOM",
+        ownerId: created.id,
+        recommendedCycleDays: 7,
+        lastCleanedAt: null,
+      });
+    });
+
+    it("removes_seeded_part_when_the_created_room_is_deleted", async () => {
+      // Arrange
+      const mock = new MockDefaultApi();
+      const created = await mock.createRoom({
+        xUserId: userId,
+        roomCreate: {
+          name: "すぐ消す部屋",
+          type: "OTHER" as never,
+          gridX: 14,
+          gridY: 14,
+          gridW: 2,
+          gridH: 2,
+        },
+      });
+
+      // Act
+      await mock.deleteRoom({ xUserId: userId, roomId: created.id });
+
+      // Assert
+      const parts = await mock.listParts({
+        xUserId: userId,
+        ownerId: created.id,
+      });
+      expect(parts).toHaveLength(0);
+    });
+  });
+
   describe("deleteRoom", () => {
     it("removes_room_from_memory_and_excludes_it_from_subsequent_list", async () => {
       // Arrange

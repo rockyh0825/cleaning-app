@@ -136,7 +136,7 @@
   - _Leverage: mobile/src/shared/components_
   - _Requirements: 1, 2, 3_
 
-- [ ] 13. app/(tabs)/history と エリア詳細画面の組み込み
+- [x] 13. app/(tabs)/history と エリア詳細画面の組み込み
   - File: mobile/app/(tabs)/history.tsx, mobile/app/area/[areaId].tsx
   - 履歴タブ、エリアタップ→パーツ一覧→記録の導線
   - Purpose: 画面の組み立て
@@ -159,7 +159,7 @@
 
 ## フェーズ4: 統合
 
-- [ ] 15. E2E統合とCI組み込み
+- [x] 15. E2E統合とCI組み込み
   - File: .github/workflows/ci.yml（既存に追記）
   - エリア選択→一括チェック→記録→履歴確認→1件修正→最終掃除日時更新 のE2E、CIにテスト・アーキテストを組み込む
   - Purpose: 一連の体験とCI自動化

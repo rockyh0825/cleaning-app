@@ -1,0 +1,107 @@
+appId: com.cleaningapp.mobile
+---
+# cleaning-record E2E（issue #112 / tasks.md フェーズ4 Task15）
+#
+# 検証フロー: 部屋作成 → エリア選択 → パーツ（床）を一括チェック → 記録
+#            → 最終掃除日時の表示更新 → 履歴タブで記録確認 → メモ修正 → 反映確認
+#
+# 前提:
+# - バックエンド未起動（#64 の MockDefaultApi fallback）でアプリが起動していること
+# - EXPO_PUBLIC_MOCK_START_EMPTY=true でビルドされていること
+# - MockDefaultApi は部屋作成時にデフォルトパーツ「床」をシードする
+# - パーツ・掃除記録はメモリのみの保持（アプリ再起動で消える）のため、
+#   本フローは再起動を挟まず1セッションで完結させる
+
+- launchApp:
+    clearState: true
+
+# --- 部屋を作成（空状態から） ---
+- assertVisible:
+    id: "empty-state"
+- tapOn: "部屋を追加"
+- assertVisible: "部屋名"
+- inputText: "テスト部屋"
+# 単一行TextInputはreturnキーでblurされる。キーボードを閉じないと
+# モーダル下部の「追加」ボタンがキーボードに覆われてタップが吸われる
+- pressKey: Enter
+- tapOn: "その他"
+- tapOn: "追加"
+- assertVisible: "テスト部屋"
+
+# --- エリア選択: 部屋タップ → 部屋詳細 → 掃除を記録 ---
+# 部屋詳細は useFloorPlan のデータ取得完了まで「部屋が見つかりません」を表示し、
+# その間はボタンが出ない。FallbackApi（実API→モックへ委譲）のレイテンシで
+# ロードに時間がかかることがあるため、待ち時間の長い extendedWaitUntil で待つ。
+#
+# 「掃除を記録」ボタンは accessibilityLabel と子 Text の両方に同じ文字列を持つため、
+# iOS のバージョンによってはアクセシビリティ露出が結合・重複してテキスト完全一致で
+# 見つからないことがある。バージョン非依存の testID（log-cleaning-button）で照合する。
+# 部屋タップの挙動（floor-plan-editor-v3）: 初回タップは選択（操作バー表示）、
+# 選択中の部屋の再タップで詳細へ遷移する。作成直後の部屋は未選択なので、まず名前で
+# タップして選択し、選択後は操作バーにも部屋名が出て多重マッチするため、2回目は
+# シェイプ testID（room-shape-<id>）で絞って再タップし詳細へ遷移する。
+- tapOn: "テスト部屋"
+- assertVisible:
+    id: "selection-actions"
+- tapOn:
+    id: "room-shape-.*"
+- extendedWaitUntil:
+    visible:
+      id: "log-cleaning-button"
+    timeout: 15000
+- tapOn:
+    id: "log-cleaning-button"
+
+# --- パーツ一括チェック → 記録 ---
+# パーツ行は accessibilityRole="checkbox" の1要素にまとまり、iOS では
+# 子テキストが "床 最終掃除: 未記録" のように結合されて公開される。
+# Maestro のテキスト照合は完全一致（正規表現）のため、"床" 単体では一致しない。
+# 部分一致させるため前後を .* で囲む。
+# パーツ一覧も usePartList のデータ取得待ちがあるため extendedWaitUntil で待つ。
+- extendedWaitUntil:
+    visible: ".*床.*"
+    timeout: 15000
+- assertVisible: ".*最終掃除: 未記録.*"
+- takeScreenshot: .maestro/screenshots/cleaning-record-01-part-checklist
+# 選択トグルは結合ラベルの曖昧さを避けて testID（part-item-<id>）で確実にタップする
+- tapOn:
+    id: "part-item-.*"
+# 記録ボタンも testID で確実にタップする
+- tapOn:
+    id: "record-button"
+
+# --- 最終掃除日時が更新される ---
+- extendedWaitUntil:
+    visible: ".*最終掃除: 20.*"
+    timeout: 10000
+- takeScreenshot: .maestro/screenshots/cleaning-record-02-last-cleaned-updated
+
+# --- 履歴タブで記録を確認 ---
+- tapOn: "戻る"
+- extendedWaitUntil:
+    visible:
+      id: "log-cleaning-button"
+    timeout: 15000
+# タブ項目は iOS で "履歴, tab, 2 of 2" のように role が付与されて公開されるため
+# 完全一致では見つからない。部分一致させる。
+- tapOn: ".*履歴.*"
+- extendedWaitUntil:
+    visible: "パーツ: .*"
+    timeout: 10000
+- takeScreenshot: .maestro/screenshots/cleaning-record-03-history
+
+# --- メモを修正して反映を確認 ---
+# 「修正」「保存」ボタンも label と子 Text が重複するため testID で照合する
+- tapOn:
+    id: "edit-button-.*"
+# 入力欄の出現を待ってから入力する（フレーク防止）
+- assertVisible:
+    id: "note-input-.*"
+- inputText: "換気扇もきれいにした"
+- pressKey: Enter
+- tapOn:
+    id: "save-note-button-.*"
+- extendedWaitUntil:
+    visible: "換気扇もきれいにした"
+    timeout: 10000
+- takeScreenshot: .maestro/screenshots/cleaning-record-04-note-edited

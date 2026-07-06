@@ -1,26 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   FlatList,
 } from "react-native";
 import type { CleaningRecord } from "../types";
+import { formatDateTime } from "@/shared/utils/formatDateTime";
 
 type CleaningTimelineProps = {
   records: CleaningRecord[];
   onDelete?: (recordId: string) => void;
+  // 更新の成否を待てるよう Promise を返せるようにする。
+  // 成功時のみ編集UIを閉じ、失敗時はドラフトを保持して再試行できるようにする。
+  onUpdateNote?: (recordId: string, note: string) => void | Promise<unknown>;
 };
-
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}/${month}/${day} ${hours}:${minutes}`;
-}
 
 // cleanedAt の降順（新しい順）でソート
 function sortByCleanedAtDesc(records: CleaningRecord[]): CleaningRecord[] {
@@ -29,7 +25,15 @@ function sortByCleanedAtDesc(records: CleaningRecord[]): CleaningRecord[] {
   );
 }
 
-export function CleaningTimeline({ records, onDelete }: CleaningTimelineProps) {
+export function CleaningTimeline({
+  records,
+  onDelete,
+  onUpdateNote,
+}: CleaningTimelineProps) {
+  // 編集中の記録IDと入力中メモ。一度に編集できるのは1件のみ
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  const [draftNote, setDraftNote] = useState("");
+
   if (records.length === 0) {
     return (
       <View testID="empty-state" style={styles.emptyContainer}>
@@ -40,38 +44,108 @@ export function CleaningTimeline({ records, onDelete }: CleaningTimelineProps) {
 
   const sorted = sortByCleanedAtDesc(records);
 
-  const renderItem = ({ item }: { item: CleaningRecord }) => (
-    <View testID="timeline-item" style={styles.item}>
-      <View style={styles.itemContent}>
-        <Text testID="timeline-item-date" style={styles.date}>
-          {formatDate(item.cleanedAt)}
-        </Text>
-        <Text style={styles.partId} numberOfLines={1}>
-          パーツ: {item.partId}
-        </Text>
-        {item.note != null && item.note.length > 0 && (
-          <Text style={styles.note}>{item.note}</Text>
+  // 編集中の記録が refetch 等で records から消えた場合、stale な
+  // editingRecordId は無効として扱う（修正ボタンが復帰しなくなるのを防ぐ）
+  const isEditingActive =
+    editingRecordId !== null && records.some((r) => r.id === editingRecordId);
+
+  const startEditing = (record: CleaningRecord) => {
+    setEditingRecordId(record.id);
+    setDraftNote(record.note ?? "");
+  };
+
+  const saveNote = async (recordId: string) => {
+    try {
+      // 更新の成功を待ってから編集UIを閉じる。
+      await onUpdateNote?.(recordId, draftNote);
+      setEditingRecordId(null);
+    } catch {
+      // 失敗時は編集UIとドラフトを保持し、ユーザーが再試行できるようにする。
+      // 失敗のフィードバック（バナー表示）は呼び出し側（history 画面）が担う。
+    }
+  };
+
+  const renderItem = ({ item }: { item: CleaningRecord }) => {
+    const isEditing = editingRecordId === item.id;
+    return (
+      <View testID="timeline-item" style={styles.item}>
+        <View style={styles.itemContent}>
+          <Text testID="timeline-item-date" style={styles.date}>
+            {formatDateTime(item.cleanedAt)}
+          </Text>
+          <Text style={styles.partId} numberOfLines={1}>
+            パーツ: {item.partId}
+          </Text>
+          {isEditing ? (
+            <View style={styles.editRow}>
+              <TextInput
+                testID={`note-input-${item.id}`}
+                style={styles.noteInput}
+                value={draftNote}
+                onChangeText={setDraftNote}
+                placeholder="メモ"
+                autoFocus
+              />
+              <TouchableOpacity
+                testID={`save-note-button-${item.id}`}
+                style={styles.saveButton}
+                onPress={() => {
+                  void saveNote(item.id);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="保存"
+              >
+                <Text style={styles.saveButtonText}>保存</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID={`cancel-note-button-${item.id}`}
+                style={styles.cancelButton}
+                onPress={() => setEditingRecordId(null)}
+                accessibilityRole="button"
+                accessibilityLabel="キャンセル"
+              >
+                <Text style={styles.cancelButtonText}>キャンセル</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            item.note != null &&
+            item.note.length > 0 && <Text style={styles.note}>{item.note}</Text>
+          )}
+        </View>
+        {/* 編集中は他の行の「修正」を出さない（ドラフトの無警告破棄を防ぐ） */}
+        {onUpdateNote != null && !isEditingActive && (
+          <TouchableOpacity
+            testID={`edit-button-${item.id}`}
+            style={styles.editButton}
+            onPress={() => startEditing(item)}
+            accessibilityRole="button"
+            accessibilityLabel="修正"
+          >
+            <Text style={styles.editButtonText}>修正</Text>
+          </TouchableOpacity>
+        )}
+        {onDelete != null && !isEditing && (
+          <TouchableOpacity
+            testID={`delete-button-${item.id}`}
+            style={styles.deleteButton}
+            onPress={() => onDelete(item.id)}
+            accessibilityRole="button"
+            accessibilityLabel="削除"
+          >
+            <Text style={styles.deleteButtonText}>削除</Text>
+          </TouchableOpacity>
         )}
       </View>
-      {onDelete != null && (
-        <TouchableOpacity
-          testID={`delete-button-${item.id}`}
-          style={styles.deleteButton}
-          onPress={() => onDelete(item.id)}
-          accessibilityRole="button"
-          accessibilityLabel="削除"
-        >
-          <Text style={styles.deleteButtonText}>削除</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+    );
+  };
 
   return (
     <FlatList
       data={sorted}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
+      // キーボード表示中でも「保存」等のタップが1回目で届くようにする
+      keyboardShouldPersistTaps="handled"
       style={styles.list}
     />
   );
@@ -107,6 +181,55 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#424242",
     marginTop: 4,
+  },
+  editRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  noteInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#BDBDBD",
+    borderRadius: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    fontSize: 13,
+    color: "#212121",
+  },
+  saveButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: "#E8F5E9",
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  saveButtonText: {
+    color: "#2E7D32",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  cancelButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+    marginLeft: 4,
+  },
+  cancelButtonText: {
+    color: "#757575",
+    fontSize: 13,
+  },
+  editButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: "#E3F2FD",
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  editButtonText: {
+    color: "#1565C0",
+    fontSize: 13,
+    fontWeight: "500",
   },
   deleteButton: {
     paddingVertical: 6,

@@ -7,6 +7,7 @@ import {
   FlatList,
 } from "react-native";
 import type { Part } from "../types";
+import { formatDateTime } from "@/shared/utils/formatDateTime";
 import { RecordButton } from "./RecordButton";
 
 type PartChecklistProps = {
@@ -53,7 +54,15 @@ export function PartChecklist({
         <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
           {isSelected && <Text style={styles.checkmark}>✓</Text>}
         </View>
-        <Text style={styles.partName}>{item.name}</Text>
+        <View style={styles.partInfo}>
+          <Text style={styles.partName}>{item.name}</Text>
+          <Text style={styles.lastCleanedAt}>
+            最終掃除:{" "}
+            {item.lastCleanedAt != null
+              ? formatDateTime(item.lastCleanedAt)
+              : "未記録"}
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -115,9 +124,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
+  partInfo: {
+    flex: 1,
+  },
   partName: {
     fontSize: 16,
     color: "#212121",
+  },
+  lastCleanedAt: {
+    fontSize: 12,
+    color: "#757575",
+    marginTop: 2,
   },
   footer: {
     padding: 16,
