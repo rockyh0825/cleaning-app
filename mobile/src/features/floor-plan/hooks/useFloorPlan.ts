@@ -32,10 +32,20 @@ type UpdateFurnitureVariables = { furnitureId: string; input: UpdateFurnitureInp
 type DeleteRoomExecutor = { execute: (userId: string, roomId: string) => Promise<void> };
 type DeleteFurnitureExecutor = { execute: (userId: string, furnitureId: string) => Promise<void> };
 
+/**
+ * 楽観的更新用の一意なIDを生成する。
+ * Date.now() だけでは同一ミリ秒内の連続追加で衝突するため、乱数を付与して一意化する。
+ */
+function generateOptimisticId(): string {
+    return `optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export function buildFloorPlanQuery(userId: string, repository: Pick<FloorPlanRepository, 'getFloorPlan'>) {
     return {
         queryKey: ['floorPlan', userId] as const,
         queryFn: () => repository.getFloorPlan(userId),
+        // userId 未解決（空文字）のうちは実行しない。空 X-User-Id での GET と捨てキャッシュを防ぐ。
+        enabled: userId !== '',
     };
 }
 
@@ -53,7 +63,7 @@ export function buildAddRoomMutationOptions(
                 rooms: [
                     ...(old?.rooms ?? []),
                     {
-                        id: `optimistic-${Date.now()}`,
+                        id: generateOptimisticId(),
                         name: input.name,
                         type: input.type,
                         gridX: input.gridX,
@@ -100,7 +110,7 @@ export function buildAddFurnitureMutationOptions(
                               furniture: [
                                   ...room.furniture,
                                   {
-                                      id: `optimistic-${Date.now()}`,
+                                      id: generateOptimisticId(),
                                       roomId,
                                       name: input.name,
                                       presetKey: input.presetKey,
