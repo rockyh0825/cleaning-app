@@ -54,9 +54,13 @@ export function useUserId(): string | null {
   useEffect(() => {
     let cancelled = false;
 
-    getUserIdPromise().then((id) => {
-      if (!cancelled) setUserId(id);
-    });
+    getUserIdPromise()
+      .then((id) => {
+        if (!cancelled) setUserId(id);
+      })
+      .catch(() => {
+        // 初期化失敗時は null を維持する（次回マウントで再試行される）
+      });
 
     return () => {
       cancelled = true;

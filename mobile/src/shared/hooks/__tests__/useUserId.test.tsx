@@ -65,4 +65,29 @@ describe("useUserId", () => {
     expect(first.current).toBe(second.current);
     expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1);
   });
+
+  it("retries_initialization_on_next_mount_after_first_load_fails", async () => {
+    // Arrange: 1回目の読み込みは失敗、2回目は保存済み値を返す
+    (AsyncStorage.getItem as jest.Mock)
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+      .mockResolvedValueOnce("recovered-uuid");
+
+    // Act: 1回目のマウントは初期化に失敗する
+    const { result: failed, unmount } = renderHook(() => useUserId());
+
+    // Assert: 初期化失敗時は userId が null のまま維持される
+    await waitFor(() => {
+      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(1);
+    });
+    expect(failed.current).toBeNull();
+    unmount();
+
+    // Act: 2回目のマウントで再試行し、保存済み値を取得できる
+    const { result: retried } = renderHook(() => useUserId());
+
+    // Assert
+    await waitFor(() => {
+      expect(retried.current).toBe("recovered-uuid");
+    });
+  });
 });
