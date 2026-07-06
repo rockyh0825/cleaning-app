@@ -82,4 +82,27 @@ describe('AddFurnitureUseCase', () => {
         // y は 8 - 2 = 6 以下にクランプ
         expect(calledWith.gridY).toBeLessThanOrEqual(6);
     });
+
+    it('境界値: 非原点の部屋でも家具座標は 0 起点の相対でクランプされる', async () => {
+        // Arrange: 部屋を (5,5) に置く。家具の相対 (9,7) 2x2 は相対境界 {0,0,10,8} を超える
+        (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({
+            rooms: [{ ...mockRoom, gridX: 5, gridY: 5 }],
+        });
+        const useCase = new AddFurnitureUseCase(mockRepository);
+        const input: CreateFurnitureInput = {
+            name: 'ソファ',
+            gridX: 9,
+            gridY: 7,
+            gridW: 2,
+            gridH: 2,
+        };
+
+        // Act
+        await useCase.execute('user-1', 'room-1', input);
+
+        // Assert: 相対境界で x=8, y=6 にクランプ（部屋の絶対位置は加味しない）
+        const calledWith = (mockRepository.createFurniture as jest.Mock).mock.calls[0][2];
+        expect(calledWith.gridX).toBe(8);
+        expect(calledWith.gridY).toBe(6);
+    });
 });

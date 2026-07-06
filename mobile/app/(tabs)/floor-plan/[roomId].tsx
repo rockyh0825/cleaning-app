@@ -11,6 +11,7 @@ import { useUserId } from '@/shared/hooks/useUserId';
 import { api } from '@/shared/app-root/providers/di';
 import { FloatingActionButton } from '@/shared/components/FloatingActionButton';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
+import { findFreePosition } from '@/shared/utils/grid';
 import type { FloorPlan } from '@/features/floor-plan/types';
 
 const repository = new FloorPlanRepository(api);
@@ -78,17 +79,40 @@ export default function RoomDetailScreen() {
         );
     }
 
-    function handleAddFurniture(input: { name: string; presetKey?: string }) {
+    function handleAddFurniture(input: {
+        name: string;
+        presetKey?: string;
+        gridW: number;
+        gridH: number;
+    }) {
         if (!room) return;
+        // モーダルで選んだサイズを部屋サイズにクランプ（最低 1 セル）
+        const w = Math.max(1, Math.min(input.gridW, room.gridW));
+        const h = Math.max(1, Math.min(input.gridH, room.gridH));
+        // 既存家具は部屋相対 rect。0 起点の相対境界から重ならない空き位置を探す
+        const obstacles = room.furniture.map((f) => ({
+            x: f.gridX,
+            y: f.gridY,
+            w: f.gridW,
+            h: f.gridH,
+        }));
+        const pos =
+            findFreePosition({ w, h }, obstacles, {
+                x: 0,
+                y: 0,
+                w: room.gridW,
+                h: room.gridH,
+            }) ?? { x: 0, y: 0 };
         addFurniture.mutate({
             roomId: room.id,
             input: {
                 name: input.name,
                 presetKey: input.presetKey,
-                gridX: room.gridX,
-                gridY: room.gridY,
-                gridW: 1,
-                gridH: 1,
+                // 家具座標は部屋相対（0基点）
+                gridX: pos.x,
+                gridY: pos.y,
+                gridW: w,
+                gridH: h,
             },
         });
         setIsModalVisible(false);

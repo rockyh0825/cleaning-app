@@ -12,15 +12,15 @@ import type { Rect } from '@/shared/utils/grid';
 import type { Furniture } from '../../types';
 
 describe('FurnitureItem', () => {
-    // 所属部屋: (2,3) 起点の 6×4。家具座標はキャンバス絶対座標
+    // 所属部屋: (2,3) 起点の 6×4（キャンバス絶対矩形）。家具座標は部屋相対（0基点）
     const roomBounds: Rect = { x: 2, y: 3, w: 6, h: 4 };
 
     const testFurniture: Furniture = {
         id: 'furn-1',
         roomId: 'room-1',
         name: 'ソファ',
-        gridX: 2,
-        gridY: 3,
+        gridX: 0,
+        gridY: 0,
         gridW: 1,
         gridH: 1,
         createdAt: new Date('2024-01-01'),
@@ -129,14 +129,14 @@ describe('FurnitureItem', () => {
             { state: State.END, translationX: 56, translationY: 0 },
         ]);
 
-        // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる
+        // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる（相対座標 0→1）
         await waitFor(() => {
-            expect(mockOnDragEnd).toHaveBeenCalledWith({ x: 3, y: 3, w: 1, h: 1 });
+            expect(mockOnDragEnd).toHaveBeenCalledWith({ x: 1, y: 0, w: 1, h: 1 });
         });
     });
 
     it('clamps_to_room_bounds_when_dragged_outside', async () => {
-        // Arrange: 右へ 400px（10 セル分）→ 部屋右端 x = 2 + 6 - 1 = 7 にクランプ
+        // Arrange: 右へ 400px（10 セル分）→ 部屋右端（相対）x = 6 - 1 = 5 にクランプ
         const mockOnDragEnd = jest.fn();
 
         render(
@@ -159,8 +159,30 @@ describe('FurnitureItem', () => {
 
         // Assert
         await waitFor(() => {
-            expect(mockOnDragEnd).toHaveBeenCalledWith({ x: 7, y: 3, w: 1, h: 1 });
+            expect(mockOnDragEnd).toHaveBeenCalledWith({ x: 5, y: 0, w: 1, h: 1 });
         });
+    });
+
+    it('offsets_furniture_by_room_absolute_position_not_canvas_origin', () => {
+        // 回帰: 部屋が (6,0) にあり家具の相対座標が (0,0) のとき、
+        // 家具は部屋の絶対位置 (6,0) を基準にオフセット描画される（キャンバス原点ではない）
+        const roomAt6: Rect = { x: 6, y: 0, w: 4, h: 4 };
+
+        render(
+            <FurnitureItem
+                furniture={testFurniture}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                bounds={roomAt6}
+            />,
+        );
+
+        // Assert: left = (6 + 0) * 40 = 240（0 ではない）
+        const item = screen.getByTestId('furniture-item-furn-1');
+        const style = StyleSheet.flatten(item.props.style);
+        expect(style.left).toBe(240);
+        expect(style.top).toBe(0);
     });
 
     it('commits_new_grid_size_when_resize_handle_drag_ends', async () => {
@@ -247,14 +269,14 @@ describe('FurnitureItem', () => {
     });
 
     it('clamps_resize_to_room_bounds_when_drag_extends_beyond', async () => {
-        // Arrange: 部屋 (2,2)〜4×4 内の家具 (3,3,1,1)。
-        // 右下端は部屋の 6 まで → サイズは最大 3×3 に収まる
+        // Arrange: 部屋 (2,2)〜4×4 内の家具（相対 (1,1)、1×1）。
+        // 相対の右下端は部屋幅 4 まで → サイズは最大 3×3 に収まる
         const mockOnResizeEnd = jest.fn();
         const innerRoomBounds: Rect = { x: 2, y: 2, w: 4, h: 4 };
         const innerFurniture: Furniture = {
             ...testFurniture,
-            gridX: 3,
-            gridY: 3,
+            gridX: 1,
+            gridY: 1,
             gridW: 1,
             gridH: 1,
         };
