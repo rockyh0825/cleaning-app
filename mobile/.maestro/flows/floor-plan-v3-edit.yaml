@@ -71,6 +71,9 @@ appId: com.cleaningapp.mobile
     id: "selection-actions"
 - tapOn:
     id: "selection-delete"
+# Alert 本文の固定文言（部屋名を含まない一意語）を assert し、Alert が前面に出たことを確定させてから
+# 「削除」ボタンを押す。これで Alert 描画前に背景の「削除」文言へ ^削除$ が二重マッチするのを防ぐ
+- assertVisible: "この操作は取り消せません"
 # Alert のボタン「削除」（タイトル・本文の「削除」を避けて完全一致で押す）
 - tapOn:
     text: "^削除$"
@@ -112,10 +115,11 @@ appId: com.cleaningapp.mobile
 - tapOn: "家具を追加"
 - assertVisible:
     id: "furniture-preset-chip-bed"
+# onboarding 規約に合わせ、選択操作（チップタップ）の前に autoFocus キーボードを閉じる。
+# チップタップは name をセットするだけでキーボードを再表示しないため、この 1 回で「追加」ボタンが覆われない
+- pressKey: Enter
 - tapOn:
     id: "furniture-preset-chip-bed"
-# autoFocus で開いたキーボードを閉じてから「追加」を押す
-- pressKey: Enter
 - tapOn: "追加"
 - assertVisible: "ベッド"
 - takeScreenshot: .maestro/screenshots/v3-08-furniture-added
@@ -158,5 +162,8 @@ appId: com.cleaningapp.mobile
     id: "selection-actions"
 - tapOn:
     id: "room-shape-.*"
+# detail 固有の FAB「家具を追加」で詳細画面到達を保証してから家具を検証する
+# （index の FAB は「部屋を追加」。「ベッド」は index にも描画され得るため単独では遷移失敗を素通りする）
+- assertVisible: "家具を追加"
 - assertVisible: "ベッド"
 - takeScreenshot: .maestro/screenshots/v3-11-furniture-persisted
