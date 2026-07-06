@@ -4,6 +4,7 @@ import {
   screen,
   fireEvent,
   within,
+  waitFor,
 } from "@testing-library/react-native";
 import { CleaningTimeline } from "../CleaningTimeline";
 import type { CleaningRecord } from "../../types";
@@ -82,12 +83,12 @@ describe("CleaningTimeline", () => {
     expect(input.props.value).toBe("換気扇も掃除した");
   });
 
-  it("calls_onUpdateNote_with_edited_note_when_save_pressed", () => {
+  it("calls_onUpdateNote_with_edited_note_when_save_pressed", async () => {
     // Arrange
     const records: CleaningRecord[] = [
       makeRecord({ id: "record-1", note: null }),
     ];
-    const onUpdateNote = jest.fn();
+    const onUpdateNote = jest.fn().mockResolvedValue(undefined);
 
     // Act
     render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
@@ -99,8 +100,60 @@ describe("CleaningTimeline", () => {
     fireEvent.press(screen.getByTestId("save-note-button-record-1"));
 
     // Assert
-    expect(onUpdateNote).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(onUpdateNote).toHaveBeenCalledTimes(1);
+    });
     expect(onUpdateNote).toHaveBeenCalledWith("record-1", "ワックスもかけた");
+  });
+
+  it("closes_edit_ui_when_update_note_succeeds", async () => {
+    // Arrange: onUpdateNote が成功（resolve）するケース
+    const records: CleaningRecord[] = [
+      makeRecord({ id: "record-1", note: "旧メモ" }),
+    ];
+    const onUpdateNote = jest.fn().mockResolvedValue(undefined);
+
+    // Act
+    render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
+    fireEvent.press(screen.getByTestId("edit-button-record-1"));
+    fireEvent.changeText(
+      screen.getByTestId("note-input-record-1"),
+      "新しいメモ",
+    );
+    fireEvent.press(screen.getByTestId("save-note-button-record-1"));
+
+    // Assert: 成功したら編集UIを閉じる
+    await waitFor(() => {
+      expect(screen.queryByTestId("note-input-record-1")).toBeNull();
+    });
+    expect(onUpdateNote).toHaveBeenCalledWith("record-1", "新しいメモ");
+  });
+
+  it("keeps_edit_ui_and_draft_when_update_note_fails", async () => {
+    // Arrange: onUpdateNote が失敗（reject）するケース
+    const records: CleaningRecord[] = [
+      makeRecord({ id: "record-1", note: "旧メモ" }),
+    ];
+    const onUpdateNote = jest.fn().mockRejectedValue(new Error("update failed"));
+
+    // Act
+    render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
+    fireEvent.press(screen.getByTestId("edit-button-record-1"));
+    fireEvent.changeText(
+      screen.getByTestId("note-input-record-1"),
+      "失敗しても保持したいメモ",
+    );
+    fireEvent.press(screen.getByTestId("save-note-button-record-1"));
+
+    // Assert: 失敗したら編集UIを閉じず、入力中のドラフトを保持する
+    await waitFor(() => {
+      expect(onUpdateNote).toHaveBeenCalledTimes(1);
+    });
+    const input = screen.getByTestId("note-input-record-1");
+    expect(input).toBeTruthy();
+    expect(input.props.value).toBe("失敗しても保持したいメモ");
+    // 再試行できる（保存ボタンが残っている）
+    expect(screen.getByTestId("save-note-button-record-1")).toBeTruthy();
   });
 
   it("closes_edit_ui_without_saving_when_cancel_pressed", () => {

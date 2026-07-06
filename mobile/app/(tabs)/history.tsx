@@ -63,7 +63,9 @@ export default function HistoryScreen() {
                 records={records}
                 onDelete={(recordId) => deleteRecord.mutate(recordId)}
                 onUpdateNote={(recordId, note) =>
-                    updateRecord.mutate({ recordId, input: { note } })
+                    // mutateAsync で成否を CleaningTimeline に伝える。
+                    // 失敗時は編集UIとドラフトを保持し、バナー（updateRecord.isError）で通知する。
+                    updateRecord.mutateAsync({ recordId, input: { note } })
                 }
             />
         </View>

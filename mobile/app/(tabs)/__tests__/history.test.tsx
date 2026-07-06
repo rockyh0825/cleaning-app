@@ -139,13 +139,13 @@ describe('HistoryScreen', () => {
 
     it('calls_update_record_mutation_when_note_is_saved', async () => {
         // Arrange
-        const mockUpdateMutate = jest.fn();
+        const mockUpdateMutateAsync = jest.fn().mockResolvedValue(undefined);
         mockUseCleaningHistory.mockReturnValue({
             records: RECORDS,
             isLoading: false,
             error: null,
             deleteRecord: { mutate: jest.fn() },
-            updateRecord: { mutate: mockUpdateMutate },
+            updateRecord: { mutateAsync: mockUpdateMutateAsync },
         });
         render(<HistoryScreen />, { wrapper: createWrapper() });
         await screen.findAllByTestId('timeline-item');
@@ -158,13 +158,50 @@ describe('HistoryScreen', () => {
         );
         fireEvent.press(screen.getByTestId('save-note-button-record-2'));
 
-        // Assert
+        // Assert: 保存で mutateAsync が呼ばれ、成功後に編集UIが閉じる
         await waitFor(() => {
-            expect(mockUpdateMutate).toHaveBeenCalledWith({
+            expect(mockUpdateMutateAsync).toHaveBeenCalledWith({
                 recordId: 'record-2',
                 input: { note: 'フィルター交換と換気扇掃除' },
             });
         });
+        await waitFor(() => {
+            expect(screen.queryByTestId('note-input-record-2')).toBeNull();
+        });
+    });
+
+    it('keeps_edit_ui_with_draft_when_update_record_mutation_fails', async () => {
+        // Arrange: 更新 mutation が失敗（reject）するケース
+        const mockUpdateMutateAsync = jest
+            .fn()
+            .mockRejectedValue(new Error('update failed'));
+        mockUseCleaningHistory.mockReturnValue({
+            records: RECORDS,
+            isLoading: false,
+            error: null,
+            deleteRecord: { mutate: jest.fn() },
+            updateRecord: { mutateAsync: mockUpdateMutateAsync, isError: true },
+        });
+        render(<HistoryScreen />, { wrapper: createWrapper() });
+        await screen.findAllByTestId('timeline-item');
+
+        // Act
+        fireEvent.press(screen.getByTestId('edit-button-record-2'));
+        fireEvent.changeText(
+            screen.getByTestId('note-input-record-2'),
+            '打ち直したくないメモ',
+        );
+        fireEvent.press(screen.getByTestId('save-note-button-record-2'));
+
+        // Assert: 失敗時は編集UIとドラフトが残り、バナーで通知される
+        await waitFor(() => {
+            expect(mockUpdateMutateAsync).toHaveBeenCalledTimes(1);
+        });
+        const input = screen.getByTestId('note-input-record-2');
+        expect(input).toBeTruthy();
+        expect(input.props.value).toBe('打ち直したくないメモ');
+        expect(screen.getByTestId('update-record-error')).toBeTruthy();
+        expect(screen.getByText('修正に失敗しました')).toBeTruthy();
     });
 
     it('shows_error_banner_when_update_record_fails', async () => {

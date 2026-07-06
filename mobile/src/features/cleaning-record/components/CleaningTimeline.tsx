@@ -13,7 +13,9 @@ import { formatDateTime } from "@/shared/utils/formatDateTime";
 type CleaningTimelineProps = {
   records: CleaningRecord[];
   onDelete?: (recordId: string) => void;
-  onUpdateNote?: (recordId: string, note: string) => void;
+  // 更新の成否を待てるよう Promise を返せるようにする。
+  // 成功時のみ編集UIを閉じ、失敗時はドラフトを保持して再試行できるようにする。
+  onUpdateNote?: (recordId: string, note: string) => void | Promise<unknown>;
 };
 
 // cleanedAt の降順（新しい順）でソート
@@ -52,9 +54,15 @@ export function CleaningTimeline({
     setDraftNote(record.note ?? "");
   };
 
-  const saveNote = (recordId: string) => {
-    onUpdateNote?.(recordId, draftNote);
-    setEditingRecordId(null);
+  const saveNote = async (recordId: string) => {
+    try {
+      // 更新の成功を待ってから編集UIを閉じる。
+      await onUpdateNote?.(recordId, draftNote);
+      setEditingRecordId(null);
+    } catch {
+      // 失敗時は編集UIとドラフトを保持し、ユーザーが再試行できるようにする。
+      // 失敗のフィードバック（バナー表示）は呼び出し側（history 画面）が担う。
+    }
   };
 
   const renderItem = ({ item }: { item: CleaningRecord }) => {
@@ -81,7 +89,9 @@ export function CleaningTimeline({
               <TouchableOpacity
                 testID={`save-note-button-${item.id}`}
                 style={styles.saveButton}
-                onPress={() => saveNote(item.id)}
+                onPress={() => {
+                  void saveNote(item.id);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="保存"
               >
