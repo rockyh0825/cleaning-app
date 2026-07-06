@@ -7,7 +7,7 @@ import {
   FlatList,
 } from "react-native";
 import type { Part } from "../types";
-import { formatDateTime } from "../utils/formatDateTime";
+import { formatDateTime } from "@/shared/utils/formatDateTime";
 import { RecordButton } from "./RecordButton";
 
 type PartChecklistProps = {

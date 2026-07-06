@@ -125,6 +125,29 @@ describe("CleaningTimeline", () => {
     expect(screen.getByText("元のメモ")).toBeTruthy();
   });
 
+  it("hides_other_edit_buttons_while_editing", () => {
+    // Arrange
+    const records: CleaningRecord[] = [
+      makeRecord({
+        id: "record-1",
+        cleanedAt: new Date("2024-06-02T10:00:00Z"),
+      }),
+      makeRecord({
+        id: "record-2",
+        cleanedAt: new Date("2024-06-01T10:00:00Z"),
+      }),
+    ];
+    const onUpdateNote = jest.fn();
+
+    // Act
+    render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
+    fireEvent.press(screen.getByTestId("edit-button-record-1"));
+
+    // Assert: 編集中は他の行の「修正」ボタンを表示しない（ドラフトの無警告破棄を防ぐ）
+    expect(screen.getByTestId("note-input-record-1")).toBeTruthy();
+    expect(screen.queryByTestId("edit-button-record-2")).toBeNull();
+  });
+
   it("does_not_show_edit_button_when_onUpdateNote_is_not_provided", () => {
     // Arrange
     const records: CleaningRecord[] = [makeRecord({ id: "record-1" })];

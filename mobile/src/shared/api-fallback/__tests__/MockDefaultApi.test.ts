@@ -109,7 +109,14 @@ describe("MockDefaultApi", () => {
         xUserId: userId,
         ownerId: created.id,
       });
-      expect(parts.some((p) => p.name === "床")).toBe(true);
+      expect(parts).toHaveLength(1);
+      expect(parts[0]).toMatchObject({
+        name: "床",
+        ownerType: "ROOM",
+        ownerId: created.id,
+        recommendedCycleDays: 7,
+        lastCleanedAt: null,
+      });
     });
 
     it("removes_seeded_part_when_the_created_room_is_deleted", async () => {

@@ -4,7 +4,7 @@
  * FallbackApi がネットワークエラー時にこちらへ委譲する。
  * 部屋・家具（FloorPlanStore）は AsyncStorage に永続化されアプリ再起動後も復元される。
  * パーツ・掃除記録（CleaningRecordStore）はセッション内メモリのみで、アプリ再起動でリセットされる
- * （本アプリのE2E検証スコープはfloor-plan側のみのため、cleaning-record側の永続化は対象外）。
+ * （cleaning-record の E2E は再起動を挟まない1セッション完結の前提のため、永続化は不要）。
  *
  * 実体は FloorPlanStore（部屋・家具）と CleaningRecordStore（パーツ・掃除記録）への
  * 委譲のみを行う。部屋・家具の削除に伴うパーツ・掃除記録のカスケード削除のみ、

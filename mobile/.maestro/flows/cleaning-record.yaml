@@ -57,6 +57,9 @@ appId: com.cleaningapp.mobile
 
 # --- メモを修正して反映を確認 ---
 - tapOn: "修正"
+# 入力欄の出現を待ってから入力する（フレーク防止）
+- assertVisible:
+    id: "note-input-.*"
 - inputText: "換気扇もきれいにした"
 - pressKey: Enter
 - tapOn: "保存"

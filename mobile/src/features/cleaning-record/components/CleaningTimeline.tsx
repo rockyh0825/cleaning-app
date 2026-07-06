@@ -8,7 +8,7 @@ import {
   FlatList,
 } from "react-native";
 import type { CleaningRecord } from "../types";
-import { formatDateTime } from "../utils/formatDateTime";
+import { formatDateTime } from "@/shared/utils/formatDateTime";
 
 type CleaningTimelineProps = {
   records: CleaningRecord[];
@@ -97,7 +97,8 @@ export function CleaningTimeline({
             item.note.length > 0 && <Text style={styles.note}>{item.note}</Text>
           )}
         </View>
-        {onUpdateNote != null && !isEditing && (
+        {/* 編集中は他の行の「修正」を出さない（ドラフトの無警告破棄を防ぐ） */}
+        {onUpdateNote != null && editingRecordId === null && (
           <TouchableOpacity
             testID={`edit-button-${item.id}`}
             style={styles.editButton}
@@ -128,6 +129,8 @@ export function CleaningTimeline({
       data={sorted}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
+      // キーボード表示中でも「保存」等のタップが1回目で届くようにする
+      keyboardShouldPersistTaps="handled"
       style={styles.list}
     />
   );
