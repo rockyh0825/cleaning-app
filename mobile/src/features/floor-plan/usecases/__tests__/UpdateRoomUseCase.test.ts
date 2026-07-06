@@ -223,6 +223,40 @@ describe('UpdateRoomUseCase', () => {
             expect(mockRepository.updateFurniture).not.toHaveBeenCalled();
         });
 
+        it('正常系: 移動＋縮小の複合では移動成分は相対座標に影響せず新サイズ相対境界にクランプされる', async () => {
+            // Arrange: 部屋 (2,2) 5x4。家具は相対 (4,3) 1x1
+            const furniture = makeFurniture({ id: 'furn-move-resize', gridX: 4, gridY: 3 });
+            (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({
+                rooms: [{ ...mockRoom, furniture: [furniture] }],
+            });
+            const useCase = new UpdateRoomUseCase(mockRepository);
+
+            // Act: 移動 (10,10) と縮小 3x3 を同時に指定
+            await useCase.execute('user-1', 'room-1', { gridX: 10, gridY: 10, gridW: 3, gridH: 3 });
+
+            // Assert: 移動成分は相対座標に影響せず、相対境界 {0,0,3,3} の右下端 (2,2) にクランプ
+            expect(mockRepository.updateFurniture).toHaveBeenCalledTimes(1);
+            expect(mockRepository.updateFurniture).toHaveBeenCalledWith('user-1', 'furn-move-resize', {
+                gridX: 2,
+                gridY: 2,
+            });
+        });
+
+        it('正常系: 部屋の拡大では収まったままの家具に updateFurniture を呼ばない（不要更新なし）', async () => {
+            // Arrange: 部屋 (2,2) 5x4 を 8x6 に拡大。家具は相対 (4,3) 1x1 で拡大後も収まる
+            const furniture = makeFurniture({ id: 'furn-expand', gridX: 4, gridY: 3 });
+            (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({
+                rooms: [{ ...mockRoom, furniture: [furniture] }],
+            });
+            const useCase = new UpdateRoomUseCase(mockRepository);
+
+            // Act: gridW/gridH を増やすのみ
+            await useCase.execute('user-1', 'room-1', { gridW: 8, gridH: 6 });
+
+            // Assert: 相対座標は境界内のまま＝不要な更新は発生しない
+            expect(mockRepository.updateFurniture).not.toHaveBeenCalled();
+        });
+
         it('正常系: 名前のみの更新では updateFurniture を呼ばない', async () => {
             // Arrange
             const furnitureOut = makeFurniture({ id: 'furn-out', gridX: 6, gridY: 5 });
