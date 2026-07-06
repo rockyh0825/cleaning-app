@@ -32,11 +32,17 @@ appId: com.cleaningapp.mobile
 # 部屋詳細は useFloorPlan のデータ取得完了まで「部屋が見つかりません」を表示し、
 # その間はボタンが出ない。FallbackApi（実API→モックへ委譲）のレイテンシで
 # ロードに時間がかかることがあるため、待ち時間の長い extendedWaitUntil で待つ。
+#
+# 「掃除を記録」ボタンは accessibilityLabel と子 Text の両方に同じ文字列を持つため、
+# iOS のバージョンによってはアクセシビリティ露出が結合・重複してテキスト完全一致で
+# 見つからないことがある。バージョン非依存の testID（log-cleaning-button）で照合する。
 - tapOn: "テスト部屋"
 - extendedWaitUntil:
-    visible: "掃除を記録"
+    visible:
+      id: "log-cleaning-button"
     timeout: 15000
-- tapOn: "掃除を記録"
+- tapOn:
+    id: "log-cleaning-button"
 
 # --- パーツ一括チェック → 記録 ---
 # パーツ行は accessibilityRole="checkbox" の1要素にまとまり、iOS では
@@ -52,7 +58,9 @@ appId: com.cleaningapp.mobile
 # 選択トグルは結合ラベルの曖昧さを避けて testID（part-item-<id>）で確実にタップする
 - tapOn:
     id: "part-item-.*"
-- tapOn: "記録（1件）"
+# 記録ボタンも testID で確実にタップする
+- tapOn:
+    id: "record-button"
 
 # --- 最終掃除日時が更新される ---
 - extendedWaitUntil:
@@ -63,7 +71,8 @@ appId: com.cleaningapp.mobile
 # --- 履歴タブで記録を確認 ---
 - tapOn: "戻る"
 - extendedWaitUntil:
-    visible: "掃除を記録"
+    visible:
+      id: "log-cleaning-button"
     timeout: 15000
 # タブ項目は iOS で "履歴, tab, 2 of 2" のように role が付与されて公開されるため
 # 完全一致では見つからない。部分一致させる。
@@ -74,13 +83,16 @@ appId: com.cleaningapp.mobile
 - takeScreenshot: .maestro/screenshots/cleaning-record-03-history
 
 # --- メモを修正して反映を確認 ---
-- tapOn: "修正"
+# 「修正」「保存」ボタンも label と子 Text が重複するため testID で照合する
+- tapOn:
+    id: "edit-button-.*"
 # 入力欄の出現を待ってから入力する（フレーク防止）
 - assertVisible:
     id: "note-input-.*"
 - inputText: "換気扇もきれいにした"
 - pressKey: Enter
-- tapOn: "保存"
+- tapOn:
+    id: "save-note-button-.*"
 - extendedWaitUntil:
     visible: "換気扇もきれいにした"
     timeout: 10000
