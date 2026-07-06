@@ -7,27 +7,23 @@ import {
     getByGestureTestId,
 } from 'react-native-gesture-handler/jest-utils';
 import { lightTheme } from '@/shared/theme/tokens';
+import { GRID_COLS, GRID_ROWS } from '../../constants';
 import { ResizeHandle } from '../ResizeHandle';
-import type { Room } from '../../types';
 
 describe('ResizeHandle', () => {
-    const testRoom: Room = {
-        id: 'room-1',
-        name: 'リビング',
-        type: 'LIVING',
-        gridX: 2,
-        gridY: 2,
-        gridW: 5,
-        gridH: 4,
-        createdAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-01-01'),
+    // 部屋 (2,2) 起点・5×4。キャンバス 20×20 内でリサイズする想定
+    const roomProps = {
+        position: { x: 2, y: 2 },
+        size: { w: 5, h: 4 },
+        maxRight: GRID_COLS,
+        maxBottom: GRID_ROWS,
+        handleTestID: 'resize-handle-room-1',
+        dragTestID: 'room-resize-room-1',
     };
 
     it('uses_theme_tokens_for_handle_colors', () => {
         // Arrange & Act: リテラル色ではなくテーマトークン参照であること（ダークモード対応）
-        render(
-            <ResizeHandle room={testRoom} cellSize={40} onCommit={jest.fn()} />,
-        );
+        render(<ResizeHandle {...roomProps} cellSize={40} onCommit={jest.fn()} />);
 
         // Assert
         const handle = screen.getByTestId('resize-handle-room-1');
@@ -41,7 +37,7 @@ describe('ResizeHandle', () => {
         const mockOnCommit = jest.fn();
 
         render(
-            <ResizeHandle room={testRoom} cellSize={40} onCommit={mockOnCommit} />,
+            <ResizeHandle {...roomProps} cellSize={40} onCommit={mockOnCommit} />,
         );
 
         // Act
@@ -58,11 +54,11 @@ describe('ResizeHandle', () => {
     });
 
     it('commits_one_x_one_when_drag_shrinks_below_minimum_size', async () => {
-        // Arrange: 5x4 の部屋を左上へ大きく縮めるドラッグ → 最小 1x1 で確定
+        // Arrange: 5x4 を左上へ大きく縮めるドラッグ → 最小 1x1 で確定
         const mockOnCommit = jest.fn();
 
         render(
-            <ResizeHandle room={testRoom} cellSize={40} onCommit={mockOnCommit} />,
+            <ResizeHandle {...roomProps} cellSize={40} onCommit={mockOnCommit} />,
         );
 
         // Act: -8 セル分（-320px）縮める
@@ -83,7 +79,7 @@ describe('ResizeHandle', () => {
         const mockOnCommit = jest.fn();
 
         render(
-            <ResizeHandle room={testRoom} cellSize={40} onCommit={mockOnCommit} />,
+            <ResizeHandle {...roomProps} cellSize={40} onCommit={mockOnCommit} />,
         );
 
         // Act: セル半分未満（丸めで 0）のドラッグ
@@ -100,11 +96,11 @@ describe('ResizeHandle', () => {
     });
 
     it('clamps_size_to_canvas_edge_when_drag_extends_beyond_bounds', async () => {
-        // Arrange: (2,2) の部屋はキャンバス 20x20 内で最大 18x18 まで
+        // Arrange: (2,2) の対象はキャンバス 20x20 内で最大 18x18 まで
         const mockOnCommit = jest.fn();
 
         render(
-            <ResizeHandle room={testRoom} cellSize={40} onCommit={mockOnCommit} />,
+            <ResizeHandle {...roomProps} cellSize={40} onCommit={mockOnCommit} />,
         );
 
         // Act: +20 セル分（800px）広げる
@@ -117,6 +113,37 @@ describe('ResizeHandle', () => {
         // Assert
         await waitFor(() => {
             expect(mockOnCommit).toHaveBeenCalledWith({ w: 18, h: 18 });
+        });
+    });
+
+    it('clamps_size_to_arbitrary_max_bounds_for_non_room_targets', async () => {
+        // Arrange: 家具ケース。所属部屋 (2,2)〜4×4 内の家具 (3,3,1,1) は
+        // 右下端 6 まで広げられる → 最大 3×3
+        const mockOnCommit = jest.fn();
+
+        render(
+            <ResizeHandle
+                position={{ x: 3, y: 3 }}
+                size={{ w: 1, h: 1 }}
+                maxRight={6}
+                maxBottom={6}
+                cellSize={40}
+                onCommit={mockOnCommit}
+                handleTestID="resize-handle-furn-1"
+                dragTestID="furniture-resize-furn-1"
+            />,
+        );
+
+        // Act: +20 セル分（800px）広げる
+        fireGestureHandler(getByGestureTestId('furniture-resize-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 800, translationY: 800 },
+            { state: State.END, translationX: 800, translationY: 800 },
+        ]);
+
+        // Assert
+        await waitFor(() => {
+            expect(mockOnCommit).toHaveBeenCalledWith({ w: 3, h: 3 });
         });
     });
 });

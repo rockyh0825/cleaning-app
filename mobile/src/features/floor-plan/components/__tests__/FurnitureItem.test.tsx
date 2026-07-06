@@ -163,6 +163,126 @@ describe('FurnitureItem', () => {
         });
     });
 
+    it('commits_new_grid_size_when_resize_handle_drag_ends', async () => {
+        // Arrange: 部屋 (2,3)〜6×4 内の 2×2 家具。右へ 56px（1.4 セル）→ 幅 +1
+        const mockOnResizeEnd = jest.fn();
+        const resizable: Furniture = {
+            ...testFurniture,
+            gridW: 2,
+            gridH: 2,
+        };
+
+        render(
+            <FurnitureItem
+                furniture={resizable}
+                cellSize={40}
+                selected={true}
+                onPress={jest.fn()}
+                bounds={roomBounds}
+                onResizeEnd={mockOnResizeEnd}
+            />,
+        );
+
+        // Act
+        fireGestureHandler(getByGestureTestId('furniture-resize-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 56, translationY: 0 },
+            { state: State.END, translationX: 56, translationY: 0 },
+        ]);
+
+        // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる
+        await waitFor(() => {
+            expect(mockOnResizeEnd).toHaveBeenCalledWith({ w: 3, h: 2 });
+        });
+    });
+
+    it('does_not_render_resize_handle_when_not_selected', () => {
+        // Arrange & Act
+        render(
+            <FurnitureItem
+                furniture={testFurniture}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                bounds={roomBounds}
+                onResizeEnd={jest.fn()}
+            />,
+        );
+
+        // Assert
+        expect(screen.queryByTestId('resize-handle-furn-1')).toBeNull();
+    });
+
+    it('commits_one_by_one_when_resize_shrinks_below_minimum', async () => {
+        // Arrange: 2×2 家具を大きく縮めるドラッグ → 最小 1×1 で確定
+        const mockOnResizeEnd = jest.fn();
+        const resizable: Furniture = {
+            ...testFurniture,
+            gridW: 2,
+            gridH: 2,
+        };
+
+        render(
+            <FurnitureItem
+                furniture={resizable}
+                cellSize={40}
+                selected={true}
+                onPress={jest.fn()}
+                bounds={roomBounds}
+                onResizeEnd={mockOnResizeEnd}
+            />,
+        );
+
+        // Act: -320px（-8 セル）縮める
+        fireGestureHandler(getByGestureTestId('furniture-resize-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: -320, translationY: -320 },
+            { state: State.END, translationX: -320, translationY: -320 },
+        ]);
+
+        // Assert
+        await waitFor(() => {
+            expect(mockOnResizeEnd).toHaveBeenCalledWith({ w: 1, h: 1 });
+        });
+    });
+
+    it('clamps_resize_to_room_bounds_when_drag_extends_beyond', async () => {
+        // Arrange: 部屋 (2,2)〜4×4 内の家具 (3,3,1,1)。
+        // 右下端は部屋の 6 まで → サイズは最大 3×3 に収まる
+        const mockOnResizeEnd = jest.fn();
+        const innerRoomBounds: Rect = { x: 2, y: 2, w: 4, h: 4 };
+        const innerFurniture: Furniture = {
+            ...testFurniture,
+            gridX: 3,
+            gridY: 3,
+            gridW: 1,
+            gridH: 1,
+        };
+
+        render(
+            <FurnitureItem
+                furniture={innerFurniture}
+                cellSize={40}
+                selected={true}
+                onPress={jest.fn()}
+                bounds={innerRoomBounds}
+                onResizeEnd={mockOnResizeEnd}
+            />,
+        );
+
+        // Act: +800px（+20 セル）広げる
+        fireGestureHandler(getByGestureTestId('furniture-resize-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 800, translationY: 800 },
+            { state: State.END, translationX: 800, translationY: 800 },
+        ]);
+
+        // Assert
+        await waitFor(() => {
+            expect(mockOnResizeEnd).toHaveBeenCalledWith({ w: 3, h: 3 });
+        });
+    });
+
     it('does_not_call_onDragEnd_when_drag_does_not_move', async () => {
         // Arrange
         const mockOnDragEnd = jest.fn();
