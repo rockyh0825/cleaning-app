@@ -47,7 +47,7 @@ export default function RoomDetailScreen() {
             [
                 { text: 'キャンセル', style: 'cancel' },
                 {
-                    text: '削除',
+                    text: '削除する',
                     style: 'destructive',
                     onPress: () => {
                         deleteFurniture.mutate(furnitureId);

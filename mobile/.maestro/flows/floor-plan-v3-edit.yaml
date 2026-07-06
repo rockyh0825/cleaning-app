@@ -1,0 +1,166 @@
+appId: com.cleaningapp.mobile
+---
+# floor-plan-editor-v3 E2E（tasks.md タスク11 / v3 編集機能の通し検証）
+#
+# 検証フロー: 空状態 → サイズ指定つきで部屋追加 → 2部屋目を追加して削除
+#            → 部屋をリネーム → 詳細画面で家具追加＆リサイズ
+#            → アプリ再起動後も「削除」「リネーム」「家具＋リサイズ」が保持される
+#
+# 前提: floor-plan-onboarding.yaml / floor-plan-drag-persistence.yaml と同じ
+# - バックエンド未起動（Mock fallback）で起動し、EXPO_PUBLIC_MOCK_START_EMPTY=true でビルド済み
+#   （このフラグが無いとデモ用フィクスチャ部屋が表示され、空状態から検証できない）
+#
+# 注意:
+# - 部屋 id・家具 id は動的なため、シェイプ／家具／リサイズハンドルは testID を正規表現で絞る
+#   （既存フローと同方式。対象が1つに定まる順序で操作する）
+# - 単一行 TextInput は Enter で blur される。キーボードを閉じないとボトムシート下部の
+#   「追加」ボタンがキーボードに覆われてタップが吸われる（onboarding と同じ対策）
+# - 削除確認は RN の Alert.alert。ボタン「削除」は完全一致の正規表現 ^削除$ で押す
+#   （タイトル・本文にも「削除」が含まれ多重マッチするため）
+
+- launchApp:
+    clearState: true
+
+- assertVisible:
+    id: "empty-state"
+- takeScreenshot: .maestro/screenshots/v3-01-empty-state
+
+# --- 1. サイズ指定つきで部屋を追加（既定 4x4 → 幅6・高さ5 に変更） ---
+- tapOn: "部屋を追加"
+- assertVisible: "部屋名"
+- inputText: "編集部屋"
+# キーボードを閉じてからステッパー・確定ボタンを操作する
+- pressKey: Enter
+
+# 幅を +2（4 → 6）
+- tapOn:
+    id: "room-width-stepper-inc"
+- tapOn:
+    id: "room-width-stepper-inc"
+# 高さを +1（4 → 5）
+- tapOn:
+    id: "room-height-stepper-inc"
+
+# 変更後のサイズが反映されている
+- assertVisible:
+    id: "room-width-value"
+    text: "6"
+- assertVisible:
+    id: "room-height-value"
+    text: "5"
+- takeScreenshot: .maestro/screenshots/v3-02-room-size-configured
+
+- tapOn:
+    id: "room-type-card-OTHER"
+- tapOn: "追加"
+- assertVisible: "編集部屋"
+- takeScreenshot: .maestro/screenshots/v3-03-edit-room-added
+
+# --- 2. 2部屋目を追加してから削除する ---
+- tapOn: "部屋を追加"
+- assertVisible: "部屋名"
+- inputText: "削除予定部屋"
+- pressKey: Enter
+- tapOn: "追加"
+- assertVisible: "削除予定部屋"
+- takeScreenshot: .maestro/screenshots/v3-04-delete-target-added
+
+# 部屋を選択 → 操作バーの削除 → Alert で確定
+- tapOn: "削除予定部屋"
+- assertVisible:
+    id: "selection-actions"
+- tapOn:
+    id: "selection-delete"
+# Alert の「キャンセル」ボタンで前面表示を確定してから確定ボタンを押す。
+# 確定ボタンは「削除する」。操作バーの削除ボタン（「削除」）や本文・タイトルの
+# 「削除」と衝突しない一意な文言にしてあるため、二重マッチせず確実に Alert 側を押せる。
+- assertVisible: "キャンセル"
+- tapOn:
+    text: "削除する"
+- assertNotVisible: "削除予定部屋"
+- takeScreenshot: .maestro/screenshots/v3-05-delete-target-removed
+
+# --- 3. 残った部屋をリネームする ---
+- tapOn: "編集部屋"
+- assertVisible:
+    id: "selection-actions"
+- tapOn:
+    id: "selection-rename"
+- tapOn:
+    id: "rename-input"
+# 既存の名称を消してから新しい名称を入力する
+- eraseText
+- inputText: "改名部屋"
+# 確定は onSubmitEditing（returnKeyType=done）で行う。rename-submit ボタンは
+# キーボードに覆われてタップが吸われうるため、Enter で確実に確定させる
+- pressKey: Enter
+- assertVisible: "改名部屋"
+- assertNotVisible: "編集部屋"
+- takeScreenshot: .maestro/screenshots/v3-06-room-renamed
+
+# --- 4. 詳細画面へ遷移して家具追加＋リサイズ ---
+# リネーム後も部屋は選択状態のため、まず選択解除してから改めて選択→再タップで遷移する
+# （操作バーにも部屋名が出て多重マッチするのを避け、onboarding と同じ選択→再タップの型にする）
+- tapOn:
+    id: "selection-dismiss"
+- tapOn: "改名部屋"
+- assertVisible:
+    id: "selection-actions"
+# 選択中の部屋の再タップで詳細へ遷移（シェイプ testID を正規表現で絞る）
+- tapOn:
+    id: "room-shape-.*"
+- assertVisible: "家具を追加"
+- takeScreenshot: .maestro/screenshots/v3-07-room-detail
+
+# 家具（ベッド）を追加。プリセットチップで名称・サイズが自動入力される
+- tapOn: "家具を追加"
+- assertVisible:
+    id: "furniture-preset-chip-bed"
+# onboarding 規約に合わせ、選択操作（チップタップ）の前に autoFocus キーボードを閉じる。
+# チップタップは name をセットするだけでキーボードを再表示しないため、この 1 回で「追加」ボタンが覆われない
+- pressKey: Enter
+- tapOn:
+    id: "furniture-preset-chip-bed"
+- tapOn: "追加"
+- assertVisible: "ベッド"
+- takeScreenshot: .maestro/screenshots/v3-08-furniture-added
+
+# 家具を選択するとリサイズハンドルが表示される（この時点で家具は1つだけ）
+- tapOn:
+    id: "furniture-item-.*"
+- assertVisible:
+    id: "resize-handle-.*"
+# リサイズハンドルを掴んで右方向へドラッグし、家具の幅を広げる。
+# 要素起点の方向スワイプのため座標計算不要で機種非依存。部屋(6x5)内に右方向の余白があり拡大できる。
+# 厳密なサイズ検証は Maestro では困難なため、家具が消えないこと＋スクリーンショットで確認する。
+- swipe:
+    from:
+      id: "resize-handle-.*"
+    direction: RIGHT
+    duration: 1200
+- assertVisible: "ベッド"
+- takeScreenshot: .maestro/screenshots/v3-09-furniture-resized
+
+# --- 5. アプリ再起動後も削除・リネーム・家具（リサイズ）が保持される ---
+# 楽観的更新後の AsyncStorage への永続化完了と UI 安定を待ってから再起動する
+# （launchApp（再起動）直後のクラッシュフレーク対策の保険。PR #102 でも同種のクラッシュが発生）
+- waitForAnimationToEnd
+
+- launchApp:
+    clearState: false
+# 再起動後は index タブ（間取り一覧）に戻る。読み込みに時間がかかることがあるため長めに待つ
+- extendedWaitUntil:
+    visible: "改名部屋"
+    timeout: 30000
+# 削除・リネームが永続化されている
+- assertNotVisible: "削除予定部屋"
+- assertNotVisible: "編集部屋"
+- takeScreenshot: .maestro/screenshots/v3-10-restored-after-restart
+
+# 家具（ベッド）が再起動後も保持されていることを確認する。
+# 間取り一覧では部屋内の家具もキャンバスに描画されるため、詳細画面へ入り直さ
+# なくても index 上で「ベッド」が見えれば家具データの永続化を確認できる。
+# （リサイズで拡大した家具が部屋名・部屋中央を覆うため、部屋の再タップ選択は
+#  家具に吸われて不安定。永続の検証には index 上の可視確認で十分）
+- assertVisible: "ベッド"
+- takeScreenshot: .maestro/screenshots/v3-11-furniture-persisted

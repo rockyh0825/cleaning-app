@@ -52,7 +52,7 @@ export default function FloorPlanIndexScreen() {
       [
         { text: "キャンセル", style: "cancel" },
         {
-          text: "削除",
+          text: "削除する",
           style: "destructive",
           onPress: () => {
             deleteRoom.mutate(roomId);
