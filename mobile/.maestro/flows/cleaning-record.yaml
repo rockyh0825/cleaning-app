@@ -29,8 +29,13 @@ appId: com.cleaningapp.mobile
 - assertVisible: "テスト部屋"
 
 # --- エリア選択: 部屋タップ → 部屋詳細 → 掃除を記録 ---
+# 部屋詳細は useFloorPlan のデータ取得完了まで「部屋が見つかりません」を表示し、
+# その間はボタンが出ない。FallbackApi（実API→モックへ委譲）のレイテンシで
+# ロードに時間がかかることがあるため、待ち時間の長い extendedWaitUntil で待つ。
 - tapOn: "テスト部屋"
-- assertVisible: "掃除を記録"
+- extendedWaitUntil:
+    visible: "掃除を記録"
+    timeout: 15000
 - tapOn: "掃除を記録"
 
 # --- パーツ一括チェック → 記録 ---
@@ -38,7 +43,10 @@ appId: com.cleaningapp.mobile
 # 子テキストが "床 最終掃除: 未記録" のように結合されて公開される。
 # Maestro のテキスト照合は完全一致（正規表現）のため、"床" 単体では一致しない。
 # 部分一致させるため前後を .* で囲む。
-- assertVisible: ".*床.*"
+# パーツ一覧も usePartList のデータ取得待ちがあるため extendedWaitUntil で待つ。
+- extendedWaitUntil:
+    visible: ".*床.*"
+    timeout: 15000
 - assertVisible: ".*最終掃除: 未記録.*"
 - takeScreenshot: .maestro/screenshots/cleaning-record-01-part-checklist
 # 選択トグルは結合ラベルの曖昧さを避けて testID（part-item-<id>）で確実にタップする
@@ -54,7 +62,9 @@ appId: com.cleaningapp.mobile
 
 # --- 履歴タブで記録を確認 ---
 - tapOn: "戻る"
-- assertVisible: "掃除を記録"
+- extendedWaitUntil:
+    visible: "掃除を記録"
+    timeout: 15000
 # タブ項目は iOS で "履歴, tab, 2 of 2" のように role が付与されて公開されるため
 # 完全一致では見つからない。部分一致させる。
 - tapOn: ".*履歴.*"
