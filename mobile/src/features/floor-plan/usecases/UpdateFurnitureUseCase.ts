@@ -26,14 +26,15 @@ export class UpdateFurnitureUseCase {
         }
 
         const g = input as { gridX?: number; gridY?: number; gridW?: number; gridH?: number };
-        const roomRect = { x: room.gridX, y: room.gridY, w: room.gridW, h: room.gridH };
+        // 家具座標は部屋相対（0基点）。可動域は部屋サイズの相対矩形でクランプする
+        const relativeBounds = { x: 0, y: 0, w: room.gridW, h: room.gridH };
         const furnitureRect = {
             x: g.gridX ?? current.gridX,
             y: g.gridY ?? current.gridY,
-            w: Math.min(g.gridW ?? current.gridW, roomRect.w),
-            h: Math.min(g.gridH ?? current.gridH, roomRect.h),
+            w: Math.min(g.gridW ?? current.gridW, relativeBounds.w),
+            h: Math.min(g.gridH ?? current.gridH, relativeBounds.h),
         };
-        const clamped = clampWithin(furnitureRect, roomRect);
+        const clamped = clampWithin(furnitureRect, relativeBounds);
 
         return this.repository.updateFurniture(userId, furnitureId, {
             ...input,

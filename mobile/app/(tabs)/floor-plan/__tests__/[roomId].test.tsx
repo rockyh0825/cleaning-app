@@ -366,6 +366,110 @@ describe('RoomDetailScreen', () => {
         expect(screen.queryByTestId('selection-actions')).toBeNull();
     });
 
+    describe('家具の空き配置（タスク10・相対座標）', () => {
+        /** 指定した部屋・家具で useFloorPlan をモックし、addFurniture の mutate を返す */
+        function mockHookWithRoom(
+            roomOverrides: Record<string, unknown>,
+            furniture: Array<Record<string, unknown>> = [],
+        ): jest.Mock {
+            const addMutate = jest.fn();
+            mockUseFloorPlan.mockReturnValue({
+                floorPlan: {
+                    data: {
+                        rooms: [{ ...targetRoom, ...roomOverrides, furniture }],
+                    },
+                    isLoading: false,
+                    isError: false,
+                },
+                addFurniture: { mutate: addMutate },
+                updateFurniture: { mutate: jest.fn() },
+                deleteFurniture: { mutate: jest.fn() },
+            });
+            return addMutate;
+        }
+
+        it('places_added_furniture_at_free_relative_position_avoiding_existing_furniture', () => {
+            // Arrange: 部屋 4x4、相対 (0,0) に既存家具（sofa 1x1）
+            const addMutate = mockHookWithRoom({}, [sofa]);
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+
+            // Act: 自由名称（1x1）を追加
+            fireEvent.press(screen.getByTestId('fab'));
+            fireEvent.changeText(screen.getByPlaceholderText('家具名'), '本棚');
+            fireEvent.press(screen.getByText('追加'));
+
+            // Assert: (0,0) は埋まっているので隣の空き (1,0) に相対配置される
+            expect(addMutate).toHaveBeenCalledWith({
+                roomId: 'room-1',
+                input: expect.objectContaining({
+                    name: '本棚',
+                    gridX: 1,
+                    gridY: 0,
+                    gridW: 1,
+                    gridH: 1,
+                }),
+            });
+        });
+
+        it('uses_relative_zero_based_coordinates_even_when_room_is_offset', () => {
+            // Arrange: 部屋を (5,5) に置く（空）
+            const addMutate = mockHookWithRoom({ gridX: 5, gridY: 5 });
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+
+            // Act
+            fireEvent.press(screen.getByTestId('fab'));
+            fireEvent.changeText(screen.getByPlaceholderText('家具名'), '本棚');
+            fireEvent.press(screen.getByText('追加'));
+
+            // Assert: 部屋の絶対位置(5,5)ではなく相対原点(0,0)で配置される
+            expect(addMutate).toHaveBeenCalledWith({
+                roomId: 'room-1',
+                input: expect.objectContaining({ gridX: 0, gridY: 0 }),
+            });
+        });
+
+        it('falls_back_to_relative_origin_when_room_is_full', () => {
+            // Arrange: 1x1 の部屋が 1x1 家具で満杯
+            const filler = { ...sofa, gridX: 0, gridY: 0, gridW: 1, gridH: 1 };
+            const addMutate = mockHookWithRoom({ gridW: 1, gridH: 1 }, [filler]);
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+
+            // Act: 空きが無くてもクラッシュせず追加する
+            fireEvent.press(screen.getByTestId('fab'));
+            fireEvent.changeText(screen.getByPlaceholderText('家具名'), '本棚');
+            fireEvent.press(screen.getByText('追加'));
+
+            // Assert: フォールバックで相対原点 (0,0)
+            expect(addMutate).toHaveBeenCalledWith({
+                roomId: 'room-1',
+                input: expect.objectContaining({ gridX: 0, gridY: 0 }),
+            });
+        });
+
+        it('clamps_selected_preset_size_to_room_before_placing', () => {
+            // Arrange: 2x2 の部屋にベッド(2×3)プリセットを追加 → 高さが部屋にクランプ
+            const addMutate = mockHookWithRoom({ gridW: 2, gridH: 2 });
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+
+            // Act
+            fireEvent.press(screen.getByTestId('fab'));
+            fireEvent.press(screen.getByTestId('furniture-preset-chip-bed'));
+            fireEvent.press(screen.getByText('追加'));
+
+            // Assert: h は部屋の 2 にクランプ、(0,0) に配置
+            expect(addMutate).toHaveBeenCalledWith({
+                roomId: 'room-1',
+                input: expect.objectContaining({
+                    presetKey: 'bed',
+                    gridX: 0,
+                    gridY: 0,
+                    gridW: 2,
+                    gridH: 2,
+                }),
+            });
+        });
+    });
+
     it('does_not_reopen_rename_sheet_for_next_selection_after_target_furniture_disappears', async () => {
         // Arrange: 家具Aを選択して名称変更シートを開く
         mockHookWithFurniture([sofa]);

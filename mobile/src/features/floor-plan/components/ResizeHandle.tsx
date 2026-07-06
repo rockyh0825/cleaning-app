@@ -7,13 +7,23 @@ import { useAppTheme } from '@/shared/theme/useAppTheme';
 import { useDragToGrid } from '../hooks/useDragToGrid';
 
 type Props = {
-    /** 対象の左上グリッド絶対座標 */
+    /**
+     * 対象の左上グリッド座標。position と maxRight/maxBottom は同一空間で渡せばよい。
+     * 部屋なら絶対座標、家具なら部屋相対座標（0 基点）を渡す。
+     */
     position: { x: number; y: number };
     /** 対象の現在グリッドサイズ */
     size: { w: number; h: number };
-    /** 広げられる右端のグリッド座標（部屋なら GRID_COLS、家具なら所属部屋の右端） */
+    /**
+     * 広げられる右端のグリッド座標（position と同一空間）。
+     * 部屋なら GRID_COLS、家具なら所属部屋の幅 room.gridW を渡す。
+     * リサイズ可動域は maxRight - position.x のみで決まる空間非依存な差分計算。
+     */
     maxRight: number;
-    /** 広げられる下端のグリッド座標（部屋なら GRID_ROWS、家具なら所属部屋の下端） */
+    /**
+     * 広げられる下端のグリッド座標（position と同一空間）。
+     * 部屋なら GRID_ROWS、家具なら所属部屋の高さ room.gridH を渡す。
+     */
     maxBottom: number;
     cellSize: number;
     /** リサイズ確定時にグリッド単位の新サイズを受け取る */

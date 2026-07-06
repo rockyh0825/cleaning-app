@@ -118,7 +118,7 @@
     - 正常系: 自由名称入力では 1×1 で onSubmit
   - _Requirements: 5_
 
-- [ ] 10. 家具追加の空き配置と相対座標バグ修正
+- [x] 10. 家具追加の空き配置と相対座標バグ修正
   - File: mobile/app/floor-plan/[roomId].tsx（handleAddFurniture）
   - 指定サイズを部屋サイズにクランプ → `findFreePosition`（bounds = {0,0,room.gridW,room.gridH}、障害物 = 既存家具）で空き探索 → null なら (0,0)。**現状 room.gridX/gridY（絶対座標）を相対座標として渡しているバグをここで修正する**
   - Purpose: 家具が重なって追加される問題と座標系バグの解消（Requirement 6）

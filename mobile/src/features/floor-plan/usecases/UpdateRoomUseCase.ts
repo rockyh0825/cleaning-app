@@ -45,19 +45,25 @@ export class UpdateRoomUseCase {
     }
 
     /**
-     * 新しい部屋矩形からはみ出した内包家具を境界内にクランプし追随更新する（Requirement 2.3）。
-     * 家具の座標はキャンバス絶対座標のため、部屋矩形をそのまま親 bounds として使う。
-     * 家具が部屋より大きい場合は clampWithin の仕様に従い部屋の左上に揃える。
+     * 新しい部屋サイズからはみ出した内包家具を境界内にクランプし追随更新する（Requirement 2.3）。
+     * 家具の座標は部屋相対（0基点）のため、可動域は部屋の位置に依存しない 0 起点の相対矩形
+     * （新しい部屋サイズ）を親 bounds として使う。これにより部屋を移動しただけ（サイズ不変）
+     * では相対座標が変わらず、家具は部屋に追従する（保存座標を書き換えない）。
+     * 家具が部屋より大きい場合は clampWithin の仕様に従い相対原点 (0,0) に揃える。
      */
     private async clampContainedFurniture(
         userId: string,
         furniture: Furniture[],
         roomRect: Rect,
     ): Promise<void> {
+        const relativeBounds: Rect = { x: 0, y: 0, w: roomRect.w, h: roomRect.h };
         const updates = furniture
             .map((f) => ({
                 furniture: f,
-                clamped: clampWithin({ x: f.gridX, y: f.gridY, w: f.gridW, h: f.gridH }, roomRect),
+                clamped: clampWithin(
+                    { x: f.gridX, y: f.gridY, w: f.gridW, h: f.gridH },
+                    relativeBounds,
+                ),
             }))
             .filter(({ furniture: f, clamped }) => clamped.x !== f.gridX || clamped.y !== f.gridY);
 
