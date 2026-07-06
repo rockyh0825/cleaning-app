@@ -143,6 +143,25 @@ describe('RenameSheet', () => {
         expect(mockOnSubmit).toHaveBeenCalledWith('和室');
     });
 
+    it('does_not_submit_when_keyboard_submit_pressed_with_whitespace_only', () => {
+        // Arrange
+        render(
+            <RenameSheet
+                visible={true}
+                initialName="リビング"
+                onSubmit={mockOnSubmit}
+                onClose={mockOnClose}
+            />,
+        );
+
+        // Act
+        fireEvent.changeText(screen.getByTestId('rename-input'), '   ');
+        fireEvent(screen.getByTestId('rename-input'), 'submitEditing');
+
+        // Assert
+        expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
     it('keeps_edited_input_when_initial_name_changes_while_open', () => {
         // Arrange: 開いた状態で入力を編集する
         const view = render(
