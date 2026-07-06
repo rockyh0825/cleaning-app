@@ -71,13 +71,12 @@ appId: com.cleaningapp.mobile
     id: "selection-actions"
 - tapOn:
     id: "selection-delete"
-# Alert の「キャンセル」ボタンで前面表示を確定してから「削除」を押す。
-# （Maestro は iOS UIAlertController の message 本文をテキストとして読めないため、
-#  確実に読めるボタン文言を使う。「キャンセル」は操作バーに無く、モーダルも閉じているため一意）
+# Alert の「キャンセル」ボタンで前面表示を確定してから確定ボタンを押す。
+# 確定ボタンは「削除する」。操作バーの削除ボタン（「削除」）や本文・タイトルの
+# 「削除」と衝突しない一意な文言にしてあるため、二重マッチせず確実に Alert 側を押せる。
 - assertVisible: "キャンセル"
-# Alert のボタン「削除」（タイトル・本文の「削除」を避けて完全一致で押す）
 - tapOn:
-    text: "^削除$"
+    text: "削除する"
 - assertNotVisible: "削除予定部屋"
 - takeScreenshot: .maestro/screenshots/v3-05-delete-target-removed
 
