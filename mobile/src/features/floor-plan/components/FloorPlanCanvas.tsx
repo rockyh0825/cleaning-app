@@ -60,6 +60,12 @@ type Props = {
      * 未指定（undefined）なら従来どおり内部 state で選択を管理する（後方互換）。
      */
     selectedRoomId?: string | null;
+    /**
+     * 家具の選択状態を親から制御する（選択ボーダーの表示を駆動）。
+     * 渡された場合はこの値が真実の源となり内部 state を使わない。
+     * 未指定（undefined）なら従来どおり内部 state で選択を管理する（後方互換）。
+     */
+    selectedFurnitureId?: string | null;
     /** 部屋のドラッグ・リサイズ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
     onRoomDragEnd?: (roomId: string, rect: Rect) => void;
     /** 家具のドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
@@ -74,6 +80,7 @@ export function FloorPlanCanvas({
     onRoomDragEnd,
     onFurnitureDragEnd,
     selectedRoomId,
+    selectedFurnitureId,
 }: Props) {
     const theme = useAppTheme();
     // 制御プロップが渡された場合は親が真実の源。未指定なら内部 state で管理する（後方互換）
@@ -84,7 +91,14 @@ export function FloorPlanCanvas({
     const resolvedSelectedRoomId = isRoomSelectionControlled
         ? selectedRoomId
         : internalSelectedRoomId;
-    const [selectedFurnitureId, setSelectedFurnitureId] = useState<string | null>(null);
+    // 家具選択も部屋と同じ後方互換パターン。制御プロップ指定時は親が真実の源
+    const isFurnitureSelectionControlled = selectedFurnitureId !== undefined;
+    const [internalSelectedFurnitureId, setInternalSelectedFurnitureId] = useState<
+        string | null
+    >(null);
+    const resolvedSelectedFurnitureId = isFurnitureSelectionControlled
+        ? selectedFurnitureId
+        : internalSelectedFurnitureId;
 
     const scale = useSharedValue(1);
     const savedScale = useSharedValue(1);
@@ -144,12 +158,18 @@ export function FloorPlanCanvas({
         if (!isRoomSelectionControlled) {
             setInternalSelectedRoomId(roomId);
         }
-        setSelectedFurnitureId(null);
+        // 制御モードでは家具選択の解除も親（onRoomPress）に委ねる
+        if (!isFurnitureSelectionControlled) {
+            setInternalSelectedFurnitureId(null);
+        }
         onRoomPress?.(roomId);
     }
 
     function handleFurniturePress(furnitureId: string) {
-        setSelectedFurnitureId(furnitureId);
+        // 制御モードでは親が selectedFurnitureId を更新するため内部 state は触らない
+        if (!isFurnitureSelectionControlled) {
+            setInternalSelectedFurnitureId(furnitureId);
+        }
         onFurniturePress?.(furnitureId);
     }
 
@@ -200,7 +220,7 @@ export function FloorPlanCanvas({
                                     cellSize={cellSize}
                                     scale={gridScale}
                                     canvasPanGesture={canvasPanGesture}
-                                    selected={selectedFurnitureId === furn.id}
+                                    selected={resolvedSelectedFurnitureId === furn.id}
                                     onPress={() => handleFurniturePress(furn.id)}
                                     bounds={{
                                         x: room.gridX,

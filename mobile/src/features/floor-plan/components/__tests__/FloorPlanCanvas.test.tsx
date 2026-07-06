@@ -1,11 +1,12 @@
 import React from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import {
     fireGestureHandler,
     getByGestureTestId,
 } from 'react-native-gesture-handler/jest-utils';
+import { lightTheme } from '@/shared/theme/tokens';
 import { clampScale, FloorPlanCanvas } from '../FloorPlanCanvas';
 import type { FloorPlan } from '../../types';
 
@@ -332,6 +333,108 @@ describe('FloorPlanCanvas', () => {
         // Assert: 内部 state 駆動で選択枠が表示される
         await waitFor(() => {
             expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
+        });
+    });
+
+    it('drives_furniture_selection_from_prop_when_selectedFurnitureId_is_controlled', () => {
+        // Arrange & Act: 制御プロップで furn-1 を選択状態にする
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                selectedFurnitureId="furn-1"
+            />,
+        );
+
+        // Assert: 内部タップ無しでも選択ボーダー（primary）が適用される
+        const item = screen.getByTestId('furniture-item-furn-1');
+        const style = StyleSheet.flatten(item.props.style);
+        expect(style.borderColor).toBe(lightTheme.colors.primary);
+    });
+
+    it('hides_furniture_selection_when_controlled_prop_is_null', async () => {
+        // Arrange & Act: 制御モードで未選択（null）
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                selectedFurnitureId={null}
+                onFurniturePress={jest.fn()}
+            />,
+        );
+        // タップしても親が state を持つため内部では選択されない
+        fireGestureHandler(getByGestureTestId('furniture-tap-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+        // runOnJS 経由の onPress を流し切ってから検証する（内部 state を触らないことの確認）
+        await act(async () => {
+            await new Promise((resolve) => setImmediate(resolve));
+        });
+
+        // Assert: 制御プロップが null のままなら選択ボーダーは付かない
+        const item = screen.getByTestId('furniture-item-furn-1');
+        const style = StyleSheet.flatten(item.props.style);
+        expect(style.borderColor).toBe(lightTheme.colors.outline);
+    });
+
+    it('selects_furniture_via_internal_state_when_prop_is_omitted', async () => {
+        // Arrange: 非制御（後方互換）
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onFurniturePress={jest.fn()}
+            />,
+        );
+
+        // Act: タップで内部 state が選択を管理する
+        fireGestureHandler(getByGestureTestId('furniture-tap-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+
+        // Assert: 内部 state 駆動で選択ボーダーが付く
+        await waitFor(() => {
+            const item = screen.getByTestId('furniture-item-furn-1');
+            const style = StyleSheet.flatten(item.props.style);
+            expect(style.borderColor).toBe(lightTheme.colors.primary);
+        });
+    });
+
+    it('clears_internal_furniture_selection_when_room_is_pressed', async () => {
+        // Arrange: 非制御でまず家具を選択する
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onRoomPress={jest.fn()}
+                onFurniturePress={jest.fn()}
+            />,
+        );
+        fireGestureHandler(getByGestureTestId('furniture-tap-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+        await waitFor(() => {
+            const item = screen.getByTestId('furniture-item-furn-1');
+            expect(StyleSheet.flatten(item.props.style).borderColor).toBe(
+                lightTheme.colors.primary,
+            );
+        });
+
+        // Act: 部屋をタップする
+        fireGestureHandler(getByGestureTestId('room-tap-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+
+        // Assert: 家具の選択は解除される
+        await waitFor(() => {
+            const item = screen.getByTestId('furniture-item-furn-1');
+            expect(StyleSheet.flatten(item.props.style).borderColor).toBe(
+                lightTheme.colors.outline,
+            );
         });
     });
 
