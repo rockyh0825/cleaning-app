@@ -55,7 +55,14 @@ export default function FloorPlanIndexScreen() {
           text: "削除する",
           style: "destructive",
           onPress: () => {
-            deleteRoom.mutate(roomId);
+            deleteRoom.mutate(roomId, {
+              onError: () => {
+                Alert.alert(
+                  "削除に失敗しました",
+                  "通信状態を確認してもう一度お試しください。",
+                );
+              },
+            });
             setSelectedRoomId(null);
             // 選択解除の各経路（✕・家具タップ）と揃えてリネーム対象も破棄する
             setRenamingRoomId(null);

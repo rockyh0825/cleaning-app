@@ -326,8 +326,38 @@ describe('FloorPlanIndexScreen', () => {
             destructiveButton?.onPress?.();
         });
 
-        // Assert
-        expect(mockDeleteMutate).toHaveBeenCalledWith('room-1');
+        // Assert: roomId と、失敗時ロールバック後の通知用 onError を渡して削除する
+        expect(mockDeleteMutate).toHaveBeenCalledWith(
+            'room-1',
+            expect.objectContaining({ onError: expect.any(Function) }),
+        );
+    });
+
+    it('alerts_delete_failure_when_delete_room_mutation_fails', async () => {
+        // Arrange: mutate は onError を受け取り、それを発火させて失敗を再現する
+        const alertSpy = jest.spyOn(Alert, 'alert');
+        const mockDeleteMutate = jest.fn(
+            (_roomId: string, options?: { onError?: () => void }) => {
+                options?.onError?.();
+            },
+        );
+        mockHookWithLivingRoom({ deleteRoom: mockDeleteMutate });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        fireEvent.press(screen.getByTestId('selection-delete'));
+
+        // Act: 確認ダイアログの破壊的ボタンで確定する（mutate が失敗して onError が走る）
+        const buttons = alertSpy.mock.calls[0][2];
+        const destructiveButton = buttons?.find((b) => b.style === 'destructive');
+        act(() => {
+            destructiveButton?.onPress?.();
+        });
+
+        // Assert: 失敗通知の Alert が出る（確認ダイアログの1回に加えて2回目）
+        expect(alertSpy).toHaveBeenCalledTimes(2);
+        const [failureTitle] = alertSpy.mock.calls[1];
+        expect(failureTitle).toMatch(/削除に失敗しました/);
     });
 
     it('does_not_delete_room_when_only_confirmation_is_shown', async () => {
