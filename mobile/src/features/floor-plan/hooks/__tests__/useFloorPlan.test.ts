@@ -7,6 +7,7 @@ import {
     buildUpdateRoomMutationOptions,
     buildUpdateFurnitureMutationOptions,
     buildDeleteFurnitureMutationOptions,
+    buildDeleteRoomMutationOptions,
 } from '../useFloorPlan';
 
 const mockRoom: Room = {
@@ -548,6 +549,105 @@ describe('useFloorPlan', () => {
             const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
             const mockUseCase = { execute: jest.fn().mockResolvedValue(undefined) };
             const options = buildDeleteFurnitureMutationOptions(queryClient, 'user-1', mockUseCase);
+
+            // Act
+            await options.onSettled!();
+
+            // Assert
+            expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['floorPlan', 'user-1'] });
+        });
+    });
+
+    describe('正常系: 部屋削除時にキャッシュが楽観的更新される', () => {
+        const sofa: Furniture = {
+            id: 'furniture-1',
+            roomId: 'room-1',
+            name: 'ソファ',
+            gridX: 1,
+            gridY: 1,
+            gridW: 2,
+            gridH: 1,
+            createdAt: new Date('2024-01-02'),
+            updatedAt: new Date('2024-01-02'),
+        };
+        const secondRoom: Room = {
+            id: 'room-2',
+            name: 'キッチン',
+            type: 'KITCHEN',
+            gridX: 10,
+            gridY: 10,
+            gridW: 4,
+            gridH: 3,
+            createdAt: new Date('2024-01-01'),
+            updatedAt: new Date('2024-01-01'),
+        };
+        const twoRoomFloorPlan: FloorPlan = {
+            rooms: [
+                { ...mockRoom, furniture: [sofa] },
+                { ...secondRoom, furniture: [] },
+            ],
+        };
+
+        it('calls_usecase_with_userId_and_roomId', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(undefined) };
+            const options = buildDeleteRoomMutationOptions(queryClient, 'user-1', mockUseCase);
+
+            // Act
+            await options.mutationFn!('room-1');
+
+            // Assert
+            expect(mockUseCase.execute).toHaveBeenCalledWith('user-1', 'room-1');
+        });
+
+        it('removes_target_room_from_cache_optimistically_without_touching_others', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(undefined) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], twoRoomFloorPlan);
+
+            // Act
+            const options = buildDeleteRoomMutationOptions(queryClient, 'user-1', mockUseCase);
+            await options.onMutate!('room-1');
+
+            // Assert
+            const optimistic = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            expect(optimistic?.rooms).toHaveLength(1);
+            expect(optimistic?.rooms[0]).toEqual(twoRoomFloorPlan.rooms[1]);
+        });
+
+        it('rolls_back_deleted_room_when_mutation_fails', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const mockUseCase = { execute: jest.fn().mockRejectedValue(new Error('network error')) };
+            queryClient.setQueryData<FloorPlan>(['floorPlan', 'user-1'], twoRoomFloorPlan);
+            const options = buildDeleteRoomMutationOptions(queryClient, 'user-1', mockUseCase);
+
+            // Act
+            const context = await options.onMutate!('room-1');
+            options.onError!(new Error('network error'), 'room-1', context);
+
+            // Assert
+            const afterRollback = queryClient.getQueryData<FloorPlan>(['floorPlan', 'user-1']);
+            expect(afterRollback).toEqual(twoRoomFloorPlan);
+            expect(afterRollback?.rooms).toHaveLength(2);
+        });
+
+        it('invalidates_floor_plan_query_on_settle', async () => {
+            // Arrange
+            const queryClient = new QueryClient({
+                defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+            });
+            const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+            const mockUseCase = { execute: jest.fn().mockResolvedValue(undefined) };
+            const options = buildDeleteRoomMutationOptions(queryClient, 'user-1', mockUseCase);
 
             // Act
             await options.onSettled!();

@@ -27,7 +27,7 @@
     - 異常系: 保存失敗時に元の name にロールバック
   - _Requirements: 4_
 
-- [ ] 12. hooks: deleteRoom の楽観的更新＋失敗時ロールバック・通知
+- [x] 12. hooks: deleteRoom の楽観的更新＋失敗時ロールバック・通知
   - File: mobile/src/features/floor-plan/hooks/useFloorPlan.ts
   - 現状の deleteRoom は mutationFn + invalidate のみで、Requirement 1.4（削除失敗時のロールバックと通知）を満たさない。buildDeleteFurnitureMutationOptions と同型の buildDeleteRoomMutationOptions を追加し、キャッシュからの楽観的除去・onError ロールバック・失敗通知を実装する（PR #114 レビュー指摘のフォロー）
   - _Leverage: buildDeleteFurnitureMutationOptions_
