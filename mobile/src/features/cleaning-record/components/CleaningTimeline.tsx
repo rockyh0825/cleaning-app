@@ -42,6 +42,11 @@ export function CleaningTimeline({
 
   const sorted = sortByCleanedAtDesc(records);
 
+  // 編集中の記録が refetch 等で records から消えた場合、stale な
+  // editingRecordId は無効として扱う（修正ボタンが復帰しなくなるのを防ぐ）
+  const isEditingActive =
+    editingRecordId !== null && records.some((r) => r.id === editingRecordId);
+
   const startEditing = (record: CleaningRecord) => {
     setEditingRecordId(record.id);
     setDraftNote(record.note ?? "");
@@ -98,7 +103,7 @@ export function CleaningTimeline({
           )}
         </View>
         {/* 編集中は他の行の「修正」を出さない（ドラフトの無警告破棄を防ぐ） */}
-        {onUpdateNote != null && editingRecordId === null && (
+        {onUpdateNote != null && !isEditingActive && (
           <TouchableOpacity
             testID={`edit-button-${item.id}`}
             style={styles.editButton}

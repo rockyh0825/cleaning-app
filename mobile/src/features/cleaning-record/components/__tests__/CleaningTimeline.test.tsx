@@ -148,6 +148,36 @@ describe("CleaningTimeline", () => {
     expect(screen.queryByTestId("edit-button-record-2")).toBeNull();
   });
 
+  it("shows_edit_buttons_again_when_editing_record_disappears_from_list", () => {
+    // Arrange: record-1 の編集を開始する
+    const records: CleaningRecord[] = [
+      makeRecord({
+        id: "record-1",
+        cleanedAt: new Date("2024-06-02T10:00:00Z"),
+      }),
+      makeRecord({
+        id: "record-2",
+        cleanedAt: new Date("2024-06-01T10:00:00Z"),
+      }),
+    ];
+    const onUpdateNote = jest.fn();
+    const { rerender } = render(
+      <CleaningTimeline records={records} onUpdateNote={onUpdateNote} />,
+    );
+    fireEvent.press(screen.getByTestId("edit-button-record-1"));
+
+    // Act: refetch 等で編集中の record-1 がリストから消える
+    rerender(
+      <CleaningTimeline
+        records={records.filter((r) => r.id !== "record-1")}
+        onUpdateNote={onUpdateNote}
+      />,
+    );
+
+    // Assert: stale な編集状態は無効扱いになり、残りの行の「修正」が再び表示される
+    expect(screen.getByTestId("edit-button-record-2")).toBeTruthy();
+  });
+
   it("does_not_show_edit_button_when_onUpdateNote_is_not_provided", () => {
     // Arrange
     const records: CleaningRecord[] = [makeRecord({ id: "record-1" })];
