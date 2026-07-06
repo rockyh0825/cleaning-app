@@ -6,6 +6,7 @@ import Animated, { runOnJS } from 'react-native-reanimated';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
 import type { Rect } from '@/shared/utils/grid';
 import { useDragToGrid } from '../hooks/useDragToGrid';
+import { ResizeHandle } from './ResizeHandle';
 import type { Furniture } from '../types';
 
 type Props = {
@@ -13,10 +14,16 @@ type Props = {
     cellSize: number;
     selected: boolean;
     onPress: () => void;
-    /** グリッド単位の可動域（所属部屋の矩形、キャンバス絶対座標） */
+    /**
+     * 所属部屋の矩形（キャンバス絶対座標）。家具座標は部屋相対（0基点）のため、
+     * 描画は bounds の絶対位置ぶんオフセットし、ドラッグ・リサイズの可動域は
+     * bounds のサイズを 0 起点の相対矩形として使う。
+     */
     bounds: Rect;
     /** ドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
     onDragEnd?: (rect: Rect) => void;
+    /** リサイズ確定時にグリッド単位の新サイズを受け取る（選択中のみハンドル表示） */
+    onResizeEnd?: (size: { w: number; h: number }) => void;
     /** キャンバスのズーム倍率（px→グリッド変換に使用） */
     scale?: number;
     /** この家具のドラッグ判定が終わるまで待機させるキャンバスパン */
@@ -30,14 +37,18 @@ export function FurnitureItem({
     onPress,
     bounds,
     onDragEnd,
+    onResizeEnd,
     scale = 1,
     canvasPanGesture,
 }: Props) {
     const theme = useAppTheme();
     const width = furniture.gridW * cellSize;
     const height = furniture.gridH * cellSize;
-    const left = furniture.gridX * cellSize;
-    const top = furniture.gridY * cellSize;
+    // 家具座標は部屋相対のため、部屋の絶対位置（bounds.x/y）ぶんオフセットして描画する
+    const left = (bounds.x + furniture.gridX) * cellSize;
+    const top = (bounds.y + furniture.gridY) * cellSize;
+    // ドラッグ・リサイズの可動域は 0 起点の相対矩形（部屋のサイズのみ）
+    const relativeBounds: Rect = { x: 0, y: 0, w: bounds.w, h: bounds.h };
 
     const { gesture: panGesture, animatedStyle } = useDragToGrid({
         rect: {
@@ -46,7 +57,7 @@ export function FurnitureItem({
             w: furniture.gridW,
             h: furniture.gridH,
         },
-        bounds,
+        bounds: relativeBounds,
         cellSize,
         scale,
         onCommit: (rect) => onDragEnd?.(rect),
@@ -91,6 +102,21 @@ export function FurnitureItem({
                 >
                     {furniture.name}
                 </Text>
+                {selected && onResizeEnd && (
+                    <ResizeHandle
+                        position={{ x: furniture.gridX, y: furniture.gridY }}
+                        size={{ w: furniture.gridW, h: furniture.gridH }}
+                        maxRight={bounds.w}
+                        maxBottom={bounds.h}
+                        cellSize={cellSize}
+                        scale={scale}
+                        blocksExternal={canvasPanGesture}
+                        onCommit={onResizeEnd}
+                        handleTestID={`resize-handle-${furniture.id}`}
+                        dragTestID={`furniture-resize-${furniture.id}`}
+                        accessibilityLabel="家具のサイズを変更"
+                    />
+                )}
             </Animated.View>
         </GestureDetector>
     );

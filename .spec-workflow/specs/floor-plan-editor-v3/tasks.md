@@ -27,7 +27,7 @@
     - 異常系: 保存失敗時に元の name にロールバック
   - _Requirements: 4_
 
-- [ ] 12. hooks: deleteRoom の楽観的更新＋失敗時ロールバック・通知
+- [x] 12. hooks: deleteRoom の楽観的更新＋失敗時ロールバック・通知
   - File: mobile/src/features/floor-plan/hooks/useFloorPlan.ts
   - 現状の deleteRoom は mutationFn + invalidate のみで、Requirement 1.4（削除失敗時のロールバックと通知）を満たさない。buildDeleteFurnitureMutationOptions と同型の buildDeleteRoomMutationOptions を追加し、キャッシュからの楽観的除去・onError ロールバック・失敗通知を実装する（PR #114 レビュー指摘のフォロー）
   - _Leverage: buildDeleteFurnitureMutationOptions_
@@ -82,7 +82,7 @@
 
 ## フェーズ3: 家具のリサイズ
 
-- [ ] 7. FurnitureItem に ResizeHandle を組み込み
+- [x] 7. FurnitureItem に ResizeHandle を組み込み
   - File: mobile/src/features/floor-plan/components/FurnitureItem.tsx, FloorPlanCanvas.tsx
   - 選択中の家具の右下に ResizeHandle を表示（bounds = 所属部屋の相対矩形、最小 1×1）。確定時に onResizeEnd でスナップ済みサイズを親へ渡し、updateFurniture.mutate を呼ぶ
   - Purpose: 家具の大きさ調整（Requirement 3）
@@ -96,7 +96,7 @@
 
 ## フェーズ4: 追加時サイズ指定・空き配置
 
-- [ ] 8. AddRoomModal にサイズステッパー追加
+- [x] 8. AddRoomModal にサイズステッパー追加
   - File: mobile/src/features/floor-plan/components/AddRoomModal.tsx
   - 幅・高さのステッパー（1〜キャンバス上限、既定 4×4）を追加し、onSubmit のペイロードに gridW/gridH を含める
   - Purpose: 部屋の追加時サイズ指定（Requirement 5.1 / 5.2）
@@ -118,7 +118,7 @@
     - 正常系: 自由名称入力では 1×1 で onSubmit
   - _Requirements: 5_
 
-- [ ] 10. 家具追加の空き配置と相対座標バグ修正
+- [x] 10. 家具追加の空き配置と相対座標バグ修正
   - File: mobile/app/floor-plan/[roomId].tsx（handleAddFurniture）
   - 指定サイズを部屋サイズにクランプ → `findFreePosition`（bounds = {0,0,room.gridW,room.gridH}、障害物 = 既存家具）で空き探索 → null なら (0,0)。**現状 room.gridX/gridY（絶対座標）を相対座標として渡しているバグをここで修正する**
   - Purpose: 家具が重なって追加される問題と座標系バグの解消（Requirement 6）
@@ -132,6 +132,6 @@
 
 ## フェーズ5: 統合
 
-- [ ] 11. E2E シナリオ追加（Maestro）
+- [x] 11. E2E シナリオ追加（Maestro）
   - 「部屋追加（サイズ指定）→ 家具追加（重ならない）→ 家具リサイズ → 部屋リネーム → 部屋削除 → 再起動して反映が保持」のシナリオを issue #68/#70 の E2E 基盤に追加する
   - _Requirements: All_

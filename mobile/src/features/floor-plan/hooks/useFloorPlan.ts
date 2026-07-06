@@ -29,6 +29,7 @@ type UpdateFurnitureExecutor = {
     execute: (userId: string, furnitureId: string, input: UpdateFurnitureInput) => Promise<Furniture>;
 };
 type UpdateFurnitureVariables = { furnitureId: string; input: UpdateFurnitureInput };
+type DeleteRoomExecutor = { execute: (userId: string, roomId: string) => Promise<void> };
 type DeleteFurnitureExecutor = { execute: (userId: string, furnitureId: string) => Promise<void> };
 
 export function buildFloorPlanQuery(userId: string, repository: Pick<FloorPlanRepository, 'getFloorPlan'>) {
@@ -197,6 +198,34 @@ export function buildUpdateFurnitureMutationOptions(
     };
 }
 
+export function buildDeleteRoomMutationOptions(
+    queryClient: QueryClient,
+    userId: string,
+    useCase: DeleteRoomExecutor,
+) {
+    return {
+        mutationFn: (roomId: string) => useCase.execute(userId, roomId),
+        onMutate: async (roomId: string) => {
+            await queryClient.cancelQueries({ queryKey: ['floorPlan', userId] });
+            const previous = queryClient.getQueryData<FloorPlan>(['floorPlan', userId]);
+            queryClient.setQueryData<FloorPlan>(['floorPlan', userId], (old) => ({
+                rooms: (old?.rooms ?? []).filter((room) => room.id !== roomId),
+            }));
+            return { previous };
+        },
+        onError: (
+            _err: unknown,
+            _roomId: string,
+            context: { previous: FloorPlan | undefined } | undefined,
+        ) => {
+            queryClient.setQueryData<FloorPlan>(['floorPlan', userId], context?.previous);
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['floorPlan', userId] });
+        },
+    };
+}
+
 export function buildDeleteFurnitureMutationOptions(
     queryClient: QueryClient,
     userId: string,
@@ -253,12 +282,9 @@ export function useFloorPlan(userId: string, repository: FloorPlanRepository) {
         ),
     );
 
-    const deleteRoom = useMutation({
-        mutationFn: (roomId: string) => new DeleteRoomUseCase(repository).execute(userId, roomId),
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['floorPlan', userId] });
-        },
-    });
+    const deleteRoom = useMutation(
+        buildDeleteRoomMutationOptions(queryClient, userId, new DeleteRoomUseCase(repository)),
+    );
 
     const deleteFurniture = useMutation(
         buildDeleteFurnitureMutationOptions(

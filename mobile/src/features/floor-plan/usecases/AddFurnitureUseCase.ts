@@ -13,9 +13,10 @@ export class AddFurnitureUseCase {
             return this.repository.createFurniture(userId, roomId, input);
         }
 
-        const roomRect = { x: room.gridX, y: room.gridY, w: room.gridW, h: room.gridH };
+        // 家具座標は部屋相対（0基点）。可動域は部屋サイズの相対矩形でクランプする
+        const relativeBounds = { x: 0, y: 0, w: room.gridW, h: room.gridH };
         const furnitureRect = { x: input.gridX, y: input.gridY, w: input.gridW, h: input.gridH };
-        const clamped = clampWithin(furnitureRect, roomRect);
+        const clamped = clampWithin(furnitureRect, relativeBounds);
 
         return this.repository.createFurniture(userId, roomId, {
             ...input,

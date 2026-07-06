@@ -231,6 +231,17 @@ export function FloorPlanCanvas({
                                     onDragEnd={(rect) =>
                                         onFurnitureDragEnd?.(furn.id, rect)
                                     }
+                                    onResizeEnd={
+                                        onFurnitureDragEnd
+                                            ? (size) =>
+                                                  onFurnitureDragEnd(furn.id, {
+                                                      x: furn.gridX,
+                                                      y: furn.gridY,
+                                                      w: size.w,
+                                                      h: size.h,
+                                                  })
+                                            : undefined
+                                    }
                                 />
                             ))}
                         </React.Fragment>

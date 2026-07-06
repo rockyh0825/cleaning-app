@@ -326,8 +326,38 @@ describe('FloorPlanIndexScreen', () => {
             destructiveButton?.onPress?.();
         });
 
-        // Assert
-        expect(mockDeleteMutate).toHaveBeenCalledWith('room-1');
+        // Assert: roomId と、失敗時ロールバック後の通知用 onError を渡して削除する
+        expect(mockDeleteMutate).toHaveBeenCalledWith(
+            'room-1',
+            expect.objectContaining({ onError: expect.any(Function) }),
+        );
+    });
+
+    it('alerts_delete_failure_when_delete_room_mutation_fails', async () => {
+        // Arrange: mutate は onError を受け取り、それを発火させて失敗を再現する
+        const alertSpy = jest.spyOn(Alert, 'alert');
+        const mockDeleteMutate = jest.fn(
+            (_roomId: string, options?: { onError?: () => void }) => {
+                options?.onError?.();
+            },
+        );
+        mockHookWithLivingRoom({ deleteRoom: mockDeleteMutate });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        fireEvent.press(screen.getByTestId('selection-delete'));
+
+        // Act: 確認ダイアログの破壊的ボタンで確定する（mutate が失敗して onError が走る）
+        const buttons = alertSpy.mock.calls[0][2];
+        const destructiveButton = buttons?.find((b) => b.style === 'destructive');
+        act(() => {
+            destructiveButton?.onPress?.();
+        });
+
+        // Assert: 失敗通知の Alert が出る（確認ダイアログの1回に加えて2回目）
+        expect(alertSpy).toHaveBeenCalledTimes(2);
+        const [failureTitle] = alertSpy.mock.calls[1];
+        expect(failureTitle).toMatch(/削除に失敗しました/);
     });
 
     it('does_not_delete_room_when_only_confirmation_is_shown', async () => {
@@ -591,6 +621,35 @@ describe('FloorPlanIndexScreen', () => {
         await waitFor(() => {
             expect(mockMutate).toHaveBeenCalledWith(
                 expect.objectContaining({ gridX: 4, gridY: 0, gridW: 4, gridH: 4 }),
+            );
+        });
+    });
+
+    it('adds_room_with_size_selected_in_modal_steppers', async () => {
+        // Arrange: 空のキャンバスでモーダルからサイズを変更して追加する
+        const mockMutate = jest.fn();
+        mockUseLayout.mockReturnValue({
+            floorPlan: { data: { rooms: [] }, isLoading: false, isError: false },
+            addRoom: { mutate: mockMutate },
+            updateRoom: { mutate: jest.fn() },
+            deleteRoom: { mutate: jest.fn() },
+        });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        await screen.findByTestId('empty-state');
+
+        // Act: モーダルを開き、幅を 4→6、高さを 4→5 に変更して送信
+        fireEvent.press(screen.getByTestId('fab'));
+        fireEvent.press(screen.getByTestId('room-width-stepper-inc'));
+        fireEvent.press(screen.getByTestId('room-width-stepper-inc'));
+        fireEvent.press(screen.getByTestId('room-height-stepper-inc'));
+        fireEvent.changeText(screen.getByPlaceholderText('部屋名'), '寝室');
+        fireEvent.press(screen.getByText('追加'));
+
+        // Assert: モーダルで選んだサイズが mutate に反映される
+        await waitFor(() => {
+            expect(mockMutate).toHaveBeenCalledWith(
+                expect.objectContaining({ gridW: 6, gridH: 5 }),
             );
         });
     });
