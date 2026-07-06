@@ -7,11 +7,15 @@ type Props = {
     targetName: string;
     onRename: () => void;
     onDelete: () => void;
+    /** 指定時のみ右端に選択解除（✕）ボタンを表示する */
+    onDismiss?: () => void;
 };
 
 type ActionButtonProps = {
     testID: string;
     label: string;
+    /** 表示ラベルが記号のみの場合などに読み上げ用の名前を指定する（省略時は label） */
+    accessibilityLabel?: string;
     color: string;
     onPress: () => void;
 };
@@ -20,14 +24,20 @@ type ActionButtonProps = {
  * 操作バー内のテキストボタン。
  * 見た目はコンパクトなまま、縦方向の hitSlop でタッチターゲットを 44pt 以上確保する。
  */
-function ActionButton({ testID, label, color, onPress }: ActionButtonProps) {
+function ActionButton({
+    testID,
+    label,
+    accessibilityLabel,
+    color,
+    onPress,
+}: ActionButtonProps) {
     const theme = useAppTheme();
 
     return (
         <Pressable
             testID={testID}
             accessibilityRole="button"
-            accessibilityLabel={label}
+            accessibilityLabel={accessibilityLabel ?? label}
             onPress={onPress}
             hitSlop={{ top: theme.spacing.sm, bottom: theme.spacing.sm }}
             style={({ pressed }) => [
@@ -49,7 +59,7 @@ function ActionButton({ testID, label, color, onPress }: ActionButtonProps) {
  * 選択中の対象（部屋・家具）に対する操作バー。
  * 名称と「名称変更」「削除」ボタンを表示する。色はテーマトークンのみ参照する。
  */
-export function SelectionActions({ targetName, onRename, onDelete }: Props) {
+export function SelectionActions({ targetName, onRename, onDelete, onDismiss }: Props) {
     const theme = useAppTheme();
 
     return (
@@ -85,6 +95,15 @@ export function SelectionActions({ targetName, onRename, onDelete }: Props) {
                 color={theme.colors.danger}
                 onPress={onDelete}
             />
+            {onDismiss && (
+                <ActionButton
+                    testID="selection-dismiss"
+                    label="✕"
+                    accessibilityLabel="選択を解除"
+                    color={theme.colors.textMuted}
+                    onPress={onDismiss}
+                />
+            )}
         </View>
     );
 }

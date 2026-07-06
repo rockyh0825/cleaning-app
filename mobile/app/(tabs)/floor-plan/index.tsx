@@ -24,7 +24,8 @@ export default function FloorPlanIndexScreen() {
   const userId = useUserId();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
-  const [isRenameSheetVisible, setIsRenameSheetVisible] = useState(false);
+  // boolean だと対象消失後の別部屋選択でシートが誤って開くため、対象の部屋 id で追跡する
+  const [renamingRoomId, setRenamingRoomId] = useState<string | null>(null);
 
   const { floorPlan, addRoom, updateRoom, deleteRoom } = useFloorPlan(
     userId ?? "",
@@ -67,7 +68,7 @@ export default function FloorPlanIndexScreen() {
   function handleRenameSubmit(name: string) {
     if (!selectedRoom) return;
     updateRoom.mutate({ roomId: selectedRoom.id, input: { name } });
-    setIsRenameSheetVisible(false);
+    setRenamingRoomId(null);
   }
 
   function handleAddRoom(input: {
@@ -151,6 +152,11 @@ export default function FloorPlanIndexScreen() {
         <FloorPlanCanvas
           floorPlan={floorPlan.data!}
           onRoomPress={handleRoomPress}
+          // 間取り一覧では家具への操作は提供しないため、部屋の選択解除のみ行う（誤削除防止）
+          onFurniturePress={() => {
+            setSelectedRoomId(null);
+            setRenamingRoomId(null);
+          }}
           onRoomDragEnd={(roomId, rect) =>
             updateRoom.mutate({
               roomId,
@@ -165,16 +171,20 @@ export default function FloorPlanIndexScreen() {
           style={[
             styles.selectionActionsContainer,
             {
+              top: theme.spacing.md,
               left: theme.spacing.md,
               right: theme.spacing.md,
-              bottom: theme.spacing.xl,
             },
           ]}
         >
           <SelectionActions
             targetName={selectedRoom.name}
-            onRename={() => setIsRenameSheetVisible(true)}
+            onRename={() => setRenamingRoomId(selectedRoom.id)}
             onDelete={handleDeletePress}
+            onDismiss={() => {
+              setSelectedRoomId(null);
+              setRenamingRoomId(null);
+            }}
           />
         </View>
       )}
@@ -191,10 +201,10 @@ export default function FloorPlanIndexScreen() {
       />
 
       <RenameSheet
-        visible={isRenameSheetVisible && selectedRoom != null}
+        visible={renamingRoomId != null && renamingRoomId === selectedRoom?.id}
         initialName={selectedRoom?.name ?? ""}
         onSubmit={handleRenameSubmit}
-        onClose={() => setIsRenameSheetVisible(false)}
+        onClose={() => setRenamingRoomId(null)}
       />
     </View>
   );
@@ -213,6 +223,7 @@ const styles = StyleSheet.create({
     fontSize: 64,
     lineHeight: 76,
   },
+  // FAB（右下）と重ならないよう画面上部に置く
   selectionActionsContainer: {
     position: "absolute",
   },
