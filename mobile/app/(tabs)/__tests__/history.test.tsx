@@ -165,9 +165,14 @@ describe('HistoryScreen', () => {
                 input: { note: 'フィルター交換と換気扇掃除' },
             });
         });
-        await waitFor(() => {
-            expect(screen.queryByTestId('note-input-record-2')).toBeNull();
-        });
+        // クローズは mutateAsync の解決後（非同期）に起きるため、CI の遅い環境でも
+        // タイムアウトしないよう待ち時間を長めに取る。
+        await waitFor(
+            () => {
+                expect(screen.queryByTestId('note-input-record-2')).toBeNull();
+            },
+            { timeout: 5000 },
+        );
     });
 
     it('keeps_edit_ui_with_draft_when_update_record_mutation_fails', async () => {

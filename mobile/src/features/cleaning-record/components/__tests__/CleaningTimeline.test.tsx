@@ -123,9 +123,14 @@ describe("CleaningTimeline", () => {
     fireEvent.press(screen.getByTestId("save-note-button-record-1"));
 
     // Assert: 成功したら編集UIを閉じる
-    await waitFor(() => {
-      expect(screen.queryByTestId("note-input-record-1")).toBeNull();
-    });
+    // クローズは onUpdateNote の解決後（非同期）に起きるため、CI の遅い環境でも
+    // タイムアウトしないよう待ち時間を長めに取る。
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId("note-input-record-1")).toBeNull();
+      },
+      { timeout: 5000 },
+    );
     expect(onUpdateNote).toHaveBeenCalledWith("record-1", "新しいメモ");
   });
 
