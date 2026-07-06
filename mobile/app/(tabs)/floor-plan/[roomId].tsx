@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+    ActivityIndicator,
+    Alert,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
 import { FloorPlanCanvas } from '@/features/floor-plan/components/FloorPlanCanvas';
@@ -63,6 +70,32 @@ export default function RoomDetailScreen() {
         if (!selectedFurniture) return;
         updateFurniture.mutate({ furnitureId: selectedFurniture.id, input: { name } });
         setRenamingFurnitureId(null);
+    }
+
+    // 取得完了前に room を判定すると実在の部屋でも not-found に落ちるため、
+    // ローディング → エラー → not-found の順に出し分ける
+    if (floorPlan.isLoading) {
+        return (
+            <View
+                testID="room-loading"
+                style={[styles.notFound, { backgroundColor: theme.colors.background }]}
+            >
+                <ActivityIndicator color={theme.colors.primary} />
+            </View>
+        );
+    }
+
+    if (floorPlan.isError) {
+        return (
+            <View
+                testID="room-error"
+                style={[styles.notFound, { backgroundColor: theme.colors.background }]}
+            >
+                <Text style={[theme.typography.body, { color: theme.colors.danger }]}>
+                    読み込みに失敗しました
+                </Text>
+            </View>
+        );
     }
 
     if (!room) {

@@ -366,6 +366,56 @@ describe('RoomDetailScreen', () => {
         expect(screen.queryByTestId('selection-actions')).toBeNull();
     });
 
+    it('shows_loading_indicator_and_not_not_found_while_floor_plan_is_loading', () => {
+        // Arrange: フェッチ中（data 未取得）の状態を再現する
+        mockUseFloorPlan.mockReturnValue({
+            floorPlan: { data: undefined, isLoading: true, isError: false },
+            addFurniture: { mutate: jest.fn() },
+        });
+
+        // Act
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+
+        // Assert: ローディングを表示し「部屋が見つかりません」は出さない
+        expect(screen.getByTestId('room-loading')).toBeTruthy();
+        expect(screen.queryByTestId('room-not-found')).toBeNull();
+    });
+
+    it('shows_error_message_and_not_not_found_when_floor_plan_fetch_fails', () => {
+        // Arrange: フェッチ失敗の状態を再現する
+        mockUseFloorPlan.mockReturnValue({
+            floorPlan: { data: undefined, isLoading: false, isError: true },
+            addFurniture: { mutate: jest.fn() },
+        });
+
+        // Act
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+
+        // Assert: エラーを表示し「部屋が見つかりません」は出さない
+        expect(screen.getByTestId('room-error')).toBeTruthy();
+        expect(screen.queryByTestId('room-not-found')).toBeNull();
+    });
+
+    it('shows_not_found_only_after_load_completes_without_the_room', () => {
+        // Arrange: 取得完了かつ該当部屋（room-1）が存在しない状態を再現する
+        mockUseFloorPlan.mockReturnValue({
+            floorPlan: {
+                data: { rooms: [{ ...targetRoom, id: 'other-room', furniture: [] }] },
+                isLoading: false,
+                isError: false,
+            },
+            addFurniture: { mutate: jest.fn() },
+        });
+
+        // Act
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+
+        // Assert: ロード完了・該当なしのときだけ not-found を出す
+        expect(screen.getByTestId('room-not-found')).toBeTruthy();
+        expect(screen.queryByTestId('room-loading')).toBeNull();
+        expect(screen.queryByTestId('room-error')).toBeNull();
+    });
+
     it('does_not_reopen_rename_sheet_for_next_selection_after_target_furniture_disappears', async () => {
         // Arrange: 家具Aを選択して名称変更シートを開く
         mockHookWithFurniture([sofa]);
