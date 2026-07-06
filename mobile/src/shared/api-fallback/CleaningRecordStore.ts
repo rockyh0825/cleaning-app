@@ -41,19 +41,27 @@ export class CleaningRecordStore {
 
   private seedFixtures(initialRoomIds: string[]): void {
     const now = new Date("2024-01-01T00:00:00.000Z");
-    initialRoomIds.forEach((roomId) => {
-      const floorPart: Part = {
-        id: this.nextId("part"),
-        ownerType: "ROOM" as Part["ownerType"],
-        ownerId: roomId,
-        name: "床",
-        recommendedCycleDays: 7,
-        lastCleanedAt: null,
-        createdAt: now,
-        updatedAt: now,
-      };
-      this.parts.set(floorPart.id, floorPart);
-    });
+    initialRoomIds.forEach((roomId) => this.seedFloorPart(roomId, now));
+  }
+
+  /**
+   * 部屋のデフォルトパーツ「床」を作成する。
+   * 起動時のフィクスチャ部屋に加え、起動後に UI から作成された部屋にも適用する
+   * （これが無いと MOCK_START_EMPTY ビルドではパーツが一切存在せず、
+   * 掃除記録フローに到達できない）。
+   */
+  seedFloorPart(roomId: string, timestamp: Date = new Date()): void {
+    const floorPart: Part = {
+      id: this.nextId("part"),
+      ownerType: "ROOM" as Part["ownerType"],
+      ownerId: roomId,
+      name: "床",
+      recommendedCycleDays: 7,
+      lastCleanedAt: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    this.parts.set(floorPart.id, floorPart);
   }
 
   private recomputeLastCleanedAt(partId: string): void {

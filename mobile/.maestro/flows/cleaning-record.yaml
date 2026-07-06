@@ -1,0 +1,66 @@
+appId: com.cleaningapp.mobile
+---
+# cleaning-record E2E（issue #112 / tasks.md フェーズ4 Task15）
+#
+# 検証フロー: 部屋作成 → エリア選択 → パーツ（床）を一括チェック → 記録
+#            → 最終掃除日時の表示更新 → 履歴タブで記録確認 → メモ修正 → 反映確認
+#
+# 前提:
+# - バックエンド未起動（#64 の MockDefaultApi fallback）でアプリが起動していること
+# - EXPO_PUBLIC_MOCK_START_EMPTY=true でビルドされていること
+# - MockDefaultApi は部屋作成時にデフォルトパーツ「床」をシードする
+# - パーツ・掃除記録はメモリのみの保持（アプリ再起動で消える）のため、
+#   本フローは再起動を挟まず1セッションで完結させる
+
+- launchApp:
+    clearState: true
+
+# --- 部屋を作成（空状態から） ---
+- assertVisible:
+    id: "empty-state"
+- tapOn: "部屋を追加"
+- assertVisible: "部屋名"
+- inputText: "テスト部屋"
+# 単一行TextInputはreturnキーでblurされる。キーボードを閉じないと
+# モーダル下部の「追加」ボタンがキーボードに覆われてタップが吸われる
+- pressKey: Enter
+- tapOn: "その他"
+- tapOn: "追加"
+- assertVisible: "テスト部屋"
+
+# --- エリア選択: 部屋タップ → 部屋詳細 → 掃除を記録 ---
+- tapOn: "テスト部屋"
+- assertVisible: "掃除を記録"
+- tapOn: "掃除を記録"
+
+# --- パーツ一括チェック → 記録 ---
+- assertVisible: "床"
+- assertVisible: "最終掃除: 未記録"
+- takeScreenshot: .maestro/screenshots/cleaning-record-01-part-checklist
+- tapOn: "床"
+- tapOn: "記録（1件）"
+
+# --- 最終掃除日時が更新される ---
+- extendedWaitUntil:
+    visible: "最終掃除: 20.*"
+    timeout: 10000
+- takeScreenshot: .maestro/screenshots/cleaning-record-02-last-cleaned-updated
+
+# --- 履歴タブで記録を確認 ---
+- tapOn: "戻る"
+- assertVisible: "掃除を記録"
+- tapOn: "履歴"
+- extendedWaitUntil:
+    visible: "パーツ: .*"
+    timeout: 10000
+- takeScreenshot: .maestro/screenshots/cleaning-record-03-history
+
+# --- メモを修正して反映を確認 ---
+- tapOn: "修正"
+- inputText: "換気扇もきれいにした"
+- pressKey: Enter
+- tapOn: "保存"
+- extendedWaitUntil:
+    visible: "換気扇もきれいにした"
+    timeout: 10000
+- takeScreenshot: .maestro/screenshots/cleaning-record-04-note-edited

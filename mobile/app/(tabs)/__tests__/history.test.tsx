@@ -137,6 +137,57 @@ describe('HistoryScreen', () => {
         expect(screen.getByTestId('delete-button-record-1')).toBeTruthy();
     });
 
+    it('calls_update_record_mutation_when_note_is_saved', async () => {
+        // Arrange
+        const mockUpdateMutate = jest.fn();
+        mockUseCleaningHistory.mockReturnValue({
+            records: RECORDS,
+            isLoading: false,
+            error: null,
+            deleteRecord: { mutate: jest.fn() },
+            updateRecord: { mutate: mockUpdateMutate },
+        });
+        render(<HistoryScreen />, { wrapper: createWrapper() });
+        await screen.findAllByTestId('timeline-item');
+
+        // Act
+        fireEvent.press(screen.getByTestId('edit-button-record-2'));
+        fireEvent.changeText(
+            screen.getByTestId('note-input-record-2'),
+            'フィルター交換と換気扇掃除',
+        );
+        fireEvent.press(screen.getByTestId('save-note-button-record-2'));
+
+        // Assert
+        await waitFor(() => {
+            expect(mockUpdateMutate).toHaveBeenCalledWith({
+                recordId: 'record-2',
+                input: { note: 'フィルター交換と換気扇掃除' },
+            });
+        });
+    });
+
+    it('shows_error_banner_when_update_record_fails', async () => {
+        // Arrange: 修正 mutation が失敗した状態
+        mockUseCleaningHistory.mockReturnValue({
+            records: RECORDS,
+            isLoading: false,
+            error: null,
+            deleteRecord: { mutate: jest.fn() },
+            updateRecord: { mutate: jest.fn(), isError: true },
+        });
+
+        // Act
+        render(<HistoryScreen />, { wrapper: createWrapper() });
+
+        // Assert: エラーバナーが表示され、タイムラインは残る
+        await waitFor(() => {
+            expect(screen.getByTestId('update-record-error')).toBeTruthy();
+        });
+        expect(screen.getByText('修正に失敗しました')).toBeTruthy();
+        expect(screen.getAllByTestId('timeline-item')).toHaveLength(2);
+    });
+
     it('calls_delete_record_mutation_when_delete_button_is_pressed', async () => {
         // Arrange
         const mockDeleteMutate = jest.fn();

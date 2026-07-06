@@ -20,7 +20,11 @@ function ThemedStack() {
             }}
         >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="area/[areaId]" options={{ title: 'エリア詳細' }} />
+            {/* headerBackTitle: E2E（Maestro）が戻るボタンをテキストで特定するため明示する */}
+            <Stack.Screen
+                name="area/[areaId]"
+                options={{ title: 'エリア詳細', headerBackTitle: '戻る' }}
+            />
         </Stack>
     );
 }

@@ -1,5 +1,10 @@
 import React from "react";
-import { render, screen, fireEvent, within } from "@testing-library/react-native";
+import {
+  render,
+  screen,
+  fireEvent,
+  within,
+} from "@testing-library/react-native";
 import { CleaningTimeline } from "../CleaningTimeline";
 import type { CleaningRecord } from "../../types";
 
@@ -59,6 +64,76 @@ describe("CleaningTimeline", () => {
     // Assert
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledWith("record-1");
+  });
+
+  it("shows_note_input_with_current_note_when_edit_button_pressed", () => {
+    // Arrange
+    const records: CleaningRecord[] = [
+      makeRecord({ id: "record-1", note: "換気扇も掃除した" }),
+    ];
+    const onUpdateNote = jest.fn();
+
+    // Act
+    render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
+    fireEvent.press(screen.getByTestId("edit-button-record-1"));
+
+    // Assert
+    const input = screen.getByTestId("note-input-record-1");
+    expect(input.props.value).toBe("換気扇も掃除した");
+  });
+
+  it("calls_onUpdateNote_with_edited_note_when_save_pressed", () => {
+    // Arrange
+    const records: CleaningRecord[] = [
+      makeRecord({ id: "record-1", note: null }),
+    ];
+    const onUpdateNote = jest.fn();
+
+    // Act
+    render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
+    fireEvent.press(screen.getByTestId("edit-button-record-1"));
+    fireEvent.changeText(
+      screen.getByTestId("note-input-record-1"),
+      "ワックスもかけた",
+    );
+    fireEvent.press(screen.getByTestId("save-note-button-record-1"));
+
+    // Assert
+    expect(onUpdateNote).toHaveBeenCalledTimes(1);
+    expect(onUpdateNote).toHaveBeenCalledWith("record-1", "ワックスもかけた");
+  });
+
+  it("closes_edit_ui_without_saving_when_cancel_pressed", () => {
+    // Arrange
+    const records: CleaningRecord[] = [
+      makeRecord({ id: "record-1", note: "元のメモ" }),
+    ];
+    const onUpdateNote = jest.fn();
+
+    // Act
+    render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
+    fireEvent.press(screen.getByTestId("edit-button-record-1"));
+    fireEvent.changeText(
+      screen.getByTestId("note-input-record-1"),
+      "書き換えたが保存しない",
+    );
+    fireEvent.press(screen.getByTestId("cancel-note-button-record-1"));
+
+    // Assert
+    expect(onUpdateNote).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("note-input-record-1")).toBeNull();
+    expect(screen.getByText("元のメモ")).toBeTruthy();
+  });
+
+  it("does_not_show_edit_button_when_onUpdateNote_is_not_provided", () => {
+    // Arrange
+    const records: CleaningRecord[] = [makeRecord({ id: "record-1" })];
+
+    // Act
+    render(<CleaningTimeline records={records} />);
+
+    // Assert
+    expect(screen.queryByTestId("edit-button-record-1")).toBeNull();
   });
 
   it("shows_empty_state_message_when_records_list_is_empty", () => {

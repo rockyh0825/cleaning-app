@@ -75,7 +75,10 @@ export class MockDefaultApi implements DefaultApiInterface {
   }
 
   async createRoom(requestParameters: CreateRoomRequest) {
-    return this.floorPlanStore.createRoom(requestParameters);
+    const room = await this.floorPlanStore.createRoom(requestParameters);
+    const cleaningRecordStore = await this.cleaningRecordStoreReady;
+    cleaningRecordStore.seedFloorPart(room.id);
+    return room;
   }
 
   async updateRoom(requestParameters: UpdateRoomRequest) {
@@ -105,9 +108,7 @@ export class MockDefaultApi implements DefaultApiInterface {
   ): Promise<void> {
     await this.floorPlanStore.deleteFurniture(requestParameters);
     const cleaningRecordStore = await this.cleaningRecordStoreReady;
-    cleaningRecordStore.deletePartsForOwners([
-      requestParameters.furnitureId,
-    ]);
+    cleaningRecordStore.deletePartsForOwners([requestParameters.furnitureId]);
   }
 
   async listParts(requestParameters: ListPartsRequest) {
@@ -115,21 +116,15 @@ export class MockDefaultApi implements DefaultApiInterface {
   }
 
   async createPart(requestParameters: CreatePartRequest) {
-    return (await this.cleaningRecordStoreReady).createPart(
-      requestParameters,
-    );
+    return (await this.cleaningRecordStoreReady).createPart(requestParameters);
   }
 
   async updatePart(requestParameters: UpdatePartRequest) {
-    return (await this.cleaningRecordStoreReady).updatePart(
-      requestParameters,
-    );
+    return (await this.cleaningRecordStoreReady).updatePart(requestParameters);
   }
 
   async deletePart(requestParameters: DeletePartRequest) {
-    return (await this.cleaningRecordStoreReady).deletePart(
-      requestParameters,
-    );
+    return (await this.cleaningRecordStoreReady).deletePart(requestParameters);
   }
 
   async createCleaningRecords(requestParameters: CreateCleaningRecordsRequest) {

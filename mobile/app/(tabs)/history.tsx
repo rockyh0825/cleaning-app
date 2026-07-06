@@ -13,7 +13,7 @@ export default function HistoryScreen() {
     const theme = useAppTheme();
     const userId = useUserId();
 
-    const { records, isLoading, error, deleteRecord } = useCleaningHistory(
+    const { records, isLoading, error, deleteRecord, updateRecord } = useCleaningHistory(
         userId ?? '',
         {},
         repository,
@@ -52,9 +52,19 @@ export default function HistoryScreen() {
                     </Text>
                 </View>
             )}
+            {updateRecord.isError && (
+                <View testID="update-record-error" style={styles.errorBanner}>
+                    <Text style={[theme.typography.body, { color: theme.colors.danger }]}>
+                        修正に失敗しました
+                    </Text>
+                </View>
+            )}
             <CleaningTimeline
                 records={records}
                 onDelete={(recordId) => deleteRecord.mutate(recordId)}
+                onUpdateNote={(recordId, note) =>
+                    updateRecord.mutate({ recordId, input: { note } })
+                }
             />
         </View>
     );

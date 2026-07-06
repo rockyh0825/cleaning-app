@@ -64,6 +64,38 @@ describe("PartChecklist", () => {
     expect(onLogCleaning).toHaveBeenCalledWith(["part-1"]);
   });
 
+  it("displays_last_cleaned_datetime_when_part_has_lastCleanedAt", () => {
+    // Arrange
+    const parts: Part[] = [
+      makePart({
+        id: "part-1",
+        name: "キッチン床",
+        lastCleanedAt: new Date(2024, 2, 15, 9, 5),
+      }),
+    ];
+    const onLogCleaning = jest.fn();
+
+    // Act
+    render(<PartChecklist parts={parts} onLogCleaning={onLogCleaning} />);
+
+    // Assert
+    expect(screen.getByText("最終掃除: 2024/03/15 09:05")).toBeTruthy();
+  });
+
+  it("displays_unrecorded_label_when_part_has_no_lastCleanedAt", () => {
+    // Arrange
+    const parts: Part[] = [
+      makePart({ id: "part-1", name: "キッチン床", lastCleanedAt: null }),
+    ];
+    const onLogCleaning = jest.fn();
+
+    // Act
+    render(<PartChecklist parts={parts} onLogCleaning={onLogCleaning} />);
+
+    // Assert
+    expect(screen.getByText("最終掃除: 未記録")).toBeTruthy();
+  });
+
   it("disables_record_button_when_no_parts_selected", () => {
     // Arrange
     const parts: Part[] = [makePart({ id: "part-1", name: "キッチン床" })];
