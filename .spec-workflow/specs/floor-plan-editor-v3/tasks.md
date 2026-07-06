@@ -107,7 +107,7 @@
     - 境界値: 1 未満・キャンバス上限超過にはできない
   - _Requirements: 5_
 
-- [ ] 9. 家具プリセットに既定サイズを定義し AddFurnitureModal に反映
+- [x] 9. 家具プリセットに既定サイズを定義し AddFurnitureModal に反映
   - File: mobile/src/features/floor-plan/constants.ts, components/AddFurnitureModal.tsx
   - 各プリセットに `defaultSize` を追加（例: ベッド 2×3、冷蔵庫 1×1）。プリセット選択でサイズ初期値に反映し、onSubmit に gridW/gridH を含める。自由名称入力は 1×1
   - Purpose: 家具の追加時サイズ指定（Requirement 5.3 / 5.4）

@@ -14,40 +14,54 @@ import { FURNITURE_PRESETS } from '../constants';
 type Props = {
     visible: boolean;
     roomId: string;
-    onSubmit: (input: { name: string; presetKey?: string }) => void;
+    onSubmit: (input: {
+        name: string;
+        presetKey?: string;
+        gridW: number;
+        gridH: number;
+    }) => void;
     onCancel: () => void;
 };
+
+// 自由名称（プリセット未選択）のときの既定サイズ
+const FREE_NAME_SIZE = { w: 1, h: 1 };
 
 export function AddFurnitureModal({ visible, onSubmit, onCancel }: Props) {
     const theme = useAppTheme();
     const [name, setName] = useState('');
     const [selectedPresetKey, setSelectedPresetKey] = useState<string | null>(null);
+    const [size, setSize] = useState(FREE_NAME_SIZE);
 
     function reset() {
         setName('');
         setSelectedPresetKey(null);
+        setSize(FREE_NAME_SIZE);
     }
 
     function handleSelectPreset(key: string, label: string) {
+        const preset = FURNITURE_PRESETS.find((p) => p.key === key);
         setSelectedPresetKey(key);
         setName(label);
+        setSize(preset ? preset.defaultSize : FREE_NAME_SIZE);
     }
 
     function handleChangeName(value: string) {
-        // 手入力に切り替えたら自由名称扱い（presetKey を外す）
+        // 手入力に切り替えたら自由名称扱い（presetKey を外し、サイズも 1×1 に戻す）
         setSelectedPresetKey(null);
         setName(value);
+        setSize(FREE_NAME_SIZE);
     }
 
     function handleSubmit() {
         if (!name.trim()) {
             return;
         }
-        onSubmit(
-            selectedPresetKey
-                ? { name: name.trim(), presetKey: selectedPresetKey }
-                : { name: name.trim() },
-        );
+        onSubmit({
+            name: name.trim(),
+            ...(selectedPresetKey ? { presetKey: selectedPresetKey } : {}),
+            gridW: size.w,
+            gridH: size.h,
+        });
         reset();
     }
 
