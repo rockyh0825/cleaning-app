@@ -34,22 +34,30 @@ appId: com.cleaningapp.mobile
 - tapOn: "掃除を記録"
 
 # --- パーツ一括チェック → 記録 ---
-- assertVisible: "床"
-- assertVisible: "最終掃除: 未記録"
+# パーツ行は accessibilityRole="checkbox" の1要素にまとまり、iOS では
+# 子テキストが "床 最終掃除: 未記録" のように結合されて公開される。
+# Maestro のテキスト照合は完全一致（正規表現）のため、"床" 単体では一致しない。
+# 部分一致させるため前後を .* で囲む。
+- assertVisible: ".*床.*"
+- assertVisible: ".*最終掃除: 未記録.*"
 - takeScreenshot: .maestro/screenshots/cleaning-record-01-part-checklist
-- tapOn: "床"
+# 選択トグルは結合ラベルの曖昧さを避けて testID（part-item-<id>）で確実にタップする
+- tapOn:
+    id: "part-item-.*"
 - tapOn: "記録（1件）"
 
 # --- 最終掃除日時が更新される ---
 - extendedWaitUntil:
-    visible: "最終掃除: 20.*"
+    visible: ".*最終掃除: 20.*"
     timeout: 10000
 - takeScreenshot: .maestro/screenshots/cleaning-record-02-last-cleaned-updated
 
 # --- 履歴タブで記録を確認 ---
 - tapOn: "戻る"
 - assertVisible: "掃除を記録"
-- tapOn: "履歴"
+# タブ項目は iOS で "履歴, tab, 2 of 2" のように role が付与されて公開されるため
+# 完全一致では見つからない。部分一致させる。
+- tapOn: ".*履歴.*"
 - extendedWaitUntil:
     visible: "パーツ: .*"
     timeout: 10000
