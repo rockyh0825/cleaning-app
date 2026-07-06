@@ -36,7 +36,15 @@ appId: com.cleaningapp.mobile
 # 「掃除を記録」ボタンは accessibilityLabel と子 Text の両方に同じ文字列を持つため、
 # iOS のバージョンによってはアクセシビリティ露出が結合・重複してテキスト完全一致で
 # 見つからないことがある。バージョン非依存の testID（log-cleaning-button）で照合する。
+# 部屋タップの挙動（floor-plan-editor-v3）: 初回タップは選択（操作バー表示）、
+# 選択中の部屋の再タップで詳細へ遷移する。作成直後の部屋は未選択なので、まず名前で
+# タップして選択し、選択後は操作バーにも部屋名が出て多重マッチするため、2回目は
+# シェイプ testID（room-shape-<id>）で絞って再タップし詳細へ遷移する。
 - tapOn: "テスト部屋"
+- assertVisible:
+    id: "selection-actions"
+- tapOn:
+    id: "room-shape-.*"
 - extendedWaitUntil:
     visible:
       id: "log-cleaning-button"
