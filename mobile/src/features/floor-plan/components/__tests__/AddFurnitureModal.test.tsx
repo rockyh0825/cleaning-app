@@ -43,9 +43,13 @@ describe('AddFurnitureModal', () => {
         fireEvent.changeText(input, 'ソファ');
         fireEvent.press(screen.getByText('追加'));
 
-        // Assert
+        // Assert: 自由名称は 1×1
         expect(mockOnSubmit).toHaveBeenCalledTimes(1);
-        expect(mockOnSubmit).toHaveBeenCalledWith({ name: 'ソファ' });
+        expect(mockOnSubmit).toHaveBeenCalledWith({
+            name: 'ソファ',
+            gridW: 1,
+            gridH: 1,
+        });
     });
 
     it('calls_onCancel_when_cancel_pressed', () => {
@@ -82,11 +86,38 @@ describe('AddFurnitureModal', () => {
         fireEvent.press(screen.getByTestId('furniture-preset-chip-sofa'));
         fireEvent.press(screen.getByText('追加'));
 
-        // Assert: プリセット名と presetKey 付きで送信される
+        // Assert: プリセット名・presetKey・既定サイズ付きで送信される
         expect(mockOnSubmit).toHaveBeenCalledTimes(1);
         expect(mockOnSubmit).toHaveBeenCalledWith({
             name: 'ソファ',
             presetKey: 'sofa',
+            gridW: 2,
+            gridH: 1,
+        });
+    });
+
+    it('calls_onSubmit_with_bed_default_size_when_bed_preset_selected', () => {
+        // Arrange
+        render(
+            <AddFurnitureModal
+                visible={true}
+                roomId={testRoomId}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+
+        // Act: ベッドプリセットを選択して送信
+        fireEvent.press(screen.getByTestId('furniture-preset-chip-bed'));
+        fireEvent.press(screen.getByText('追加'));
+
+        // Assert: ベッドの既定サイズ 2×3 が付与される
+        expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+        expect(mockOnSubmit).toHaveBeenCalledWith({
+            name: 'ベッド',
+            presetKey: 'bed',
+            gridW: 2,
+            gridH: 3,
         });
     });
 
@@ -106,9 +137,13 @@ describe('AddFurnitureModal', () => {
         fireEvent.changeText(screen.getByPlaceholderText('家具名'), '観葉植物');
         fireEvent.press(screen.getByText('追加'));
 
-        // Assert: presetKey は付かない
+        // Assert: presetKey は付かず、サイズは 1×1 に戻る
         expect(mockOnSubmit).toHaveBeenCalledTimes(1);
-        expect(mockOnSubmit).toHaveBeenCalledWith({ name: '観葉植物' });
+        expect(mockOnSubmit).toHaveBeenCalledWith({
+            name: '観葉植物',
+            gridW: 1,
+            gridH: 1,
+        });
     });
 
     it('renders_icon_and_accessibility_label_on_each_preset_chip', () => {
@@ -170,5 +205,14 @@ describe('AddFurnitureModal', () => {
 
         // Assert
         expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    it('defines_a_valid_default_size_for_every_preset', () => {
+        // Arrange & Act & Assert: 全プリセットに 1 以上の既定サイズがある
+        for (const preset of FURNITURE_PRESETS) {
+            expect(preset.defaultSize).toBeDefined();
+            expect(preset.defaultSize.w).toBeGreaterThanOrEqual(1);
+            expect(preset.defaultSize.h).toBeGreaterThanOrEqual(1);
+        }
     });
 });
