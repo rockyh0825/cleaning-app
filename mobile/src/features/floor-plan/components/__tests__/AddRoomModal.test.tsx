@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { lightTheme } from '@/shared/theme/tokens';
 import { GRID_COLS, GRID_ROWS } from '../../constants';
@@ -314,6 +315,74 @@ describe('AddRoomModal', () => {
         expect(mockOnSubmit).toHaveBeenCalledWith(
             expect.objectContaining({ gridW: GRID_COLS, gridH: GRID_ROWS }),
         );
+    });
+
+    it('resets_size_and_name_to_defaults_after_cancel_and_reopen', () => {
+        // Arrange
+        const { rerender } = render(
+            <AddRoomModal
+                visible={true}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+
+        // Act: 名前を入力し幅を 4→6 に増やしてからキャンセル
+        fireEvent.changeText(screen.getByPlaceholderText('部屋名'), '寝室');
+        fireEvent.press(screen.getByTestId('room-width-stepper-inc'));
+        fireEvent.press(screen.getByTestId('room-width-stepper-inc'));
+        fireEvent.press(screen.getByText('キャンセル'));
+
+        // Act: 同一インスタンスのまま閉じて再表示する
+        rerender(
+            <AddRoomModal
+                visible={false}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+        rerender(
+            <AddRoomModal
+                visible={true}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+
+        // Assert: ステッパーは既定 4×4、名前は空に戻る
+        expect(screen.getByTestId('room-width-value').props.children).toBe(4);
+        expect(screen.getByTestId('room-height-value').props.children).toBe(4);
+        expect(screen.getByPlaceholderText('部屋名').props.value).toBe('');
+    });
+
+    it('provides_touch_target_of_at_least_44_on_stepper_buttons', () => {
+        // Arrange & Act
+        render(
+            <AddRoomModal
+                visible={true}
+                onSubmit={mockOnSubmit}
+                onCancel={mockOnCancel}
+            />,
+        );
+
+        // Assert: 各ステッパーボタンの実効タッチ領域が 44pt 以上ある
+        const buttonIds = [
+            'room-width-stepper-dec',
+            'room-width-stepper-inc',
+            'room-height-stepper-dec',
+            'room-height-stepper-inc',
+        ];
+        for (const id of buttonIds) {
+            const button = screen.getByTestId(id);
+            const style = StyleSheet.flatten(button.props.style);
+            const hitSlop = button.props.hitSlop ?? {};
+            const effectiveWidth =
+                (style.width ?? 0) + (hitSlop.left ?? 0) + (hitSlop.right ?? 0);
+            const effectiveHeight =
+                (style.height ?? 0) + (hitSlop.top ?? 0) + (hitSlop.bottom ?? 0);
+            expect(effectiveWidth).toBeGreaterThanOrEqual(44);
+            expect(effectiveHeight).toBeGreaterThanOrEqual(44);
+        }
     });
 
     it('resets_size_to_4x4_after_submit', () => {
