@@ -98,6 +98,8 @@ export default function RoomDetailScreen() {
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <FloorPlanCanvas
                 floorPlan={{ rooms: [room] }}
+                // 詳細画面には部屋選択の解除導線が無いため常に非選択で制御する
+                selectedRoomId={null}
                 // 選択状態を単一の source にする（バーと選択ボーダーを同時に制御）
                 selectedFurnitureId={selectedFurnitureId}
                 onFurniturePress={setSelectedFurnitureId}

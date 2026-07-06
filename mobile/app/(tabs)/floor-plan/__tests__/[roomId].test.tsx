@@ -271,6 +271,72 @@ describe('RoomDetailScreen', () => {
         expect(screen.queryByTestId('selection-actions')).toBeNull();
     });
 
+    it('does_not_show_room_selection_outline_when_room_is_pressed', async () => {
+        // Arrange: 詳細画面には部屋選択の解除導線が無いため常に非選択とする
+        mockHookWithFurniture([sofa]);
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        await screen.findByTestId('room-shape-room-1');
+
+        // Act: 家具解除のために部屋をタップする
+        fireEvent.press(
+            within(screen.getByTestId('room-shape-room-1')).getByText('リビング'),
+        );
+
+        // Assert: 部屋の選択枠は出ない（制御下で常に非選択）
+        expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
+    });
+
+    it('closes_rename_sheet_without_mutation_when_room_is_pressed_while_renaming', async () => {
+        // Arrange: 家具を選択して名称変更シートを開く
+        const mockUpdateMutate = jest.fn();
+        mockHookWithFurniture([sofa], { updateFurniture: mockUpdateMutate });
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+        fireEvent.press(screen.getByTestId('selection-rename'));
+        expect(screen.getByTestId('rename-input')).toBeTruthy();
+
+        // Act: シート表示中に部屋をタップする
+        fireEvent.press(
+            within(screen.getByTestId('room-shape-room-1')).getByText('リビング'),
+        );
+
+        // Assert: シートが閉じ、更新 mutation は呼ばれない
+        await waitFor(() => {
+            expect(screen.queryByTestId('rename-input')).toBeNull();
+        });
+        expect(mockUpdateMutate).not.toHaveBeenCalled();
+    });
+
+    it('switches_selection_actions_target_name_when_another_furniture_is_pressed', async () => {
+        // Arrange: 家具A（ソファ）を選択して操作バーを表示する
+        const table = {
+            id: 'furn-2',
+            roomId: 'room-1',
+            name: 'テーブル',
+            presetKey: 'table',
+            gridX: 1,
+            gridY: 1,
+            gridW: 1,
+            gridH: 1,
+            createdAt: new Date('2024-01-01'),
+            updatedAt: new Date('2024-01-01'),
+        };
+        mockHookWithFurniture([sofa, table]);
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+        expect(
+            within(screen.getByTestId('selection-actions')).getByText('ソファ'),
+        ).toBeTruthy();
+
+        // Act: 別の家具B（テーブル）をタップする
+        fireEvent.press(screen.getByText('テーブル'));
+
+        // Assert: 操作バーの対象名がBに切り替わる
+        const actions = screen.getByTestId('selection-actions');
+        expect(within(actions).getByText('テーブル')).toBeTruthy();
+        expect(within(actions).queryByText('ソファ')).toBeNull();
+    });
+
     it('hides_selection_actions_when_dismiss_is_pressed', async () => {
         // Arrange: 家具を選択して操作バーを表示する
         mockHookWithFurniture([sofa]);
