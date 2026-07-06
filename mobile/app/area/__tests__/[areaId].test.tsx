@@ -24,6 +24,7 @@ jest.mock('@/features/cleaning-record/repositories/CleaningRecordRepository', ()
 
 import { useLocalSearchParams } from 'expo-router';
 import { useLogCleaning } from '@/features/cleaning-record/hooks/useLogCleaning';
+import { resetUserIdCacheForTest } from '@/shared/hooks/useUserId';
 
 const mockUseLocalSearchParams = useLocalSearchParams as jest.Mock;
 const mockUseLogCleaning = useLogCleaning as jest.Mock;
@@ -80,6 +81,8 @@ const PARTS = [
 describe('AreaDetailScreen', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // モジュールレベルにメモ化された初期化 Promise をテスト間でリセットする
+        resetUserIdCacheForTest();
         (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
         (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
         mockUseLocalSearchParams.mockReturnValue({ areaId: 'room-1' });

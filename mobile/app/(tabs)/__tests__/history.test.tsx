@@ -10,6 +10,7 @@ jest.mock('@/features/cleaning-record/hooks/useCleaningHistory', () => ({
 }));
 
 import { useCleaningHistory } from '@/features/cleaning-record/hooks/useCleaningHistory';
+import { resetUserIdCacheForTest } from '@/shared/hooks/useUserId';
 const mockUseCleaningHistory = useCleaningHistory as jest.Mock;
 
 function createWrapper() {
@@ -50,6 +51,8 @@ const RECORDS = [
 describe('HistoryScreen', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // モジュールレベルにメモ化された初期化 Promise をテスト間でリセットする
+        resetUserIdCacheForTest();
         (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
         (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
     });

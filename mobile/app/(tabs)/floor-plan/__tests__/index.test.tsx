@@ -29,6 +29,7 @@ jest.mock('@/features/floor-plan/hooks/useFloorPlan', () => ({
 
 import { router } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
+import { resetUserIdCacheForTest } from '@/shared/hooks/useUserId';
 import type { Furniture } from '@/features/floor-plan/types';
 const mockUseLayout = useFloorPlan as jest.Mock;
 
@@ -87,6 +88,8 @@ function mockHookWithLivingRoom(
 describe('FloorPlanIndexScreen', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // モジュールレベルにメモ化された初期化 Promise をテスト間でリセットする
+        resetUserIdCacheForTest();
         (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
         (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
     });
