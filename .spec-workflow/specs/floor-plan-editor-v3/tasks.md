@@ -50,7 +50,7 @@
   - _Leverage: mobile/src/shared/components/BottomSheet_
   - _Requirements: 4_
 
-- [ ] 5. 間取り画面: 部屋の削除・リネーム組み込み
+- [x] 5. 間取り画面: 部屋の削除・リネーム組み込み
   - File: mobile/app/floor-plan/index.tsx
   - 部屋選択時に SelectionActions を表示。削除は `Alert.alert`（カスケード削除の明示文言＋破壊的スタイル）を挟んで deleteRoom.mutate、リネームは RenameSheet → updateRoom.mutate
   - Purpose: 部屋の削除・リネーム完成（Requirement 1, 4）

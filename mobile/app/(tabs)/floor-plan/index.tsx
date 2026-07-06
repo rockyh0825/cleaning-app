@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 import { useFloorPlan } from "@/features/floor-plan/hooks/useFloorPlan";
 import { FloorPlanCanvas } from "@/features/floor-plan/components/FloorPlanCanvas";
 import { AddRoomModal } from "@/features/floor-plan/components/AddRoomModal";
+import { RenameSheet } from "@/features/floor-plan/components/RenameSheet";
+import { SelectionActions } from "@/features/floor-plan/components/SelectionActions";
 import { FloorPlanRepository } from "@/features/floor-plan/repositories/FloorPlanRepository";
 import type { CreateRoomInput } from "@/features/floor-plan/types";
 import { GRID_COLS, GRID_ROWS } from "@/features/floor-plan/constants";
@@ -21,13 +23,51 @@ export default function FloorPlanIndexScreen() {
   const theme = useAppTheme();
   const userId = useUserId();
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [isRenameSheetVisible, setIsRenameSheetVisible] = useState(false);
 
-  const { floorPlan, addRoom, updateRoom } = useFloorPlan(userId ?? "", repository);
+  const { floorPlan, addRoom, updateRoom, deleteRoom } = useFloorPlan(
+    userId ?? "",
+    repository,
+  );
 
   const rooms = floorPlan.data?.rooms ?? [];
+  // 楽観的削除などでキャッシュから消えた部屋は選択扱いにしない
+  const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? null;
 
   function handleRoomPress(roomId: string) {
-    router.push(`/floor-plan/${roomId}`);
+    // 初回タップは選択（操作バー表示）、選択中の部屋の再タップで詳細へ
+    if (selectedRoomId === roomId) {
+      router.push(`/floor-plan/${roomId}`);
+      return;
+    }
+    setSelectedRoomId(roomId);
+  }
+
+  function handleDeletePress() {
+    if (!selectedRoom) return;
+    const roomId = selectedRoom.id;
+    Alert.alert(
+      `「${selectedRoom.name}」を削除しますか？`,
+      "この部屋に置いた家具・パーツ・掃除記録もまとめて削除されます。この操作は取り消せません。",
+      [
+        { text: "キャンセル", style: "cancel" },
+        {
+          text: "削除",
+          style: "destructive",
+          onPress: () => {
+            deleteRoom.mutate(roomId);
+            setSelectedRoomId(null);
+          },
+        },
+      ],
+    );
+  }
+
+  function handleRenameSubmit(name: string) {
+    if (!selectedRoom) return;
+    updateRoom.mutate({ roomId: selectedRoom.id, input: { name } });
+    setIsRenameSheetVisible(false);
   }
 
   function handleAddRoom(input: {
@@ -120,6 +160,25 @@ export default function FloorPlanIndexScreen() {
         />
       )}
 
+      {selectedRoom && (
+        <View
+          style={[
+            styles.selectionActionsContainer,
+            {
+              left: theme.spacing.md,
+              right: theme.spacing.md,
+              bottom: theme.spacing.xl,
+            },
+          ]}
+        >
+          <SelectionActions
+            targetName={selectedRoom.name}
+            onRename={() => setIsRenameSheetVisible(true)}
+            onDelete={handleDeletePress}
+          />
+        </View>
+      )}
+
       <FloatingActionButton
         accessibilityLabel="部屋を追加"
         onPress={() => setIsModalVisible(true)}
@@ -129,6 +188,13 @@ export default function FloorPlanIndexScreen() {
         visible={isModalVisible}
         onSubmit={handleAddRoom}
         onCancel={() => setIsModalVisible(false)}
+      />
+
+      <RenameSheet
+        visible={isRenameSheetVisible && selectedRoom != null}
+        initialName={selectedRoom?.name ?? ""}
+        onSubmit={handleRenameSubmit}
+        onClose={() => setIsRenameSheetVisible(false)}
       />
     </View>
   );
@@ -146,5 +212,8 @@ const styles = StyleSheet.create({
   emptyIllustration: {
     fontSize: 64,
     lineHeight: 76,
+  },
+  selectionActionsContainer: {
+    position: "absolute",
   },
 });
