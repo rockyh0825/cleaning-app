@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { BottomSheet } from '@/shared/components/BottomSheet';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
@@ -14,16 +14,20 @@ type Props = {
 /**
  * 部屋・家具の名称編集ボトムシート。
  * 空・空白のみの入力では確定できない。色・余白はテーマトークンのみ参照する。
+ * 確定・キャンセル後にシートを閉じる責務は親が持つ。
  */
 export function RenameSheet({ visible, initialName, onSubmit, onClose }: Props) {
     const theme = useAppTheme();
     const [name, setName] = useState(initialName);
+    const prevVisibleRef = useRef(visible);
 
-    // シートを開くたびに現在の名称へ入力を戻す
+    // シートが開いた（false→true）ときのみ現在の名称へ入力を戻す。
+    // 開いている最中に initialName が変わっても編集中の入力は破棄しない。
     useEffect(() => {
-        if (visible) {
+        if (!prevVisibleRef.current && visible) {
             setName(initialName);
         }
+        prevVisibleRef.current = visible;
     }, [visible, initialName]);
 
     const trimmedName = name.trim();
@@ -64,6 +68,8 @@ export function RenameSheet({ visible, initialName, onSubmit, onClose }: Props) 
                 placeholderTextColor={theme.colors.textMuted}
                 value={name}
                 onChangeText={setName}
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
                 autoFocus
             />
 

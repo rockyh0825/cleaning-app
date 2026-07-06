@@ -101,6 +101,74 @@ describe('RenameSheet', () => {
         );
     });
 
+    it('does_not_submit_when_input_is_empty', () => {
+        // Arrange
+        render(
+            <RenameSheet
+                visible={true}
+                initialName="リビング"
+                onSubmit={mockOnSubmit}
+                onClose={mockOnClose}
+            />,
+        );
+
+        // Act
+        fireEvent.changeText(screen.getByTestId('rename-input'), '');
+        fireEvent.press(screen.getByText('変更'));
+
+        // Assert
+        expect(mockOnSubmit).not.toHaveBeenCalled();
+        expect(screen.getByTestId('rename-submit').props.accessibilityState?.disabled).toBe(
+            true,
+        );
+    });
+
+    it('calls_onSubmit_when_keyboard_submit_pressed', () => {
+        // Arrange
+        render(
+            <RenameSheet
+                visible={true}
+                initialName="リビング"
+                onSubmit={mockOnSubmit}
+                onClose={mockOnClose}
+            />,
+        );
+
+        // Act
+        fireEvent.changeText(screen.getByTestId('rename-input'), '和室');
+        fireEvent(screen.getByTestId('rename-input'), 'submitEditing');
+
+        // Assert
+        expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+        expect(mockOnSubmit).toHaveBeenCalledWith('和室');
+    });
+
+    it('keeps_edited_input_when_initial_name_changes_while_open', () => {
+        // Arrange: 開いた状態で入力を編集する
+        const view = render(
+            <RenameSheet
+                visible={true}
+                initialName="リビング"
+                onSubmit={mockOnSubmit}
+                onClose={mockOnClose}
+            />,
+        );
+        fireEvent.changeText(screen.getByTestId('rename-input'), '和室');
+
+        // Act: 開いたまま initialName だけが変わる（バックグラウンド refetch 等）
+        view.rerender(
+            <RenameSheet
+                visible={true}
+                initialName="ダイニング"
+                onSubmit={mockOnSubmit}
+                onClose={mockOnClose}
+            />,
+        );
+
+        // Assert: 編集中の入力は破棄されない
+        expect(screen.getByTestId('rename-input').props.value).toBe('和室');
+    });
+
     it('calls_onClose_when_cancel_pressed', () => {
         // Arrange
         render(
