@@ -13,10 +13,10 @@ export type HeatThresholds = {
   red: number;
 };
 
-export const DEFAULT_THRESHOLDS: HeatThresholds = {
+export const DEFAULT_THRESHOLDS = {
   green: 0.8,
   red: 1.0,
-};
+} as const satisfies HeatThresholds;
 
 /**
  * 経過割合（computeElapsedRatio の結果）を色状態に分類する純粋関数。
