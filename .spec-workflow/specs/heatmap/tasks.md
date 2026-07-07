@@ -6,7 +6,7 @@
 
 ## フェーズ1: 色判定ロジック（純粋関数・UI非依存）
 
-- [ ] 1. usecases: computeElapsedRatio（経過割合の算出）
+- [x] 1. usecases: computeElapsedRatio（経過割合の算出）
   - File: mobile/src/features/heatmap/usecases/computeElapsedRatio.ts
   - `(lastCleanedAt, recommendedCycleDays, now) => number`。null は Infinity、recommendedCycleDays <= 0 は Infinity、それ以外は `(now - lastCleanedAt) / (cycleDays * 86_400_000)`
   - Purpose: パーツ単位の経過割合を求める土台
