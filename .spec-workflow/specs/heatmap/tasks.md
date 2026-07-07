@@ -18,7 +18,7 @@
     - 異常系: recommendedCycleDays が 0・負値 → Infinity
   - _Requirements: 1_
 
-- [ ] 2. usecases: resolveHeatStatus（経過割合 → 状態）
+- [x] 2. usecases: resolveHeatStatus（経過割合 → 状態）
   - File: mobile/src/features/heatmap/usecases/resolveHeatStatus.ts
   - `HeatStatus = 'fresh' | 'due' | 'overdue' | 'neutral'` と `DEFAULT_THRESHOLDS = { green: 0.8, red: 1.0 }` を定義。ratio < green → fresh、ratio < red → due、それ以外 → overdue（neutral は呼び出し側が付与）。閾値は引数で差し替え可能
   - Purpose: 色分類の中核。閾値をパラメータ化し閾値カスタマイズ spec が差し込めるようにする
