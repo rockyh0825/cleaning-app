@@ -19,9 +19,11 @@ const palette = {
     red400: '#F87171',
     amber100: '#FEF3C7',
     amber300: '#FCD34D',
+    amber600: '#D97706',
     amber900: '#78350F',
     emerald100: '#D1FAE5',
     emerald300: '#6EE7B7',
+    emerald600: '#059669',
     emerald900: '#064E3B',
     sky100: '#E0F2FE',
     sky300: '#7DD3FC',
@@ -56,6 +58,11 @@ export type AppTheme = {
         outline: string;
         gridLine: string;
         overlay: string;
+        // ヒートマップの状態色（経過割合 → 状態）。resolveHeatStatus の状態と対応する
+        heatFresh: string;
+        heatDue: string;
+        heatOverdue: string;
+        heatNeutral: string;
     };
     roomAccents: Record<RoomType, RoomAccent>;
     spacing: { xs: number; sm: number; md: number; lg: number; xl: number };
@@ -97,6 +104,10 @@ export const lightTheme: AppTheme = {
         outline: palette.gray200,
         gridLine: palette.gray200,
         overlay: 'rgba(15, 23, 42, 0.45)',
+        heatFresh: palette.emerald300,
+        heatDue: palette.amber300,
+        heatOverdue: palette.red400,
+        heatNeutral: palette.gray200,
     },
     roomAccents: {
         [RoomType.Living]: {
@@ -164,6 +175,10 @@ export const darkTheme: AppTheme = {
         outline: palette.gray700,
         gridLine: palette.gray800,
         overlay: 'rgba(2, 6, 23, 0.6)',
+        heatFresh: palette.emerald600,
+        heatDue: palette.amber600,
+        heatOverdue: palette.red500,
+        heatNeutral: palette.gray700,
     },
     roomAccents: {
         [RoomType.Living]: {

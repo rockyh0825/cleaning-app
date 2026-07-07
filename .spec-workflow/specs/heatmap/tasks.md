@@ -46,7 +46,7 @@
 
 ## フェーズ3: テーマトークン
 
-- [ ] 4. theme: heat セマンティックトークンを追加（light/dark）
+- [x] 4. theme: heat セマンティックトークンを追加（light/dark）
   - File: mobile/src/shared/theme/tokens.ts
   - `AppTheme.colors` に heatFresh / heatDue / heatOverdue / heatNeutral を追加し、lightTheme・darkTheme 双方で palette から具体色を割り当てる（緑=emerald系 / 黄=amber系 / 赤=red系 / 中立=surfaceAlt系）
   - Purpose: 状態→hex の変換をテーマ層で担い、ダークモードで視認性を保つ
