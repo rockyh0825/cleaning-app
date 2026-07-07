@@ -26,6 +26,11 @@ interface MockOverdueArea {
   elapsedRatio: number;
 }
 
+interface MockAreaStatus {
+  areaId: string;
+  maxElapsedRatio: number;
+}
+
 interface MockRepository {
   listParts(userId: string): Promise<MockPart[]>;
 }
@@ -36,6 +41,7 @@ const { CleaningStatusCapabilityImpl } =
   require("../../features/cleaning-record/repositories/CleaningStatusCapabilityImpl") as {
     CleaningStatusCapabilityImpl: new (repo: MockRepository) => {
       getOverdueAreas(userId: string): Promise<MockOverdueArea[]>;
+      getAreaStatuses(userId: string): Promise<MockAreaStatus[]>;
       getLastCleanedAt(userId: string, areaId: string): Promise<Date | null>;
     };
   };
@@ -155,6 +161,108 @@ describe("CleaningStatusCapabilityImpl", () => {
 
       // Act
       await impl.getOverdueAreas(userId);
+
+      // Assert
+      expect(repo.listParts as jest.Mock).toHaveBeenCalledWith(userId);
+    });
+  });
+
+  describe("getAreaStatuses", () => {
+    it("returns_max_elapsed_ratio_when_area_has_multiple_parts", async () => {
+      // Arrange
+      // area-1 に周期7日のパーツが2つ。3日前(=3/7)と10日前(=10/7)→最大は 10/7
+      const repo = makeRepository([
+        makePart({
+          id: "part-1",
+          ownerId: "area-1",
+          recommendedCycleDays: 7,
+          lastCleanedAt: new Date("2024-06-28T00:00:00Z"), // 3日前
+        }),
+        makePart({
+          id: "part-2",
+          ownerId: "area-1",
+          recommendedCycleDays: 7,
+          lastCleanedAt: new Date("2024-06-21T00:00:00Z"), // 10日前
+        }),
+      ]);
+      const impl = new CleaningStatusCapabilityImpl(repo);
+
+      // Act
+      const result = await impl.getAreaStatuses(userId);
+
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(result[0].areaId).toBe("area-1");
+      expect(result[0].maxElapsedRatio).toBeCloseTo(10 / 7);
+    });
+
+    it("returns_infinity_when_all_parts_in_area_are_never_cleaned", async () => {
+      // Arrange
+      const repo = makeRepository([
+        makePart({ id: "part-1", ownerId: "area-1", lastCleanedAt: null }),
+        makePart({ id: "part-2", ownerId: "area-1", lastCleanedAt: null }),
+      ]);
+      const impl = new CleaningStatusCapabilityImpl(repo);
+
+      // Act
+      const result = await impl.getAreaStatuses(userId);
+
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(result[0].areaId).toBe("area-1");
+      expect(result[0].maxElapsedRatio).toBe(Infinity);
+    });
+
+    it("aggregates_parts_by_area_id", async () => {
+      // Arrange
+      // area-1: 3日前(3/7) と null(Infinity) → Infinity
+      // area-2: 7日前ちょうど(=1.0)
+      const repo = makeRepository([
+        makePart({
+          id: "part-1",
+          ownerId: "area-1",
+          recommendedCycleDays: 7,
+          lastCleanedAt: new Date("2024-06-28T00:00:00Z"), // 3日前
+        }),
+        makePart({ id: "part-2", ownerId: "area-1", lastCleanedAt: null }),
+        makePart({
+          id: "part-3",
+          ownerId: "area-2",
+          recommendedCycleDays: 7,
+          lastCleanedAt: new Date("2024-06-24T00:00:00Z"), // 7日前 = 1.0
+        }),
+      ]);
+      const impl = new CleaningStatusCapabilityImpl(repo);
+
+      // Act
+      const result = await impl.getAreaStatuses(userId);
+
+      // Assert
+      const byArea = new Map(result.map((s) => [s.areaId, s.maxElapsedRatio]));
+      expect(byArea.size).toBe(2);
+      expect(byArea.get("area-1")).toBe(Infinity);
+      expect(byArea.get("area-2")).toBeCloseTo(1.0);
+    });
+
+    it("returns_empty_array_when_no_parts_exist", async () => {
+      // Arrange
+      const repo = makeRepository([]);
+      const impl = new CleaningStatusCapabilityImpl(repo);
+
+      // Act
+      const result = await impl.getAreaStatuses(userId);
+
+      // Assert
+      expect(result).toHaveLength(0);
+    });
+
+    it("calls_repository_with_correct_userId", async () => {
+      // Arrange
+      const repo = makeRepository([]);
+      const impl = new CleaningStatusCapabilityImpl(repo);
+
+      // Act
+      await impl.getAreaStatuses(userId);
 
       // Assert
       expect(repo.listParts as jest.Mock).toHaveBeenCalledWith(userId);

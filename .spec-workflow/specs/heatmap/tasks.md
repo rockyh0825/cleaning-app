@@ -31,7 +31,7 @@
 
 ## フェーズ2: Capability 拡張（cleaning-record 側で実装）
 
-- [ ] 3. capability: CleaningStatusCapability に getAreaStatuses を追加
+- [x] 3. capability: CleaningStatusCapability に getAreaStatuses を追加
   - File: mobile/src/capabilities/CleaningStatusCapability.ts, mobile/src/features/cleaning-record/repositories/CleaningStatusCapabilityImpl.ts
   - インターフェースに `AreaStatus = { areaId; maxElapsedRatio }` と `getAreaStatuses(userId)` を追加。実装は `listParts(userId)` を ownerId でグルーピングし各グループの経過割合の最大値を返す。既存 getOverdueAreas の比率計算を private ヘルパーに抽出して共有する
   - Purpose: 黄（0.8〜1.0）を含む全エリアの状態を heatmap へ供給する。既存 getOverdueAreas は ratio > 1.0 で filter 済みのため黄が取れない
