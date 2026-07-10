@@ -204,6 +204,41 @@ describe('RoomShape', () => {
         expect(style.backgroundColor).toBe(lightTheme.roomAccents.LIVING.fill);
     });
 
+    it('uses_fillColor_for_background_color_when_provided', () => {
+        // Arrange & Act: fillColor 指定時は種別色を上書きする（ヒートマップ用）
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                fillColor="#FF0000"
+            />,
+        );
+
+        // Assert
+        const shape = screen.getByTestId('room-shape-room-1');
+        const style = StyleSheet.flatten(shape.props.style);
+        expect(style.backgroundColor).toBe('#FF0000');
+    });
+
+    it('keeps_room_accent_fill_when_fillColor_is_omitted', () => {
+        // Arrange & Act: fillColor 未指定なら従来どおり種別色（回帰）
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+            />,
+        );
+
+        // Assert
+        const shape = screen.getByTestId('room-shape-room-1');
+        const style = StyleSheet.flatten(shape.props.style);
+        expect(style.backgroundColor).toBe(lightTheme.roomAccents.LIVING.fill);
+    });
+
     it('shows_resize_handle_when_selected', () => {
         // Arrange & Act
         render(

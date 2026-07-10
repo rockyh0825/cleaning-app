@@ -28,6 +28,8 @@ type Props = {
     scale?: number;
     /** この家具のドラッグ判定が終わるまで待機させるキャンバスパン */
     canvasPanGesture?: GestureType;
+    /** 指定時は surface 色の代わりにこの色で塗る（ヒートマップ用）。未指定なら従来の surface 色 */
+    fillColor?: string;
 };
 
 export function FurnitureItem({
@@ -40,6 +42,7 @@ export function FurnitureItem({
     onResizeEnd,
     scale = 1,
     canvasPanGesture,
+    fillColor,
 }: Props) {
     const theme = useAppTheme();
     const width = furniture.gridW * cellSize;
@@ -86,7 +89,7 @@ export function FurnitureItem({
                         height,
                         left,
                         top,
-                        backgroundColor: theme.colors.surface,
+                        backgroundColor: fillColor ?? theme.colors.surface,
                         borderRadius: theme.radius.sm,
                         borderWidth: selected ? 2 : 1,
                         borderColor: selected
