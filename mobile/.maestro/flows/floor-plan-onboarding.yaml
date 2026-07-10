@@ -30,14 +30,12 @@ appId: com.cleaningapp.mobile
 - assertVisible: "自分の部屋"
 - takeScreenshot: .maestro/screenshots/03-room-added-on-canvas
 
-# 1回目のタップは「選択」（操作バー表示）に変わったため、まず選択状態を確認する
+# 部屋タップは「選択」（操作バー表示）。詳細への遷移は操作バーの「部屋の中を修正」から行う
 - tapOn: "自分の部屋"
 - assertVisible:
     id: "selection-actions"
-# 2回目のタップで詳細画面へ遷移する。操作バーにも「自分の部屋」が出て多重マッチするため、
-# 部屋シェイプの testID を正規表現で絞る（部屋 id は動的・既存 floor-plan-drag-persistence.yaml と同方式）
 - tapOn:
-    id: "room-shape-.*"
+    id: "selection-edit-interior"
 - assertVisible: "家具を追加"
 - tapOn: "家具を追加"
 - assertVisible: "家具名"

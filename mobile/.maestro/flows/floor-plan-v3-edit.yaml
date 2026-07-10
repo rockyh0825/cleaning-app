@@ -99,16 +99,11 @@ appId: com.cleaningapp.mobile
 - takeScreenshot: .maestro/screenshots/v3-06-room-renamed
 
 # --- 4. 詳細画面へ遷移して家具追加＋リサイズ ---
-# リネーム後も部屋は選択状態のため、まず選択解除してから改めて選択→再タップで遷移する
-# （操作バーにも部屋名が出て多重マッチするのを避け、onboarding と同じ選択→再タップの型にする）
-- tapOn:
-    id: "selection-dismiss"
-- tapOn: "改名部屋"
+# リネーム後も部屋は選択状態のため、操作バーの「部屋の中を修正」でそのまま詳細へ遷移する
 - assertVisible:
     id: "selection-actions"
-# 選択中の部屋の再タップで詳細へ遷移（シェイプ testID を正規表現で絞る）
 - tapOn:
-    id: "room-shape-.*"
+    id: "selection-edit-interior"
 - assertVisible: "家具を追加"
 - takeScreenshot: .maestro/screenshots/v3-07-room-detail
 
@@ -125,17 +120,18 @@ appId: com.cleaningapp.mobile
 - assertVisible: "ベッド"
 - takeScreenshot: .maestro/screenshots/v3-08-furniture-added
 
-# 家具を選択するとリサイズハンドルが表示される（この時点で家具は1つだけ）
+# 家具を選択すると四つ角にリサイズハンドルが表示される（この時点で家具は1つだけ）。
+# ハンドルは4つあるため、右下（-br）に絞って一意にマッチさせる
 - tapOn:
     id: "furniture-item-.*"
 - assertVisible:
-    id: "resize-handle-.*"
-# リサイズハンドルを掴んで右方向へドラッグし、家具の幅を広げる。
+    id: "resize-handle-.*-br"
+# 右下ハンドルを掴んで右方向へドラッグし、家具の幅を広げる。
 # 要素起点の方向スワイプのため座標計算不要で機種非依存。部屋(6x5)内に右方向の余白があり拡大できる。
 # 厳密なサイズ検証は Maestro では困難なため、家具が消えないこと＋スクリーンショットで確認する。
 - swipe:
     from:
-      id: "resize-handle-.*"
+      id: "resize-handle-.*-br"
     direction: RIGHT
     duration: 1200
 - assertVisible: "ベッド"
