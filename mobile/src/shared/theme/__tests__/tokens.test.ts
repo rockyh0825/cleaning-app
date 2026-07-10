@@ -19,7 +19,13 @@ describe('theme tokens', () => {
         'outline',
         'gridLine',
         'overlay',
+        'heatFresh',
+        'heatDue',
+        'heatOverdue',
+        'heatNeutral',
     ] as const;
+
+    const heatColorKeys = ['heatFresh', 'heatDue', 'heatOverdue', 'heatNeutral'] as const;
 
     it.each(themes)('defines_all_semantic_color_tokens_in_%s_theme', (_name, theme) => {
         // Arrange & Act & Assert
@@ -63,5 +69,18 @@ describe('theme tokens', () => {
     it('uses_different_background_colors_between_light_and_dark', () => {
         // Assert
         expect(lightTheme.colors.background).not.toBe(darkTheme.colors.background);
+    });
+
+    it.each(heatColorKeys)('defines_%s_in_both_light_and_dark_themes', (key) => {
+        // Assert
+        expect(lightTheme.colors[key]).toEqual(expect.any(String));
+        expect(lightTheme.colors[key].length).toBeGreaterThan(0);
+        expect(darkTheme.colors[key]).toEqual(expect.any(String));
+        expect(darkTheme.colors[key].length).toBeGreaterThan(0);
+    });
+
+    it.each(heatColorKeys)('uses_different_%s_value_between_light_and_dark', (key) => {
+        // Assert
+        expect(lightTheme.colors[key]).not.toBe(darkTheme.colors[key]);
     });
 });
