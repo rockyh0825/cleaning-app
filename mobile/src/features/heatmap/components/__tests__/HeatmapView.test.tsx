@@ -19,8 +19,10 @@ import { HeatmapView } from "../HeatmapView";
 jest.mock("@shopify/react-native-skia");
 
 // expo-router をモック（エリアタップで詳細画面へ push する）
+// useFocusEffect は useHeatmap がタブ再訪時の再取得に使う（no-op で十分）
 jest.mock("expo-router", () => ({
     router: { push: jest.fn() },
+    useFocusEffect: jest.fn(),
 }));
 
 import { router } from "expo-router";

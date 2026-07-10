@@ -1,5 +1,6 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useFocusEffect } from "expo-router";
 import type {
     AreaStatus,
     CleaningStatusCapability,
@@ -50,6 +51,11 @@ export function buildHeatmapRoomsQuery(
     };
 }
 
+/** エリア状態クエリの key。フォーカス時 invalidate と共有し、キーの乖離を防ぐ */
+export function areaStatusesQueryKey(userId: string) {
+    return ["parts", { userId }, "area-statuses"] as const;
+}
+
 /**
  * 全エリアの最大経過割合を CleaningStatusCapability 経由で取得するクエリ。
  * cleaning-record の mutation（記録の登録・修正・削除）は ['parts'] を invalidate
@@ -63,7 +69,7 @@ export function buildAreaStatusesQuery(
     capability: Pick<CleaningStatusCapability, "getAreaStatuses">,
 ) {
     return {
-        queryKey: ["parts", { userId }, "area-statuses"] as const,
+        queryKey: areaStatusesQueryKey(userId),
         queryFn: () => capability.getAreaStatuses(userId),
         enabled: userId !== "",
         staleTime: 0,
@@ -115,6 +121,20 @@ export type UseHeatmapDeps = {
  */
 export function useHeatmap(userId: string, deps: UseHeatmapDeps) {
     const theme = useAppTheme();
+    const queryClient = useQueryClient();
+
+    // expo-router の Tabs は画面をマウント保持するため、refetchOnMount だけでは
+    // タブ再訪時に再取得されない。フォーカス復帰のたびにエリア状態を invalidate し、
+    // 現在時刻基準で経過割合を再計算する（Requirement 5.1: 時間経過による黄→赤）。
+    // 部屋配置は時間経過で変わらないため対象外（floor-plan の mutation invalidate に任せる）。
+    useFocusEffect(
+        useCallback(() => {
+            if (userId === "") return;
+            void queryClient.invalidateQueries({
+                queryKey: areaStatusesQueryKey(userId),
+            });
+        }, [queryClient, userId]),
+    );
 
     const roomsQuery = useQuery(
         buildHeatmapRoomsQuery(userId, deps.floorPlanCapability),
