@@ -83,7 +83,7 @@
 
 ## フェーズ5: フック（Capability 合成）
 
-- [ ] 7. hooks: useHeatmap（floor-plan × 掃除状態の合成）
+- [x] 7. hooks: useHeatmap（floor-plan × 掃除状態の合成）
   - File: mobile/src/features/heatmap/hooks/useHeatmap.ts
   - floorPlanCapability.getRooms と cleaningStatusCapability.getAreaStatuses を react-query で取得し、各エリア（room.id / furniture.id）の maxElapsedRatio を resolveHeatStatus にかけ theme で hex 化した `areaColors: Map<string,string>` を返す。パーツ0件のエリアは heatNeutral。掃除記録更新後にタブへ戻ると最新化されるよう refetchOnMount・staleTime を設定
   - Purpose: 画面が使う整形済みデータを1フックに集約
@@ -98,7 +98,7 @@
 
 ## フェーズ6: 画面・コンポーネント
 
-- [ ] 8. components: HeatmapLegend（凡例）
+- [x] 8. components: HeatmapLegend（凡例）
   - File: mobile/src/features/heatmap/components/HeatmapLegend.tsx
   - 緑/黄/赤/中立の意味を色スウォッチ + ラベル（例「そろそろ」「要掃除」「記録なし」）で表示。色のみに依存しない
   - Purpose: 色のみに依存しない状態表示（アクセシビリティ）
@@ -109,7 +109,7 @@
   - _Leverage: mobile/src/shared/theme_
   - _Requirements: 2_
 
-- [ ] 9. components: HeatmapView（本体ラッパー）
+- [x] 9. components: HeatmapView（本体ラッパー）
   - File: mobile/src/features/heatmap/components/HeatmapView.tsx
   - useHeatmap(userId) の結果を FloorPlanCanvas（readOnly + areaColors）に渡し HeatmapLegend を併置。loading / error / 空状態（部屋0件 → 間取り作成導線）を出し分け。onRoomPress/onFurniturePress で `router.push('/area/'+areaId)`
   - Purpose: ヒートマップ画面の中身
@@ -122,7 +122,7 @@
   - _Leverage: FloorPlanCanvas, HeatmapLegend, useHeatmap_
   - _Requirements: 2, 3, 5_
 
-- [ ] 10. 画面: ヒートマップタブを追加
+- [x] 10. 画面: ヒートマップタブを追加
   - File: mobile/app/(tabs)/heatmap.tsx, mobile/app/(tabs)/_layout.tsx
   - heatmap.tsx で userId を解決し HeatmapView をマウント。_layout.tsx に「ヒートマップ」タブ（🔥）を間取り・履歴と並べて追加
   - Purpose: ヒートマップへの導線
@@ -133,7 +133,7 @@
   - _Leverage: useUserId, HeatmapView_
   - _Requirements: 2_
 
-- [ ] 11. 掃除記録更新後の色反映を確認（query 連携）
+- [x] 11. 掃除記録更新後の色反映を確認（query 連携）
   - File: mobile/src/features/heatmap/hooks/useHeatmap.ts
   - 掃除記録の登録/修正/削除後にヒートマップタブへ戻ると色が最新化されることを結合テストで担保。境界を跨ぐ直接依存を作らず、refetchOnMount もしくは共有 query key の無効化で実現する
   - Purpose: 掃除記録と色表示の整合（状態の鮮度）

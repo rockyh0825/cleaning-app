@@ -47,6 +47,9 @@ export function buildDeleteRecordMutationOptions(
       queryClient.invalidateQueries({
         queryKey: ["cleaning-records", { userId }],
       });
+      // 削除で lastCleanedAt が巻き戻るため、パーツ由来のデータ
+      // （パーツ一覧・ヒートマップの掃除状態）も prefix で無効化する
+      queryClient.invalidateQueries({ queryKey: ["parts"] });
     },
   };
 }
@@ -68,6 +71,9 @@ export function buildUpdateRecordMutationOptions(
       queryClient.invalidateQueries({
         queryKey: ["cleaning-records", { userId }],
       });
+      // cleanedAt の修正で lastCleanedAt が変わり得るため、パーツ由来のデータ
+      // （パーツ一覧・ヒートマップの掃除状態）も prefix で無効化する
+      queryClient.invalidateQueries({ queryKey: ["parts"] });
     },
   };
 }

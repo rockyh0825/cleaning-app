@@ -17,6 +17,7 @@ heatmap は、floor-plan の部屋・家具配置（`FloorPlanCapability`）と 
 - feature 間直接 import 禁止（structure.md Capability パターン）を厳守。floor-plan / cleaning-record へは Capability 経由のみ
 - 描画は `@shopify/react-native-skia`（グリッド）＋ RN View（部屋・家具矩形）の既存構成を踏襲。Skia 不在環境（Jest）は既存の View フォールバックがそのまま効く
 - アーキテスト（eslint-plugin-boundaries）で `features/heatmap` から他 feature への import を禁止する
+  - **例外**: floor-plan の描画コンポーネント（`FloorPlanCanvas`）は共有描画基盤として heatmap からの import を許可する（本 design の方針「別キャンバスを新造しない」に対応）。データ参照はこの例外に含めず、Capability 経由に限定する
 
 ### Project Structure (structure.md)
 
@@ -95,12 +96,13 @@ app/(tabs)/heatmap.tsx
 
 ### useHeatmap (hooks・新規)
 
-- **Signature:** `useHeatmap(userId: string): { rooms: RoomWithFurniture[]; areaColors: Map<string,string>; isPending; isError }`
+- **Signature:** `useHeatmap(userId: string): { rooms: RoomWithFurniture[]; areaColors: Map<string,string>; isPending; isError; isStatusError }`
 - **処理:**
-  1. `useQuery(['floorPlan', userId], () => floorPlanCapability.getRooms(userId))`
-  2. `useQuery(['areaStatuses', userId], () => cleaningStatusCapability.getAreaStatuses(userId))`
+  1. `useQuery(['floorPlan', userId, 'heatmap-rooms'], () => floorPlanCapability.getRooms(userId))` — floor-plan の mutation が invalidate する `['floorPlan', userId]` を **prefix として共有**し、部屋・家具の変更に自動で巻き込まれる。データ形状（`RoomWithFurniture[]`）が floor-plan 本体（`FloorPlan`）と異なるため、末尾セグメントで exact key は分けてキャッシュ衝突を防ぐ
+  2. `useQuery(['parts', { userId }, 'area-statuses'], () => cleaningStatusCapability.getAreaStatuses(userId))` — cleaning-record の mutation が invalidate する `['parts']` を **prefix として共有**し、掃除記録の登録・修正・削除に自動で巻き込まれる
   3. 各 area（room.id / furniture.id）について、`getAreaStatuses` の maxElapsedRatio を `resolveHeatStatus(ratio, DEFAULT_THRESHOLDS)` にかけ、`theme` で hex 化して Map に詰める。ステータスが無いエリア（パーツ0件）は `neutral`
-- **無効化:** 掃除記録の mutation 成功時に `['areaStatuses', userId]` を invalidate（cleaning-record 側と query key を共有）
+- **無効化:** heatmap 専用の invalidate 配線は持たない。既存 feature の mutation が invalidate する query key（`['floorPlan', userId]` / `['parts']`）に **prefix 相乗り**することで、境界を跨ぐ直接依存なしに自動追従する
+- **表示のたび再計算（Requirement 5.1）:** expo-router の Tabs は画面をマウント保持するため `refetchOnMount` ではタブ再訪に反応しない。`useFocusEffect` でフォーカス復帰のたびにエリア状態クエリを invalidate し、現在時刻基準で経過割合を再計算する
 
 ### computeElapsedRatio / resolveHeatStatus (usecases・新規、純粋関数)
 
@@ -189,7 +191,7 @@ export const DEFAULT_THRESHOLDS = { green: 0.8, red: 1.0 } as const;
 ### Integration Testing
 
 - `HeatmapView`: fake Capability で「緑・黄・赤・中立が混在する間取り」を描画し、各エリアに期待 fill 色が付くこと。エリアタップで `/area/{id}` に遷移すること
-- 掃除記録 mutation → `['areaStatuses']` invalidate → 該当エリア色が緑に戻ることを query 連携で確認
+- 掃除記録 mutation → `['parts']` prefix invalidate → 該当エリア色が緑に戻ることを query 連携で確認
 - ダークモードで heat トークンが切り替わること
 
 ### End-to-End Testing
