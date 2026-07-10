@@ -473,4 +473,140 @@ describe('FloorPlanCanvas', () => {
             });
         });
     });
+
+    it('fills_rooms_and_furniture_with_matching_areaColors_entries', () => {
+        // Arrange: areaId（room.id / furniture.id）→ hex の Map を渡す
+        const areaColors = new Map<string, string>([
+            ['room-1', '#112233'],
+            ['furn-1', '#445566'],
+        ]);
+
+        // Act
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                areaColors={areaColors}
+            />,
+        );
+
+        // Assert: 各エリアの背景が対応する色で塗られる
+        const room = screen.getByTestId('room-shape-room-1');
+        expect(StyleSheet.flatten(room.props.style).backgroundColor).toBe(
+            '#112233',
+        );
+        const furniture = screen.getByTestId('furniture-item-furn-1');
+        expect(StyleSheet.flatten(furniture.props.style).backgroundColor).toBe(
+            '#445566',
+        );
+    });
+
+    it('keeps_default_fill_when_area_id_is_missing_from_areaColors', () => {
+        // Arrange: Map にどのエリアも載っていない
+        const areaColors = new Map<string, string>([['other-area', '#112233']]);
+
+        // Act
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                areaColors={areaColors}
+            />,
+        );
+
+        // Assert: miss したエリアは従来色（種別色 / surface）のまま
+        const room = screen.getByTestId('room-shape-room-1');
+        expect(StyleSheet.flatten(room.props.style).backgroundColor).toBe(
+            lightTheme.roomAccents.LIVING.fill,
+        );
+        const furniture = screen.getByTestId('furniture-item-furn-1');
+        expect(StyleSheet.flatten(furniture.props.style).backgroundColor).toBe(
+            lightTheme.colors.surface,
+        );
+    });
+
+    it('does_not_call_drag_end_callbacks_when_readOnly', async () => {
+        // Arrange: readOnly でもドラッグコールバックを渡した状態にする
+        const mockOnRoomDragEnd = jest.fn();
+        const mockOnFurnitureDragEnd = jest.fn();
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                readOnly
+                onRoomDragEnd={mockOnRoomDragEnd}
+                onFurnitureDragEnd={mockOnFurnitureDragEnd}
+            />,
+        );
+
+        // Act: 部屋・家具それぞれを 1 セル分ドラッグする
+        fireGestureHandler(getByGestureTestId('room-pan-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 56, translationY: 0 },
+            { state: State.END, translationX: 56, translationY: 0 },
+        ]);
+        fireGestureHandler(getByGestureTestId('furniture-pan-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 56, translationY: 0 },
+            { state: State.END, translationX: 56, translationY: 0 },
+        ]);
+        // runOnJS 経由の commit を流し切ってから「呼ばれない」ことを検証する
+        await act(async () => {
+            await new Promise((resolve) => setImmediate(resolve));
+        });
+
+        // Assert
+        expect(mockOnRoomDragEnd).not.toHaveBeenCalled();
+        expect(mockOnFurnitureDragEnd).not.toHaveBeenCalled();
+    });
+
+    it('calls_press_callbacks_on_tap_when_readOnly', async () => {
+        // Arrange: readOnly でもタップ（詳細画面への導線）は有効
+        const mockOnRoomPress = jest.fn();
+        const mockOnFurniturePress = jest.fn();
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                readOnly
+                onRoomPress={mockOnRoomPress}
+                onFurniturePress={mockOnFurniturePress}
+            />,
+        );
+
+        // Act
+        fireGestureHandler(getByGestureTestId('room-tap-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+        fireGestureHandler(getByGestureTestId('furniture-tap-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+
+        // Assert
+        await waitFor(() => {
+            expect(mockOnRoomPress).toHaveBeenCalledWith('room-1');
+            expect(mockOnFurniturePress).toHaveBeenCalledWith('furn-1');
+        });
+    });
+
+    it('hides_selection_outline_and_resize_handle_when_readOnly', () => {
+        // Arrange & Act: 制御プロップで選択済みでも readOnly なら選択表示しない
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                readOnly
+                selectedRoomId="room-1"
+                selectedFurnitureId="furn-1"
+                onRoomDragEnd={jest.fn()}
+            />,
+        );
+
+        // Assert: 選択枠・リサイズハンドル・家具の選択ボーダーが出ない
+        expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
+        expect(screen.queryByTestId('resize-handle-room-1')).toBeNull();
+        const furniture = screen.getByTestId('furniture-item-furn-1');
+        expect(StyleSheet.flatten(furniture.props.style).borderColor).toBe(
+            lightTheme.colors.outline,
+        );
+    });
 });

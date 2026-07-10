@@ -69,7 +69,7 @@
     - 回帰: fillColor 未指定時は従来の種別色のまま（既存テストが通る）
   - _Requirements: 2_
 
-- [ ] 6. FloorPlanCanvas に areaColors / readOnly prop を追加
+- [x] 6. FloorPlanCanvas に areaColors / readOnly prop を追加
   - File: mobile/src/features/floor-plan/components/FloorPlanCanvas.tsx
   - 任意 prop `areaColors?: Map<string, string>`（areaId→hex）と `readOnly?: boolean` を追加。areaColors 指定時は各 room/furniture の fillColor に該当色を渡す。readOnly=true では onRoomDragEnd/onFurnitureDragEnd・リサイズハンドル・選択枠を無効化しタップのみ許可。未指定なら従来の編集挙動
   - Purpose: 既存キャンバスを read-only ヒートマップ表示として再利用
