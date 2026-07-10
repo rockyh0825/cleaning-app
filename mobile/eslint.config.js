@@ -41,6 +41,8 @@ module.exports = [
     rules: {
       // feature-A → feature-B の直接 import を禁止。
       // 同一 feature 内・capabilities・shared への参照のみ許可する。
+      // NOTE: `@/` alias の resolver 対応（issue #135）が入った際は、heatmap → floor-plan の
+      // 描画コンポーネント（FloorPlanCanvas）共有を許可する例外ルールが必要（design.md 参照）。
       "boundaries/dependencies": [
         "error",
         {
