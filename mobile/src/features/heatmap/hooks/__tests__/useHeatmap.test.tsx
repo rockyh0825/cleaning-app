@@ -242,6 +242,46 @@ describe("buildAreaStatusesQuery", () => {
         expect(query.staleTime).toBe(0);
     });
 
+    it("recomputes_area_color_from_overdue_to_fresh_after_parts_invalidation", async () => {
+        // Arrange: 掃除前は期限超過（赤）。掃除記録の mutation は onSettled で
+        // ['parts'] prefix を invalidate する（cleaning-record 側と同じフィルタで再現）
+        const capability = {
+            getAreaStatuses: jest
+                .fn()
+                .mockResolvedValueOnce([
+                    { areaId: "room-1", maxElapsedRatio: 1.5 },
+                ])
+                .mockResolvedValueOnce([
+                    { areaId: "room-1", maxElapsedRatio: 0.0 },
+                ]),
+        };
+        const rooms = [makeRoom("room-1")];
+        const queryClient = createQueryClient();
+        const query = buildAreaStatusesQuery("user-1", capability);
+        const observer = new QueryObserver(queryClient, query);
+        const unsubscribe = observer.subscribe(() => {});
+        await queryClient.fetchQuery(query);
+        const before = buildAreaColors(
+            rooms,
+            observer.getCurrentResult().data,
+            HEAT_COLORS,
+        );
+        expect(before.get("room-1")).toBe(HEAT_COLORS.overdue);
+
+        // Act: 掃除記録 mutation 成功後の invalidate（アクティブなクエリは再取得される）
+        await queryClient.invalidateQueries({ queryKey: ["parts"] });
+
+        // Assert: 再取得後の状態で該当エリアが緑（fresh）に変わる
+        const after = buildAreaColors(
+            rooms,
+            observer.getCurrentResult().data,
+            HEAT_COLORS,
+        );
+        expect(after.get("room-1")).toBe(HEAT_COLORS.fresh);
+        expect(capability.getAreaStatuses).toHaveBeenCalledTimes(2);
+        unsubscribe();
+    });
+
     it("does_not_fetch_statuses_when_userId_is_empty", async () => {
         // Arrange
         const queryClient = createQueryClient();

@@ -185,6 +185,30 @@ describe("useCleaningHistory", () => {
         queryKey: ["cleaning-records", { userId: "user-1" }],
       });
     });
+
+    it("invalidates_parts_query_after_deleting_record", async () => {
+      // Arrange: 削除で lastCleanedAt が巻き戻るため parts 由来のデータも古くなる
+      mockRepository.deleteRecord.mockResolvedValue(undefined);
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+      const invalidateSpy = jest.spyOn(queryClient, "invalidateQueries");
+
+      // Act
+      const options = buildDeleteRecordMutationOptions(
+        queryClient,
+        "user-1",
+        mockRepository as never,
+      );
+      await options.mutationFn("record-1");
+      options.onSettled!();
+
+      // Assert: パーツ一覧・ヒートマップの掃除状態（['parts'] prefix）を最新化する
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["parts"] });
+    });
   });
 
   describe("正常系: 記録更新後にクエリが invalidate される", () => {
@@ -218,6 +242,33 @@ describe("useCleaningHistory", () => {
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: ["cleaning-records", { userId: "user-1" }],
       });
+    });
+
+    it("invalidates_parts_query_after_updating_record", async () => {
+      // Arrange: cleanedAt の修正で lastCleanedAt が変わり得るため parts も無効化する
+      mockRepository.updateRecord.mockResolvedValue(mockRecord1);
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+      const invalidateSpy = jest.spyOn(queryClient, "invalidateQueries");
+
+      // Act
+      const options = buildUpdateRecordMutationOptions(
+        queryClient,
+        "user-1",
+        mockRepository as never,
+      );
+      await options.mutationFn({
+        recordId: "record-1",
+        input: { cleanedAt: new Date("2024-01-03") },
+      });
+      options.onSettled!();
+
+      // Assert: パーツ一覧・ヒートマップの掃除状態（['parts'] prefix）を最新化する
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["parts"] });
     });
   });
 });
