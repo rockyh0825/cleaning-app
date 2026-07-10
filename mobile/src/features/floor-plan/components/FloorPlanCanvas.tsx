@@ -170,21 +170,27 @@ export function FloorPlanCanvas({
     );
 
     function handleRoomPress(roomId: string) {
-        // 制御モードでは親が selectedRoomId を更新するため内部 state は触らない
-        if (!isRoomSelectionControlled) {
-            setInternalSelectedRoomId(roomId);
-        }
-        // 制御モードでは家具選択の解除も親（onRoomPress）に委ねる
-        if (!isFurnitureSelectionControlled) {
-            setInternalSelectedFurnitureId(null);
+        // readOnly では選択 UI を出さないため内部選択 state を更新しない（onRoomPress は通知する）
+        if (!readOnly) {
+            // 制御モードでは親が selectedRoomId を更新するため内部 state は触らない
+            if (!isRoomSelectionControlled) {
+                setInternalSelectedRoomId(roomId);
+            }
+            // 制御モードでは家具選択の解除も親（onRoomPress）に委ねる
+            if (!isFurnitureSelectionControlled) {
+                setInternalSelectedFurnitureId(null);
+            }
         }
         onRoomPress?.(roomId);
     }
 
     function handleFurniturePress(furnitureId: string) {
-        // 制御モードでは親が selectedFurnitureId を更新するため内部 state は触らない
-        if (!isFurnitureSelectionControlled) {
-            setInternalSelectedFurnitureId(furnitureId);
+        // readOnly では選択 UI を出さないため内部選択 state を更新しない（onFurniturePress は通知する）
+        if (!readOnly) {
+            // 制御モードでは親が selectedFurnitureId を更新するため内部 state は触らない
+            if (!isFurnitureSelectionControlled) {
+                setInternalSelectedFurnitureId(furnitureId);
+            }
         }
         onFurniturePress?.(furnitureId);
     }
@@ -222,6 +228,7 @@ export function FloorPlanCanvas({
                                 }
                                 overlapping={overlappingRoomIds.has(room.id)}
                                 fillColor={areaColors?.get(room.id)}
+                                dragDisabled={readOnly}
                                 onResizeEnd={
                                     effectiveOnRoomDragEnd
                                         ? (size) =>
@@ -253,6 +260,7 @@ export function FloorPlanCanvas({
                                         h: room.gridH,
                                     }}
                                     fillColor={areaColors?.get(furn.id)}
+                                    dragDisabled={readOnly}
                                     onDragEnd={(rect) =>
                                         effectiveOnFurnitureDragEnd?.(furn.id, rect)
                                     }

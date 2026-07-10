@@ -76,6 +76,12 @@ export type UseDragToGridParams = {
     testID?: string;
     /** このドラッグの判定が終わるまで待機させる外部ジェスチャー（キャンバスパン等） */
     blocksExternal?: GestureType;
+    /**
+     * false で pan ジェスチャー自体を無効化する（読み取り専用表示用）。
+     * 無効時は指への追従も blocksExternal による外部ジェスチャーの待機も発生しない。
+     * 省略時は true（従来どおりドラッグ可能）
+     */
+    enabled?: boolean;
 };
 
 /**
@@ -91,6 +97,7 @@ export function useDragToGrid({
     onCommit,
     testID,
     blocksExternal,
+    enabled = true,
 }: UseDragToGridParams) {
     const translationX = useSharedValue(0);
     const translationY = useSharedValue(0);
@@ -101,6 +108,7 @@ export function useDragToGrid({
     }
 
     const gesture = Gesture.Pan()
+        .enabled(enabled)
         .onUpdate((event) => {
             const preview = previewOffset(
                 { x: event.translationX, y: event.translationY },

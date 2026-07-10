@@ -342,6 +342,83 @@ describe('FurnitureItem', () => {
         });
     });
 
+    it('disables_pan_gesture_when_dragDisabled', async () => {
+        // Arrange: dragDisabled でも onDragEnd を渡した状態にする
+        const mockOnDragEnd = jest.fn();
+        render(
+            <FurnitureItem
+                furniture={testFurniture}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                bounds={roomBounds}
+                onDragEnd={mockOnDragEnd}
+                dragDisabled
+            />,
+        );
+
+        // Act: 無効化されたジェスチャーへの fireGestureHandler は no-op になる
+        fireGestureHandler(getByGestureTestId('furniture-pan-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 56, translationY: 0 },
+            { state: State.END, translationX: 56, translationY: 0 },
+        ]);
+
+        // Assert: 非同期呼び出しの取りこぼしを防ぐためタスクキューを流してから検証する
+        await new Promise((resolve) => setImmediate(resolve));
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(getByGestureTestId('furniture-pan-furn-1').config.enabled).toBe(
+            false,
+        );
+        expect(mockOnDragEnd).not.toHaveBeenCalled();
+    });
+
+    it('keeps_pan_gesture_enabled_when_dragDisabled_is_omitted', () => {
+        // Arrange & Act: dragDisabled 未指定なら従来どおりドラッグ可能（後方互換）
+        render(
+            <FurnitureItem
+                furniture={testFurniture}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                bounds={roomBounds}
+                onDragEnd={jest.fn()}
+            />,
+        );
+
+        // Assert
+        expect(getByGestureTestId('furniture-pan-furn-1').config.enabled).toBe(
+            true,
+        );
+    });
+
+    it('calls_onPress_on_tap_even_when_dragDisabled', async () => {
+        // Arrange: dragDisabled はドラッグのみ無効化し、タップ（選択導線）は残す
+        const mockOnPress = jest.fn();
+        render(
+            <FurnitureItem
+                furniture={testFurniture}
+                cellSize={40}
+                selected={false}
+                onPress={mockOnPress}
+                bounds={roomBounds}
+                dragDisabled
+            />,
+        );
+
+        // Act
+        fireGestureHandler(getByGestureTestId('furniture-tap-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+
+        // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる
+        await waitFor(() => {
+            expect(mockOnPress).toHaveBeenCalledTimes(1);
+        });
+    });
+
     it('does_not_call_onDragEnd_when_drag_does_not_move', async () => {
         // Arrange
         const mockOnDragEnd = jest.fn();
