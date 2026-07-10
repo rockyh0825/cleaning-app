@@ -30,6 +30,15 @@ export default function TabsLayout() {
                 }}
             />
             <Tabs.Screen
+                name="heatmap"
+                options={{
+                    title: 'ヒートマップ',
+                    tabBarIcon: ({ color }) => (
+                        <Text style={{ color, fontSize: 18 }}>🔥</Text>
+                    ),
+                }}
+            />
+            <Tabs.Screen
                 name="history"
                 options={{
                     title: '履歴',
