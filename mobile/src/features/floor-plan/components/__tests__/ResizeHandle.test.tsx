@@ -19,6 +19,7 @@ describe('ResizeHandle', () => {
         maxBottom: GRID_ROWS,
         handleTestID: 'resize-handle-room-1',
         dragTestID: 'room-resize-room-1',
+        ghostTestID: 'resize-ghost-room-1',
     };
 
     it('uses_theme_tokens_for_handle_colors', () => {
@@ -30,6 +31,18 @@ describe('ResizeHandle', () => {
         const style = StyleSheet.flatten(handle.props.style);
         expect(style.backgroundColor).toBe(lightTheme.colors.primary);
         expect(style.borderColor).toBe(lightTheme.colors.surface);
+    });
+
+    it('renders_a_non_interactive_snapped_size_ghost_preview', () => {
+        // Arrange & Act: ドラッグ中の確定サイズを示すゴースト枠を重ねて表示する
+        render(<ResizeHandle {...roomProps} cellSize={40} onCommit={jest.fn()} />);
+
+        // Assert: 枠はタッチを奪わず、色はテーマトークン参照（ダークモード対応）
+        const ghost = screen.getByTestId('resize-ghost-room-1');
+        expect(ghost.props.pointerEvents).toBe('none');
+        const style = StyleSheet.flatten(ghost.props.style);
+        expect(style.borderColor).toBe(lightTheme.colors.primary);
+        expect(style.borderStyle).toBe('dashed');
     });
 
     it('calls_onCommit_with_new_grid_size_when_resize_drag_commits', async () => {

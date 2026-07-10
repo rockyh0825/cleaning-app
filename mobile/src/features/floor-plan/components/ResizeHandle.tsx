@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import type { GestureType } from 'react-native-gesture-handler';
-import Animated from 'react-native-reanimated';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
 import { useDragToGrid } from '../hooks/useDragToGrid';
 
@@ -36,6 +36,8 @@ type Props = {
     handleTestID: string;
     /** ジェスチャーに付与するテストID（jest-utils の参照用） */
     dragTestID: string;
+    /** ゴーストプレビュー枠に付与するテストID */
+    ghostTestID?: string;
     /** アクセシビリティ用ラベル */
     accessibilityLabel?: string;
 };
@@ -58,10 +60,11 @@ export function ResizeHandle({
     blocksExternal,
     handleTestID,
     dragTestID,
+    ghostTestID,
     accessibilityLabel = 'サイズを変更',
 }: Props) {
     const theme = useAppTheme();
-    const { gesture, animatedStyle } = useDragToGrid({
+    const { gesture, animatedStyle, preview } = useDragToGrid({
         rect: { x: size.w, y: size.h, w: 0, h: 0 },
         bounds: {
             x: 1,
@@ -76,25 +79,58 @@ export function ResizeHandle({
         blocksExternal,
     });
 
+    // preview.x/y はスナップ後のグリッド幅・高さ。対象の左上（0,0）を基点に
+    // px サイズへ変換してゴースト枠を描く。active(0/1) で表示を切り替える。
+    const ghostStyle = useAnimatedStyle(
+        () => ({
+            width: preview.x.value * cellSize,
+            height: preview.y.value * cellSize,
+            opacity: preview.active.value,
+        }),
+        [preview.x, preview.y, preview.active, cellSize],
+    );
+
     return (
-        <GestureDetector gesture={gesture}>
+        <>
             <Animated.View
-                testID={handleTestID}
-                accessibilityLabel={accessibilityLabel}
+                testID={ghostTestID}
+                pointerEvents="none"
                 style={[
-                    styles.handle,
+                    styles.ghost,
                     {
-                        backgroundColor: theme.colors.primary,
-                        borderColor: theme.colors.surface,
+                        borderColor: theme.colors.primary,
+                        borderRadius: theme.radius.md,
                     },
-                    animatedStyle,
+                    ghostStyle,
                 ]}
             />
-        </GestureDetector>
+            <GestureDetector gesture={gesture}>
+                <Animated.View
+                    testID={handleTestID}
+                    accessibilityLabel={accessibilityLabel}
+                    style={[
+                        styles.handle,
+                        {
+                            backgroundColor: theme.colors.primary,
+                            borderColor: theme.colors.surface,
+                        },
+                        animatedStyle,
+                    ]}
+                />
+            </GestureDetector>
+        </>
     );
 }
 
 const styles = StyleSheet.create({
+    // 対象の左上を基点に、確定後サイズを示す破線ゴースト枠。塗りは持たず枠線のみ。
+    ghost: {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        borderWidth: 2,
+        borderStyle: 'dashed',
+    },
     handle: {
         position: 'absolute',
         right: -HANDLE_SIZE / 2,

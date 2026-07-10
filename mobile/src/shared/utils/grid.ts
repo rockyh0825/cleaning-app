@@ -27,6 +27,7 @@ export function rectsOverlap(a: Rect, b: Rect): boolean {
  * child が parent より大きい場合は parent の左上に揃える。
  */
 export function clampWithin(child: Rect, parent: Rect): Rect {
+    'worklet';
     const x = Math.max(parent.x, Math.min(child.x, parent.x + parent.w - child.w));
     const y = Math.max(parent.y, Math.min(child.y, parent.y + parent.h - child.h));
     return { x, y, w: child.w, h: child.h };
@@ -62,6 +63,7 @@ export function findFreePosition(
  * cellSize・scale が 0 以下または非有限値の場合は差分 0 を返す。
  */
 export function pxOffsetToGridDelta(offsetPx: Point, cellSize: number, scale = 1): Point {
+    'worklet';
     if (!Number.isFinite(cellSize) || cellSize <= 0) return { x: 0, y: 0 };
     if (!Number.isFinite(scale) || scale <= 0) return { x: 0, y: 0 };
     const effectiveCellSize = cellSize * scale;
