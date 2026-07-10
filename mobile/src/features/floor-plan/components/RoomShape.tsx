@@ -27,6 +27,11 @@ type Props = {
     canvasPanGesture?: GestureType;
     /** 指定時は種別色の代わりにこの色で塗る（ヒートマップ用）。未指定なら従来の種別色 */
     fillColor?: string;
+    /**
+     * true で移動ドラッグの pan ジェスチャーを無効化する（タップは有効のまま）。
+     * 読み取り専用表示で指への追従やキャンバスパンの阻害を防ぐ。未指定なら従来どおりドラッグ可能
+     */
+    dragDisabled?: boolean;
 };
 
 const CANVAS_BOUNDS: Rect = { x: 0, y: 0, w: GRID_COLS, h: GRID_ROWS };
@@ -42,6 +47,7 @@ export function RoomShape({
     scale = 1,
     canvasPanGesture,
     fillColor,
+    dragDisabled = false,
 }: Props) {
     const theme = useAppTheme();
     const width = room.gridW * cellSize;
@@ -58,6 +64,7 @@ export function RoomShape({
         onCommit: (rect) => onDragEnd?.(rect),
         testID: `room-pan-${room.id}`,
         blocksExternal: canvasPanGesture,
+        enabled: !dragDisabled,
     });
 
     const tapGesture = Gesture.Tap()

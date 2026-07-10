@@ -30,6 +30,11 @@ type Props = {
     canvasPanGesture?: GestureType;
     /** 指定時は surface 色の代わりにこの色で塗る（ヒートマップ用）。未指定なら従来の surface 色 */
     fillColor?: string;
+    /**
+     * true で移動ドラッグの pan ジェスチャーを無効化する（タップは有効のまま）。
+     * 読み取り専用表示で指への追従やキャンバスパンの阻害を防ぐ。未指定なら従来どおりドラッグ可能
+     */
+    dragDisabled?: boolean;
 };
 
 export function FurnitureItem({
@@ -43,6 +48,7 @@ export function FurnitureItem({
     scale = 1,
     canvasPanGesture,
     fillColor,
+    dragDisabled = false,
 }: Props) {
     const theme = useAppTheme();
     const width = furniture.gridW * cellSize;
@@ -66,6 +72,7 @@ export function FurnitureItem({
         onCommit: (rect) => onDragEnd?.(rect),
         testID: `furniture-pan-${furniture.id}`,
         blocksExternal: canvasPanGesture,
+        enabled: !dragDisabled,
     });
 
     const tapGesture = Gesture.Tap()

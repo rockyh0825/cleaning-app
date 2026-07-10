@@ -271,6 +271,76 @@ describe('RoomShape', () => {
         expect(screen.queryByTestId('resize-handle-room-1')).toBeNull();
     });
 
+    it('disables_pan_gesture_when_dragDisabled', async () => {
+        // Arrange: dragDisabled でも onDragEnd を渡した状態にする
+        const mockOnDragEnd = jest.fn();
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                onDragEnd={mockOnDragEnd}
+                dragDisabled
+            />,
+        );
+
+        // Act: 無効化されたジェスチャーへの fireGestureHandler は no-op になる
+        fireGestureHandler(getByGestureTestId('room-pan-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 56, translationY: 0 },
+            { state: State.END, translationX: 56, translationY: 0 },
+        ]);
+
+        // Assert: 非同期呼び出しの取りこぼしを防ぐためタスクキューを流してから検証する
+        await new Promise((resolve) => setImmediate(resolve));
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(getByGestureTestId('room-pan-room-1').config.enabled).toBe(false);
+        expect(mockOnDragEnd).not.toHaveBeenCalled();
+    });
+
+    it('keeps_pan_gesture_enabled_when_dragDisabled_is_omitted', () => {
+        // Arrange & Act: dragDisabled 未指定なら従来どおりドラッグ可能（後方互換）
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                onDragEnd={jest.fn()}
+            />,
+        );
+
+        // Assert
+        expect(getByGestureTestId('room-pan-room-1').config.enabled).toBe(true);
+    });
+
+    it('calls_onPress_on_tap_even_when_dragDisabled', async () => {
+        // Arrange: dragDisabled はドラッグのみ無効化し、タップ（選択導線）は残す
+        const mockOnPress = jest.fn();
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={mockOnPress}
+                dragDisabled
+            />,
+        );
+
+        // Act
+        fireGestureHandler(getByGestureTestId('room-tap-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+
+        // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる
+        await waitFor(() => {
+            expect(mockOnPress).toHaveBeenCalledTimes(1);
+        });
+    });
+
     it('calls_onResizeEnd_with_new_size_when_resize_drag_commits', async () => {
         // Arrange: cellSize=40 で右へ 56px（1.4 セル分）→ 幅 5 → 6
         const mockOnResizeEnd = jest.fn();

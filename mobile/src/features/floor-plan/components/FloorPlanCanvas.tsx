@@ -70,6 +70,16 @@ type Props = {
     onRoomDragEnd?: (roomId: string, rect: Rect) => void;
     /** 家具のドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
     onFurnitureDragEnd?: (furnitureId: string, rect: Rect) => void;
+    /**
+     * areaId（room.id / furniture.id）→ hex のヒートマップ色。
+     * 該当エリアの背景を fillColor として差し込む。miss したエリアは従来色のまま
+     */
+    areaColors?: Map<string, string>;
+    /**
+     * true でドラッグ確定・リサイズハンドル・選択表示を無効化しタップのみ許可する
+     * （ヒートマップ等の読み取り専用表示向け）。未指定なら従来の編集挙動
+     */
+    readOnly?: boolean;
 };
 
 export function FloorPlanCanvas({
@@ -81,6 +91,8 @@ export function FloorPlanCanvas({
     onFurnitureDragEnd,
     selectedRoomId,
     selectedFurnitureId,
+    areaColors,
+    readOnly = false,
 }: Props) {
     const theme = useAppTheme();
     // 制御プロップが渡された場合は親が真実の源。未指定なら内部 state で管理する（後方互換）
@@ -146,6 +158,10 @@ export function FloorPlanCanvas({
         [panX, panY, scale],
     );
 
+    // readOnly ではドラッグ・リサイズを確定させない（タップのみ許可）
+    const effectiveOnRoomDragEnd = readOnly ? undefined : onRoomDragEnd;
+    const effectiveOnFurnitureDragEnd = readOnly ? undefined : onFurnitureDragEnd;
+
     const canvasWidth = GRID_COLS * cellSize;
     const canvasHeight = GRID_ROWS * cellSize;
     const overlappingRoomIds = useMemo(
@@ -154,21 +170,27 @@ export function FloorPlanCanvas({
     );
 
     function handleRoomPress(roomId: string) {
-        // 制御モードでは親が selectedRoomId を更新するため内部 state は触らない
-        if (!isRoomSelectionControlled) {
-            setInternalSelectedRoomId(roomId);
-        }
-        // 制御モードでは家具選択の解除も親（onRoomPress）に委ねる
-        if (!isFurnitureSelectionControlled) {
-            setInternalSelectedFurnitureId(null);
+        // readOnly では選択 UI を出さないため内部選択 state を更新しない（onRoomPress は通知する）
+        if (!readOnly) {
+            // 制御モードでは親が selectedRoomId を更新するため内部 state は触らない
+            if (!isRoomSelectionControlled) {
+                setInternalSelectedRoomId(roomId);
+            }
+            // 制御モードでは家具選択の解除も親（onRoomPress）に委ねる
+            if (!isFurnitureSelectionControlled) {
+                setInternalSelectedFurnitureId(null);
+            }
         }
         onRoomPress?.(roomId);
     }
 
     function handleFurniturePress(furnitureId: string) {
-        // 制御モードでは親が selectedFurnitureId を更新するため内部 state は触らない
-        if (!isFurnitureSelectionControlled) {
-            setInternalSelectedFurnitureId(furnitureId);
+        // readOnly では選択 UI を出さないため内部選択 state を更新しない（onFurniturePress は通知する）
+        if (!readOnly) {
+            // 制御モードでは親が selectedFurnitureId を更新するため内部 state は触らない
+            if (!isFurnitureSelectionControlled) {
+                setInternalSelectedFurnitureId(furnitureId);
+            }
         }
         onFurniturePress?.(furnitureId);
     }
@@ -197,14 +219,20 @@ export function FloorPlanCanvas({
                                 cellSize={cellSize}
                                 scale={gridScale}
                                 canvasPanGesture={canvasPanGesture}
-                                selected={resolvedSelectedRoomId === room.id}
+                                selected={
+                                    !readOnly && resolvedSelectedRoomId === room.id
+                                }
                                 onPress={() => handleRoomPress(room.id)}
-                                onDragEnd={(rect) => onRoomDragEnd?.(room.id, rect)}
+                                onDragEnd={(rect) =>
+                                    effectiveOnRoomDragEnd?.(room.id, rect)
+                                }
                                 overlapping={overlappingRoomIds.has(room.id)}
+                                fillColor={areaColors?.get(room.id)}
+                                dragDisabled={readOnly}
                                 onResizeEnd={
-                                    onRoomDragEnd
+                                    effectiveOnRoomDragEnd
                                         ? (size) =>
-                                              onRoomDragEnd(room.id, {
+                                              effectiveOnRoomDragEnd(room.id, {
                                                   x: room.gridX,
                                                   y: room.gridY,
                                                   w: size.w,
@@ -220,7 +248,10 @@ export function FloorPlanCanvas({
                                     cellSize={cellSize}
                                     scale={gridScale}
                                     canvasPanGesture={canvasPanGesture}
-                                    selected={resolvedSelectedFurnitureId === furn.id}
+                                    selected={
+                                        !readOnly &&
+                                        resolvedSelectedFurnitureId === furn.id
+                                    }
                                     onPress={() => handleFurniturePress(furn.id)}
                                     bounds={{
                                         x: room.gridX,
@@ -228,13 +259,15 @@ export function FloorPlanCanvas({
                                         w: room.gridW,
                                         h: room.gridH,
                                     }}
+                                    fillColor={areaColors?.get(furn.id)}
+                                    dragDisabled={readOnly}
                                     onDragEnd={(rect) =>
-                                        onFurnitureDragEnd?.(furn.id, rect)
+                                        effectiveOnFurnitureDragEnd?.(furn.id, rect)
                                     }
                                     onResizeEnd={
-                                        onFurnitureDragEnd
+                                        effectiveOnFurnitureDragEnd
                                             ? (size) =>
-                                                  onFurnitureDragEnd(furn.id, {
+                                                  effectiveOnFurnitureDragEnd(furn.id, {
                                                       x: furn.gridX,
                                                       y: furn.gridY,
                                                       w: size.w,
