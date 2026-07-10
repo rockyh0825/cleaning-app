@@ -9,7 +9,7 @@ jest.mock('react-native-reanimated', () => ({
     runOnJS: (fn: unknown) => fn,
 }));
 
-import { commitDrag, previewOffset } from '../useDragToGrid';
+import { commitDrag, previewOffset, snapDragRect } from '../useDragToGrid';
 
 describe('commitDrag', () => {
     const bounds = { x: 0, y: 0, w: 20, h: 20 };
@@ -73,6 +73,49 @@ describe('commitDrag', () => {
 
         // Assert
         expect(result).toEqual({ x: 3, y: 2, w: 4, h: 4 });
+    });
+});
+
+describe('snapDragRect', () => {
+    const bounds = { x: 0, y: 0, w: 20, h: 20 };
+    const cellSize = 30;
+
+    it('returns_snapped_rect_when_offset_is_one_point_four_cells', () => {
+        // Arrange: commitDrag と同じ丸め結果になること（プレビューと確定の一致）
+        const rect = { x: 2, y: 2, w: 4, h: 4 };
+        const offsetPx = { x: cellSize * 1.4, y: 0 };
+
+        // Act
+        const result = snapDragRect({ rect, offsetPx, cellSize, bounds });
+
+        // Assert
+        expect(result).toEqual({ x: 3, y: 2, w: 4, h: 4 });
+    });
+
+    it('returns_current_rect_instead_of_null_when_offset_is_zero', () => {
+        // Arrange: commitDrag は null を返すが、プレビューは常に現在サイズを表示する
+        const rect = { x: 2, y: 2, w: 4, h: 4 };
+        const offsetPx = { x: 0, y: 0 };
+
+        // Act
+        const result = snapDragRect({ rect, offsetPx, cellSize, bounds });
+
+        // Assert
+        expect(result).toEqual({ x: 2, y: 2, w: 4, h: 4 });
+    });
+
+    it('clamps_to_bounds_when_dragged_outside', () => {
+        // Arrange: リサイズ空間の読み替え（x=幅, y=高さ, w=h=0）。5x4 を +20 セル拡大
+        // → (2,2) 起点でキャンバス 20 まで最大 18x18
+        const rect = { x: 5, y: 4, w: 0, h: 0 };
+        const offsetPx = { x: cellSize * 20, y: cellSize * 20 };
+        const sizeBounds = { x: 1, y: 1, w: 20 - 2 - 1, h: 20 - 2 - 1 };
+
+        // Act
+        const result = snapDragRect({ rect, offsetPx, cellSize, bounds: sizeBounds });
+
+        // Assert
+        expect(result).toEqual({ x: 18, y: 18, w: 0, h: 0 });
     });
 });
 

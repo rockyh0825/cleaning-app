@@ -22,21 +22,22 @@ export type CommitDragParams = {
 };
 
 /**
- * ドラッグ終了時の確定計算。px オフセットをグリッド差分に変換し、
- * bounds にクランプした矩形を返す。位置が変わらない場合は null。
- * Reanimated 非依存の純粋関数としてテストする。
+ * ドラッグ中の「今この位置で確定したら」のスナップ済み矩形を返す。
+ * px オフセットをグリッド差分に変換し bounds にクランプする。位置が変わらない
+ * 場合も現在位置を返す（null にしない）ので、確定前のゴーストプレビューに使える。
+ * 確定（commitDrag）とプレビューを同一計算にすることで、指を離した瞬間のズレを防ぐ。
+ * UIスレッド（onUpdate worklet）とJSスレッド（commit）の双方から呼ぶため worklet 指定。
  *
  * rect・差分ともグリッド整数座標のため snapToGrid は恒等変換になり省略している。
- * rect が最初から bounds 外にある場合は、移動量 0 でもクランプ後の位置で
- * commit される（不正データの自己修復として意図した挙動）。
  */
-export function commitDrag({
+export function snapDragRect({
     rect,
     offsetPx,
     cellSize,
     scale = 1,
     bounds,
-}: CommitDragParams): Rect | null {
+}: CommitDragParams): Rect {
+    'worklet';
     const delta = pxOffsetToGridDelta(offsetPx, cellSize, scale);
     const moved: Rect = {
         x: rect.x + delta.x,
@@ -44,8 +45,20 @@ export function commitDrag({
         w: rect.w,
         h: rect.h,
     };
-    const clamped = clampWithin(moved, bounds);
-    if (clamped.x === rect.x && clamped.y === rect.y) return null;
+    return clampWithin(moved, bounds);
+}
+
+/**
+ * ドラッグ終了時の確定計算。snapDragRect のクランプ結果を返すが、位置が
+ * 変わらない場合は null（無駄な更新・履歴を避ける）。
+ * Reanimated 非依存の純粋関数としてテストする。
+ *
+ * rect が最初から bounds 外にある場合は、移動量 0 でもクランプ後の位置で
+ * commit される（不正データの自己修復として意図した挙動）。
+ */
+export function commitDrag(params: CommitDragParams): Rect | null {
+    const clamped = snapDragRect(params);
+    if (clamped.x === params.rect.x && clamped.y === params.rect.y) return null;
     return clamped;
 }
 
@@ -94,6 +107,11 @@ export function useDragToGrid({
 }: UseDragToGridParams) {
     const translationX = useSharedValue(0);
     const translationY = useSharedValue(0);
+    // ドラッグ中の「今確定したら」のスナップ済み矩形（グリッド単位）。プレビュー描画用。
+    const previewX = useSharedValue(rect.x);
+    const previewY = useSharedValue(rect.y);
+    // 0=非ドラッグ（プレビュー非表示）／1=ドラッグ中（表示）。opacity として使える。
+    const previewActive = useSharedValue(0);
 
     function commit(offsetPx: Point) {
         const committed = commitDrag({ rect, offsetPx, cellSize, scale, bounds });
@@ -102,12 +120,21 @@ export function useDragToGrid({
 
     const gesture = Gesture.Pan()
         .onUpdate((event) => {
-            const preview = previewOffset(
-                { x: event.translationX, y: event.translationY },
-                scale,
-            );
+            const offset = { x: event.translationX, y: event.translationY };
+            const preview = previewOffset(offset, scale);
             translationX.value = preview.x;
             translationY.value = preview.y;
+            // 確定と同じ計算でスナップ後の矩形を求め、ゴーストへ反映する
+            const snapped = snapDragRect({
+                rect,
+                offsetPx: offset,
+                cellSize,
+                scale,
+                bounds,
+            });
+            previewX.value = snapped.x;
+            previewY.value = snapped.y;
+            previewActive.value = 1;
         })
         .onEnd((event) => {
             runOnJS(commit)({ x: event.translationX, y: event.translationY });
@@ -115,6 +142,7 @@ export function useDragToGrid({
         .onFinalize(() => {
             translationX.value = 0;
             translationY.value = 0;
+            previewActive.value = 0;
         });
     if (testID) gesture.withTestId(testID);
     if (blocksExternal) gesture.blocksExternalGesture(blocksExternal);
@@ -130,5 +158,14 @@ export function useDragToGrid({
         [translationX, translationY],
     );
 
-    return { gesture, animatedStyle };
+    return {
+        gesture,
+        animatedStyle,
+        /**
+         * ドラッグ中の確定サイズ/位置プレビュー用の shared value 群。
+         * 消費側（ResizeHandle 等）が useAnimatedStyle でゴースト描画に使う。
+         * x/y はグリッド単位。リサイズ用途では x=幅・y=高さに読み替わる。
+         */
+        preview: { x: previewX, y: previewY, active: previewActive },
+    };
 }

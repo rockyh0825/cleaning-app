@@ -117,6 +117,7 @@ export function FurnitureItem({
                         onCommit={onResizeEnd}
                         handleTestID={`resize-handle-${furniture.id}`}
                         dragTestID={`furniture-resize-${furniture.id}`}
+                        ghostTestID={`resize-ghost-${furniture.id}`}
                         accessibilityLabel="家具のサイズを変更"
                     />
                 )}

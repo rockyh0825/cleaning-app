@@ -179,7 +179,7 @@ export default function FloorPlanIndexScreen() {
             setSelectedRoomId(null);
             setRenamingRoomId(null);
           }}
-          onRoomDragEnd={(roomId, rect) =>
+          onRoomDragEnd={(roomId, rect) => {
             updateRoom.mutate({
               roomId,
               input: {
@@ -188,8 +188,8 @@ export default function FloorPlanIndexScreen() {
                 gridW: rect.w,
                 gridH: rect.h,
               },
-            })
-          }
+            });
+          }}
         />
       )}
 

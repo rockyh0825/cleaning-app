@@ -140,6 +140,7 @@ export function RoomShape({
                         onCommit={onResizeEnd}
                         handleTestID={`resize-handle-${room.id}`}
                         dragTestID={`room-resize-${room.id}`}
+                        ghostTestID={`resize-ghost-${room.id}`}
                         accessibilityLabel="部屋のサイズを変更"
                     />
                 )}
