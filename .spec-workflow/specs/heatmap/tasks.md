@@ -59,7 +59,7 @@
 
 ## フェーズ4: 描画基盤の拡張（floor-plan と共有・後方互換）
 
-- [ ] 5. RoomShape / FurnitureItem に fillColor prop を追加
+- [x] 5. RoomShape / FurnitureItem に fillColor prop を追加
   - File: mobile/src/features/floor-plan/components/{RoomShape,FurnitureItem}.tsx
   - 任意 prop `fillColor?: string` を追加。指定時は `theme.roomAccents[...].fill` の代わりに fillColor で塗る。未指定なら従来どおり種別色
   - Purpose: ヒートマップの色をエリアごとに差し込む口

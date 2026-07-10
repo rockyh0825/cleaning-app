@@ -62,6 +62,43 @@ describe('FurnitureItem', () => {
         expect(style.borderColor).toBe(lightTheme.colors.outline);
     });
 
+    it('uses_fillColor_for_background_color_when_provided', () => {
+        // Arrange & Act: fillColor 指定時は surface 色を上書きする（ヒートマップ用）
+        render(
+            <FurnitureItem
+                furniture={testFurniture}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                bounds={roomBounds}
+                fillColor="#FF0000"
+            />,
+        );
+
+        // Assert
+        const item = screen.getByTestId('furniture-item-furn-1');
+        const style = StyleSheet.flatten(item.props.style);
+        expect(style.backgroundColor).toBe('#FF0000');
+    });
+
+    it('keeps_surface_background_when_fillColor_is_omitted', () => {
+        // Arrange & Act: fillColor 未指定なら従来どおり surface 色（回帰）
+        render(
+            <FurnitureItem
+                furniture={testFurniture}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                bounds={roomBounds}
+            />,
+        );
+
+        // Assert
+        const item = screen.getByTestId('furniture-item-furn-1');
+        const style = StyleSheet.flatten(item.props.style);
+        expect(style.backgroundColor).toBe(lightTheme.colors.surface);
+    });
+
     it('uses_primary_token_for_selected_border_color', () => {
         // Arrange & Act
         render(

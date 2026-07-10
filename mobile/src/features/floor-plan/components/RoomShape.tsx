@@ -25,6 +25,8 @@ type Props = {
     scale?: number;
     /** この部屋のドラッグ判定が終わるまで待機させるキャンバスパン */
     canvasPanGesture?: GestureType;
+    /** 指定時は種別色の代わりにこの色で塗る（ヒートマップ用）。未指定なら従来の種別色 */
+    fillColor?: string;
 };
 
 const CANVAS_BOUNDS: Rect = { x: 0, y: 0, w: GRID_COLS, h: GRID_ROWS };
@@ -39,6 +41,7 @@ export function RoomShape({
     onResizeEnd,
     scale = 1,
     canvasPanGesture,
+    fillColor,
 }: Props) {
     const theme = useAppTheme();
     const width = room.gridW * cellSize;
@@ -78,7 +81,7 @@ export function RoomShape({
                         height,
                         left,
                         top,
-                        backgroundColor: accent.fill,
+                        backgroundColor: fillColor ?? accent.fill,
                         borderRadius: theme.radius.md,
                         // 重なりは警告チャネル（danger 枠）、選択は別オーバーレイで強調する
                         borderWidth: overlapping ? 2 : 1,
