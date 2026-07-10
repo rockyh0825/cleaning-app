@@ -36,4 +36,21 @@ describe("HeatmapLegend", () => {
             );
         }
     });
+
+    it("outlines_swatches_with_border_color_distinct_from_neutral_fill", () => {
+        // Arrange & Act: ライトテーマは heatNeutral と outline が同色（gray200）のため、
+        // 枠線には塗りと同化しない濃いトークン（textMuted）を使う
+        render(<HeatmapLegend />);
+
+        // Assert: 全スウォッチの枠線が textMuted で、neutral の塗りとは異なる
+        for (const status of ["fresh", "due", "overdue", "neutral"]) {
+            const style = StyleSheet.flatten(
+                screen.getByTestId(`legend-swatch-${status}`).props.style,
+            );
+            expect(style.borderColor).toBe(lightTheme.colors.textMuted);
+            expect(style.borderColor).not.toBe(
+                lightTheme.colors.heatNeutral,
+            );
+        }
+    });
 });

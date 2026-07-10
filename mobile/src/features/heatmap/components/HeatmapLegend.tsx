@@ -37,7 +37,9 @@ export function HeatmapLegend() {
                             styles.swatch,
                             {
                                 backgroundColor: heatColors[status],
-                                borderColor: theme.colors.outline,
+                                // outline は heatNeutral と同色（ライト: gray200）で
+                                // スウォッチが同化するため、濃い textMuted で縁取る
+                                borderColor: theme.colors.textMuted,
                                 borderRadius: theme.radius.sm,
                             },
                         ]}
