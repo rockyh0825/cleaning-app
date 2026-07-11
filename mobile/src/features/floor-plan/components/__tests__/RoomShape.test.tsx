@@ -49,6 +49,44 @@ describe('RoomShape', () => {
         });
     });
 
+    it('renders_move_grip_covering_the_center_area_of_the_room', () => {
+        // Arrange & Act: 移動用のグリップは部屋の中央 50% 領域を覆う
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                onDragEnd={jest.fn()}
+            />,
+        );
+
+        // Assert: 四つ角のリサイズハンドルと干渉しないよう中央のみに置く
+        const grip = screen.getByTestId('room-move-area-room-1');
+        const style = StyleSheet.flatten(grip.props.style);
+        expect(style.left).toBe('25%');
+        expect(style.top).toBe('25%');
+        expect(style.width).toBe('50%');
+        expect(style.height).toBe('50%');
+    });
+
+    it('activates_move_drag_only_after_holding_the_center_grip', () => {
+        // Arrange & Act: 触れてすぐ動かしても移動せず、ホールド後にのみ移動が始まる
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                onDragEnd={jest.fn()}
+            />,
+        );
+
+        // Assert: pan は長押し（300ms）経過後にアクティブ化する設定であること
+        const panGesture = getByGestureTestId('room-pan-room-1');
+        expect(panGesture.config.activateAfterLongPress).toBe(300);
+    });
+
     it('calls_onDragEnd_with_snapped_rect_when_drag_commits', async () => {
         // Arrange: cellSize=40 で 56px（1.4 セル分）ドラッグ → 1 セル移動にスナップ
         const mockOnDragEnd = jest.fn();
@@ -239,7 +277,7 @@ describe('RoomShape', () => {
         expect(style.backgroundColor).toBe(lightTheme.roomAccents.LIVING.fill);
     });
 
-    it('shows_resize_handle_when_selected', () => {
+    it('shows_resize_handles_on_all_four_corners_when_selected', () => {
         // Arrange & Act
         render(
             <RoomShape
@@ -251,11 +289,14 @@ describe('RoomShape', () => {
             />,
         );
 
-        // Assert
-        expect(screen.getByTestId('resize-handle-room-1')).toBeTruthy();
+        // Assert: 四つ角すべてにハンドルが出る
+        expect(screen.getByTestId('resize-handle-room-1-tl')).toBeTruthy();
+        expect(screen.getByTestId('resize-handle-room-1-tr')).toBeTruthy();
+        expect(screen.getByTestId('resize-handle-room-1-bl')).toBeTruthy();
+        expect(screen.getByTestId('resize-handle-room-1-br')).toBeTruthy();
     });
 
-    it('hides_resize_handle_when_not_selected', () => {
+    it('hides_resize_handles_when_not_selected', () => {
         // Arrange & Act
         render(
             <RoomShape
@@ -268,7 +309,8 @@ describe('RoomShape', () => {
         );
 
         // Assert
-        expect(screen.queryByTestId('resize-handle-room-1')).toBeNull();
+        expect(screen.queryByTestId('resize-handle-room-1-br')).toBeNull();
+        expect(screen.queryByTestId('resize-handle-room-1-tl')).toBeNull();
     });
 
     it('disables_pan_gesture_when_dragDisabled', async () => {
@@ -341,7 +383,44 @@ describe('RoomShape', () => {
         });
     });
 
-    it('calls_onResizeEnd_with_new_size_when_resize_drag_commits', async () => {
+    it('raises_room_above_sibling_furniture_when_selected', () => {
+        // Arrange & Act: 家具はキャンバス上で部屋の後に描画される絶対配置の兄弟のため、
+        // 選択中は部屋を前面に出さないと中央の移動グリップが家具に覆われて操作できない
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={true}
+                onPress={jest.fn()}
+                onDragEnd={jest.fn()}
+            />,
+        );
+
+        // Assert
+        const shape = screen.getByTestId('room-shape-room-1');
+        const style = StyleSheet.flatten(shape.props.style);
+        expect(style.zIndex).toBeGreaterThan(0);
+    });
+
+    it('keeps_default_stacking_below_furniture_when_not_selected', () => {
+        // Arrange & Act: 非選択時は従来どおり家具が部屋の上に描画される（家具操作を阻害しない）
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                onDragEnd={jest.fn()}
+            />,
+        );
+
+        // Assert
+        const shape = screen.getByTestId('room-shape-room-1');
+        const style = StyleSheet.flatten(shape.props.style);
+        expect(style.zIndex ?? 0).toBe(0);
+    });
+
+    it('calls_onResizeEnd_with_new_rect_when_bottom_right_resize_commits', async () => {
         // Arrange: cellSize=40 で右へ 56px（1.4 セル分）→ 幅 5 → 6
         const mockOnResizeEnd = jest.fn();
         render(
@@ -355,15 +434,41 @@ describe('RoomShape', () => {
         );
 
         // Act
-        fireGestureHandler(getByGestureTestId('room-resize-room-1'), [
+        fireGestureHandler(getByGestureTestId('room-resize-room-1-br'), [
             { state: State.BEGAN },
             { state: State.ACTIVE, translationX: 56, translationY: 0 },
             { state: State.END, translationX: 56, translationY: 0 },
         ]);
 
-        // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる
+        // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる。左上は固定
         await waitFor(() => {
-            expect(mockOnResizeEnd).toHaveBeenCalledWith({ w: 6, h: 4 });
+            expect(mockOnResizeEnd).toHaveBeenCalledWith({ x: 0, y: 0, w: 6, h: 4 });
+        });
+    });
+
+    it('calls_onResizeEnd_with_moved_origin_when_top_left_resize_commits', async () => {
+        // Arrange: (0,0) 5×4 の左上角を (1,1) へ → 右下 (5,4) 固定で 4×3 に縮む
+        const mockOnResizeEnd = jest.fn();
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={true}
+                onPress={jest.fn()}
+                onResizeEnd={mockOnResizeEnd}
+            />,
+        );
+
+        // Act
+        fireGestureHandler(getByGestureTestId('room-resize-room-1-tl'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 40, translationY: 40 },
+            { state: State.END, translationX: 40, translationY: 40 },
+        ]);
+
+        // Assert
+        await waitFor(() => {
+            expect(mockOnResizeEnd).toHaveBeenCalledWith({ x: 1, y: 1, w: 4, h: 3 });
         });
     });
 });

@@ -6,6 +6,7 @@ import Animated, { runOnJS } from 'react-native-reanimated';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
 import type { Rect } from '@/shared/utils/grid';
 import { useDragToGrid } from '../hooks/useDragToGrid';
+import { CORNERS } from '../utils/cornerResize';
 import { ResizeHandle } from './ResizeHandle';
 import type { Furniture } from '../types';
 
@@ -22,8 +23,11 @@ type Props = {
     bounds: Rect;
     /** ドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
     onDragEnd?: (rect: Rect) => void;
-    /** リサイズ確定時にグリッド単位の新サイズを受け取る（選択中のみハンドル表示） */
-    onResizeEnd?: (size: { w: number; h: number }) => void;
+    /**
+     * リサイズ確定時にグリッド単位の新矩形（部屋相対）を受け取る（選択中のみ四つ角ハンドル表示）。
+     * 左上・右上・左下の角では x/y も変わるため矩形全体を返す。
+     */
+    onResizeEnd?: (rect: Rect) => void;
     /** キャンバスのズーム倍率（px→グリッド変換に使用） */
     scale?: number;
     /** この家具のドラッグ判定が終わるまで待機させるキャンバスパン */
@@ -112,22 +116,26 @@ export function FurnitureItem({
                 >
                     {furniture.name}
                 </Text>
-                {selected && onResizeEnd && (
-                    <ResizeHandle
-                        position={{ x: furniture.gridX, y: furniture.gridY }}
-                        size={{ w: furniture.gridW, h: furniture.gridH }}
-                        maxRight={bounds.w}
-                        maxBottom={bounds.h}
-                        cellSize={cellSize}
-                        scale={scale}
-                        blocksExternal={canvasPanGesture}
-                        onCommit={onResizeEnd}
-                        handleTestID={`resize-handle-${furniture.id}`}
-                        dragTestID={`furniture-resize-${furniture.id}`}
-                        ghostTestID={`resize-ghost-${furniture.id}`}
-                        accessibilityLabel="家具のサイズを変更"
-                    />
-                )}
+                {selected &&
+                    onResizeEnd &&
+                    CORNERS.map((corner) => (
+                        <ResizeHandle
+                            key={corner}
+                            corner={corner}
+                            position={{ x: furniture.gridX, y: furniture.gridY }}
+                            size={{ w: furniture.gridW, h: furniture.gridH }}
+                            maxRight={bounds.w}
+                            maxBottom={bounds.h}
+                            cellSize={cellSize}
+                            scale={scale}
+                            blocksExternal={canvasPanGesture}
+                            onCommit={onResizeEnd}
+                            handleTestID={`resize-handle-${furniture.id}-${corner}`}
+                            dragTestID={`furniture-resize-${furniture.id}-${corner}`}
+                            ghostTestID={`resize-ghost-${furniture.id}-${corner}`}
+                            accessibilityLabel="家具のサイズを変更"
+                        />
+                    ))}
             </Animated.View>
         </GestureDetector>
     );

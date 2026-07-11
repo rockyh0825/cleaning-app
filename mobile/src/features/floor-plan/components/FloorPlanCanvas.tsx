@@ -230,14 +230,10 @@ export function FloorPlanCanvas({
                                 fillColor={areaColors?.get(room.id)}
                                 dragDisabled={readOnly}
                                 onResizeEnd={
+                                    // 四つ角リサイズは x/y も変わるため矩形をそのまま渡す
                                     effectiveOnRoomDragEnd
-                                        ? (size) =>
-                                              effectiveOnRoomDragEnd(room.id, {
-                                                  x: room.gridX,
-                                                  y: room.gridY,
-                                                  w: size.w,
-                                                  h: size.h,
-                                              })
+                                        ? (rect) =>
+                                              effectiveOnRoomDragEnd(room.id, rect)
                                         : undefined
                                 }
                             />
@@ -265,14 +261,13 @@ export function FloorPlanCanvas({
                                         effectiveOnFurnitureDragEnd?.(furn.id, rect)
                                     }
                                     onResizeEnd={
+                                        // 四つ角リサイズは x/y も変わるため矩形をそのまま渡す
                                         effectiveOnFurnitureDragEnd
-                                            ? (size) =>
-                                                  effectiveOnFurnitureDragEnd(furn.id, {
-                                                      x: furn.gridX,
-                                                      y: furn.gridY,
-                                                      w: size.w,
-                                                      h: size.h,
-                                                  })
+                                            ? (rect) =>
+                                                  effectiveOnFurnitureDragEnd(
+                                                      furn.id,
+                                                      rect,
+                                                  )
                                             : undefined
                                     }
                                 />

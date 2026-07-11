@@ -95,6 +95,11 @@ export type UseDragToGridParams = {
      * 省略時は true（従来どおりドラッグ可能）
      */
     enabled?: boolean;
+    /**
+     * 指定時、この時間（ms）ホールドしてからドラッグがアクティブ化する。
+     * タップ選択や四つ角リサイズとの誤操作を防ぐ「長押しで移動」用。
+     */
+    activateAfterLongPressMs?: number;
 };
 
 /**
@@ -111,6 +116,7 @@ export function useDragToGrid({
     testID,
     blocksExternal,
     enabled = true,
+    activateAfterLongPressMs,
 }: UseDragToGridParams) {
     const translationX = useSharedValue(0);
     const translationY = useSharedValue(0);
@@ -154,6 +160,9 @@ export function useDragToGrid({
         });
     if (testID) gesture.withTestId(testID);
     if (blocksExternal) gesture.blocksExternalGesture(blocksExternal);
+    if (activateAfterLongPressMs != null) {
+        gesture.activateAfterLongPress(activateAfterLongPressMs);
+    }
 
     // 依存配列は Babel プラグイン無しの環境（ts-jest でのテスト実行）でも動くよう明示する
     const animatedStyle = useAnimatedStyle(

@@ -186,7 +186,23 @@ describe('FloorPlanIndexScreen', () => {
         expect(router.push).not.toHaveBeenCalled();
     });
 
-    it('navigates_to_room_detail_when_selected_room_is_pressed_again', async () => {
+    it('navigates_to_room_detail_when_edit_interior_is_pressed', async () => {
+        // Arrange: 初回タップで選択済みの状態にする
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+
+        // Act: 「中を修正」を押す
+        fireEvent.press(screen.getByTestId('selection-edit-interior'));
+
+        // Assert: 家具配置の修正画面（部屋詳細）へ遷移する
+        await waitFor(() => {
+            expect(router.push).toHaveBeenCalledWith('/floor-plan/room-1');
+        });
+    });
+
+    it('does_not_navigate_when_selected_room_is_pressed_again', async () => {
         // Arrange: 初回タップで選択済みの状態にする
         mockHookWithLivingRoom();
         (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
@@ -198,10 +214,9 @@ describe('FloorPlanIndexScreen', () => {
             within(screen.getByTestId('room-shape-room-1')).getByText('リビング'),
         );
 
-        // Assert
-        await waitFor(() => {
-            expect(router.push).toHaveBeenCalledWith('/floor-plan/room-1');
-        });
+        // Assert: 遷移は「中を修正」ボタン経由のみ。選択は維持される
+        expect(router.push).not.toHaveBeenCalled();
+        expect(screen.getByTestId('selection-actions')).toBeTruthy();
     });
 
     it('shows_selection_actions_with_room_name_when_room_is_pressed', async () => {
@@ -213,11 +228,30 @@ describe('FloorPlanIndexScreen', () => {
         // Act
         fireEvent.press(await screen.findByText('リビング'));
 
-        // Assert: 操作バーに選択中の部屋名と操作ボタンが表示される
+        // Assert: 操作バーに部屋名と「中を修正」「名称修正」「削除」が並ぶ
+        // （375pt 幅端末で部屋名が潰れないよう短縮ラベルを使う）
         const actions = screen.getByTestId('selection-actions');
         expect(within(actions).getByText('リビング')).toBeTruthy();
+        expect(within(actions).getByText('中を修正')).toBeTruthy();
+        expect(within(actions).getByText('名称修正')).toBeTruthy();
         expect(screen.getByTestId('selection-rename')).toBeTruthy();
         expect(screen.getByTestId('selection-delete')).toBeTruthy();
+    });
+
+    it('opens_full_screen_rename_when_rename_is_pressed', async () => {
+        // Arrange
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+
+        // Act: 「名称修正」を押す
+        fireEvent.press(screen.getByTestId('selection-rename'));
+
+        // Assert: 入力が画面を支配するフルスクリーンの名称変更画面が開く
+        expect(screen.getByTestId('rename-screen')).toBeTruthy();
+        expect(screen.getByTestId('rename-input').props.autoFocus).toBe(true);
+        expect(screen.getByTestId('rename-input').props.value).toBe('リビング');
     });
 
     it('shows_cascade_delete_confirmation_when_delete_is_pressed', async () => {

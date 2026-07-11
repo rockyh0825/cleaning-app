@@ -9,6 +9,13 @@ type Props = {
     onDelete: () => void;
     /** 指定時のみ右端に選択解除（✕）ボタンを表示する */
     onDismiss?: () => void;
+    /**
+     * 指定時のみ「中を修正」ボタンを表示する（間取り画面の部屋選択のみ）。
+     * 部屋詳細（家具配置編集）への導線。読み上げ名は「部屋の中を修正」。
+     */
+    onEditInterior?: () => void;
+    /** 名称変更ボタンの文言（省略時「名称変更」。部屋では「名称修正」を渡す） */
+    renameLabel?: string;
 };
 
 type ActionButtonProps = {
@@ -50,16 +57,27 @@ function ActionButton({
                 },
             ]}
         >
-            <Text style={[theme.typography.label, { color }]}>{label}</Text>
+            <Text numberOfLines={1} style={[theme.typography.label, { color }]}>
+                {label}
+            </Text>
         </Pressable>
     );
 }
 
 /**
  * 選択中の対象（部屋・家具）に対する操作バー。
- * 名称と「名称変更」「削除」ボタンを表示する。色はテーマトークンのみ参照する。
+ * 名称と「名称変更」「削除」ボタン（部屋では「中を修正」も）を表示する。
+ * ラベルは 375pt 幅端末でも名称が視認できるよう短い文言にする。
+ * 色はテーマトークンのみ参照する。
  */
-export function SelectionActions({ targetName, onRename, onDelete, onDismiss }: Props) {
+export function SelectionActions({
+    targetName,
+    onRename,
+    onDelete,
+    onDismiss,
+    onEditInterior,
+    renameLabel = '名称変更',
+}: Props) {
     const theme = useAppTheme();
 
     return (
@@ -83,9 +101,18 @@ export function SelectionActions({ targetName, onRename, onDelete, onDismiss }: 
             >
                 {targetName}
             </Text>
+            {onEditInterior && (
+                <ActionButton
+                    testID="selection-edit-interior"
+                    label="中を修正"
+                    accessibilityLabel="部屋の中を修正"
+                    color={theme.colors.primary}
+                    onPress={onEditInterior}
+                />
+            )}
             <ActionButton
                 testID="selection-rename"
-                label="名称変更"
+                label={renameLabel}
                 color={theme.colors.primary}
                 onPress={onRename}
             />
@@ -116,9 +143,14 @@ const styles = StyleSheet.create({
     },
     name: {
         flex: 1,
+        // ボタン群が幅を占めても名称が 0 幅に潰れないよう最小幅を確保する（375pt 端末対策）
+        minWidth: 48,
     },
     action: {
         justifyContent: 'center',
         alignItems: 'center',
+        // RN の flexShrink デフォルトは 0。狭い端末では ✕ をバー外へ押し出すのではなく
+        // ボタン側を縮めて 1 行（numberOfLines=1）で収める
+        flexShrink: 1,
     },
 });

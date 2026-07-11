@@ -243,7 +243,7 @@ describe('FurnitureItem', () => {
         );
 
         // Act
-        fireGestureHandler(getByGestureTestId('furniture-resize-furn-1'), [
+        fireGestureHandler(getByGestureTestId('furniture-resize-furn-1-br'), [
             { state: State.BEGAN },
             { state: State.ACTIVE, translationX: 56, translationY: 0 },
             { state: State.END, translationX: 56, translationY: 0 },
@@ -251,7 +251,7 @@ describe('FurnitureItem', () => {
 
         // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる
         await waitFor(() => {
-            expect(mockOnResizeEnd).toHaveBeenCalledWith({ w: 3, h: 2 });
+            expect(mockOnResizeEnd).toHaveBeenCalledWith({ x: 0, y: 0, w: 3, h: 2 });
         });
     });
 
@@ -269,7 +269,7 @@ describe('FurnitureItem', () => {
         );
 
         // Assert
-        expect(screen.queryByTestId('resize-handle-furn-1')).toBeNull();
+        expect(screen.queryByTestId('resize-handle-furn-1-br')).toBeNull();
     });
 
     it('commits_one_by_one_when_resize_shrinks_below_minimum', async () => {
@@ -293,7 +293,7 @@ describe('FurnitureItem', () => {
         );
 
         // Act: -320px（-8 セル）縮める
-        fireGestureHandler(getByGestureTestId('furniture-resize-furn-1'), [
+        fireGestureHandler(getByGestureTestId('furniture-resize-furn-1-br'), [
             { state: State.BEGAN },
             { state: State.ACTIVE, translationX: -320, translationY: -320 },
             { state: State.END, translationX: -320, translationY: -320 },
@@ -301,7 +301,7 @@ describe('FurnitureItem', () => {
 
         // Assert
         await waitFor(() => {
-            expect(mockOnResizeEnd).toHaveBeenCalledWith({ w: 1, h: 1 });
+            expect(mockOnResizeEnd).toHaveBeenCalledWith({ x: 0, y: 0, w: 1, h: 1 });
         });
     });
 
@@ -330,7 +330,7 @@ describe('FurnitureItem', () => {
         );
 
         // Act: +800px（+20 セル）広げる
-        fireGestureHandler(getByGestureTestId('furniture-resize-furn-1'), [
+        fireGestureHandler(getByGestureTestId('furniture-resize-furn-1-br'), [
             { state: State.BEGAN },
             { state: State.ACTIVE, translationX: 800, translationY: 800 },
             { state: State.END, translationX: 800, translationY: 800 },
@@ -338,7 +338,7 @@ describe('FurnitureItem', () => {
 
         // Assert
         await waitFor(() => {
-            expect(mockOnResizeEnd).toHaveBeenCalledWith({ w: 3, h: 3 });
+            expect(mockOnResizeEnd).toHaveBeenCalledWith({ x: 1, y: 1, w: 3, h: 3 });
         });
     });
 

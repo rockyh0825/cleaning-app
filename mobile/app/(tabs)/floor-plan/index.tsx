@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { useFloorPlan } from "@/features/floor-plan/hooks/useFloorPlan";
 import { FloorPlanCanvas } from "@/features/floor-plan/components/FloorPlanCanvas";
 import { AddRoomModal } from "@/features/floor-plan/components/AddRoomModal";
-import { RenameSheet } from "@/features/floor-plan/components/RenameSheet";
+import { RenameScreen } from "@/features/floor-plan/components/RenameScreen";
 import { SelectionActions } from "@/features/floor-plan/components/SelectionActions";
 import { FloorPlanRepository } from "@/features/floor-plan/repositories/FloorPlanRepository";
 import type { CreateRoomInput } from "@/features/floor-plan/types";
@@ -35,11 +35,7 @@ export default function FloorPlanIndexScreen() {
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? null;
 
   function handleRoomPress(roomId: string) {
-    // 初回タップは選択（操作バー表示）、選択中の部屋の再タップで詳細へ
-    if (selectedRoomId === roomId) {
-      router.push(`/floor-plan/${roomId}`);
-      return;
-    }
+    // タップは選択のみ。詳細（家具配置の修正）へは操作バーの「部屋の中を修正」から遷移する
     setSelectedRoomId(roomId);
   }
 
@@ -206,6 +202,8 @@ export default function FloorPlanIndexScreen() {
         >
           <SelectionActions
             targetName={selectedRoom.name}
+            onEditInterior={() => router.push(`/floor-plan/${selectedRoom.id}`)}
+            renameLabel="名称修正"
             onRename={() => setRenamingRoomId(selectedRoom.id)}
             onDelete={handleDeletePress}
             onDismiss={() => {
@@ -227,8 +225,9 @@ export default function FloorPlanIndexScreen() {
         onCancel={() => setIsModalVisible(false)}
       />
 
-      <RenameSheet
+      <RenameScreen
         visible={renamingRoomId != null && renamingRoomId === selectedRoom?.id}
+        title="部屋の名称を修正"
         initialName={selectedRoom?.name ?? ""}
         onSubmit={handleRenameSubmit}
         onClose={() => setRenamingRoomId(null)}

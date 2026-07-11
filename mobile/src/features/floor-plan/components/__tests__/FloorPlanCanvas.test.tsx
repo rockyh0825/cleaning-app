@@ -453,11 +453,11 @@ describe('FloorPlanCanvas', () => {
             { state: State.END },
         ]);
         await waitFor(() => {
-            expect(screen.getByTestId('resize-handle-room-1')).toBeTruthy();
+            expect(screen.getByTestId('resize-handle-room-1-br')).toBeTruthy();
         });
 
         // Act: cellSize=40 で右へ 56px（1.4 セル分）→ 幅 5 → 6
-        fireGestureHandler(getByGestureTestId('room-resize-room-1'), [
+        fireGestureHandler(getByGestureTestId('room-resize-room-1-br'), [
             { state: State.BEGAN },
             { state: State.ACTIVE, translationX: 56, translationY: 0 },
             { state: State.END, translationX: 56, translationY: 0 },
@@ -673,10 +673,117 @@ describe('FloorPlanCanvas', () => {
 
         // Assert: 選択枠・リサイズハンドル・家具の選択ボーダーが出ない
         expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
-        expect(screen.queryByTestId('resize-handle-room-1')).toBeNull();
+        expect(screen.queryByTestId('resize-handle-room-1-br')).toBeNull();
         const furniture = screen.getByTestId('furniture-item-furn-1');
         expect(StyleSheet.flatten(furniture.props.style).borderColor).toBe(
             lightTheme.colors.outline,
         );
+    });
+
+    it('calls_onRoomDragEnd_with_moved_origin_when_top_left_resize_commits', async () => {
+        // Arrange: 左上角のリサイズは x/y も変わる。矩形全体がそのまま親へ届くこと
+        const mockOnRoomDragEnd = jest.fn();
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onRoomDragEnd={mockOnRoomDragEnd}
+            />,
+        );
+        fireGestureHandler(getByGestureTestId('room-tap-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+        await waitFor(() => {
+            expect(screen.getByTestId('resize-handle-room-1-tl')).toBeTruthy();
+        });
+
+        // Act: 左上角を 1 セル分（+40px）内側へ
+        fireGestureHandler(getByGestureTestId('room-resize-room-1-tl'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE, translationX: 40, translationY: 40 },
+            { state: State.END, translationX: 40, translationY: 40 },
+        ]);
+
+        // Assert: 右下固定のまま原点が (1,1) へ移った矩形で確定する
+        await waitFor(() => {
+            expect(mockOnRoomDragEnd).toHaveBeenCalledWith('room-1', {
+                x: 1,
+                y: 1,
+                w: 4,
+                h: 3,
+            });
+        });
+    });
+
+    it('stacks_selected_room_above_furniture_covering_the_center_move_grip', () => {
+        // Arrange: 4×4 の部屋の中央 2×2 セル（= 中央 50% の移動グリップ全域）を家具が覆う
+        const floorPlanWithCoveredGrip: FloorPlan = {
+            rooms: [
+                {
+                    id: 'room-1',
+                    name: 'リビング',
+                    type: 'LIVING',
+                    gridX: 0,
+                    gridY: 0,
+                    gridW: 4,
+                    gridH: 4,
+                    createdAt: new Date('2024-01-01'),
+                    updatedAt: new Date('2024-01-01'),
+                    furniture: [
+                        {
+                            id: 'furn-1',
+                            roomId: 'room-1',
+                            name: 'テーブル',
+                            gridX: 1,
+                            gridY: 1,
+                            gridW: 2,
+                            gridH: 2,
+                            createdAt: new Date('2024-01-01'),
+                            updatedAt: new Date('2024-01-01'),
+                        },
+                    ],
+                },
+            ],
+        };
+
+        // Act: 部屋を選択状態で表示する
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorPlanWithCoveredGrip}
+                selectedRoomId="room-1"
+                onRoomDragEnd={jest.fn()}
+            />,
+        );
+
+        // Assert: 家具は部屋の後に描画される兄弟のため、選択中の部屋を前面に出さないと
+        // 中央の移動グリップが家具に覆われて部屋を移動できない（回帰防止）
+        const roomStyle = StyleSheet.flatten(
+            screen.getByTestId('room-shape-room-1').props.style,
+        );
+        const furnitureStyle = StyleSheet.flatten(
+            screen.getByTestId('furniture-item-furn-1').props.style,
+        );
+        expect(roomStyle.zIndex ?? 0).toBeGreaterThan(furnitureStyle.zIndex ?? 0);
+    });
+
+    it('keeps_furniture_above_unselected_rooms', () => {
+        // Arrange & Act: 非選択の部屋は従来どおり家具の下に置く（家具のタップ・操作を阻害しない）
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                selectedRoomId={null}
+                onFurniturePress={jest.fn()}
+            />,
+        );
+
+        // Assert
+        const roomStyle = StyleSheet.flatten(
+            screen.getByTestId('room-shape-room-1').props.style,
+        );
+        const furnitureStyle = StyleSheet.flatten(
+            screen.getByTestId('furniture-item-furn-1').props.style,
+        );
+        expect(roomStyle.zIndex ?? 0).toBe(furnitureStyle.zIndex ?? 0);
     });
 });
