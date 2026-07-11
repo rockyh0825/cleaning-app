@@ -203,7 +203,7 @@ export default function FloorPlanIndexScreen() {
           <SelectionActions
             targetName={selectedRoom.name}
             onEditInterior={() => router.push(`/floor-plan/${selectedRoom.id}`)}
-            renameLabel="部屋の名称を修正"
+            renameLabel="名称修正"
             onRename={() => setRenamingRoomId(selectedRoom.id)}
             onDelete={handleDeletePress}
             onDismiss={() => {

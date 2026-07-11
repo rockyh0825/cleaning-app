@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { SelectionActions } from '../SelectionActions';
 
@@ -79,7 +80,8 @@ describe('SelectionActions', () => {
     });
 
     it('calls_onEditInterior_when_edit_interior_button_pressed', () => {
-        // Arrange: 部屋選択時のみ「部屋の中を修正」を出す（間取り画面から詳細への導線）
+        // Arrange: 部屋選択時のみ詳細への導線を出す（間取り画面から詳細への導線）。
+        // 375pt 幅端末でバーが溢れないよう表示ラベルは短縮し、読み上げは説明的な名前を保つ
         const mockOnEditInterior = jest.fn();
         render(
             <SelectionActions
@@ -95,7 +97,55 @@ describe('SelectionActions', () => {
 
         // Assert
         expect(mockOnEditInterior).toHaveBeenCalledTimes(1);
-        expect(screen.getByText('部屋の中を修正')).toBeTruthy();
+        expect(screen.getByText('中を修正')).toBeTruthy();
+        expect(screen.getByLabelText('部屋の中を修正')).toBeTruthy();
+    });
+
+    it('keeps_room_name_visible_when_all_action_buttons_are_shown', () => {
+        // Arrange & Act: 全ボタン表示（中を修正・名称修正・削除・✕）でもっとも幅が厳しい構成
+        render(
+            <SelectionActions
+                targetName="リビング"
+                onRename={jest.fn()}
+                onDelete={jest.fn()}
+                onDismiss={jest.fn()}
+                onEditInterior={jest.fn()}
+                renameLabel="名称修正"
+            />,
+        );
+
+        // Assert: flex:1 の名称がボタン群に押し潰されて 0 幅にならないよう最小幅を確保する
+        const name = screen.getByText('リビング');
+        const nameStyle = StyleSheet.flatten(name.props.style);
+        expect(nameStyle.minWidth).toBeGreaterThan(0);
+    });
+
+    it('allows_action_buttons_to_shrink_instead_of_pushing_dismiss_out_of_the_bar', () => {
+        // Arrange & Act: 長い部屋名 + 全ボタン表示でも ✕ がバー外にはみ出さないこと
+        render(
+            <SelectionActions
+                targetName="とても長い名前の部屋リビングダイニング"
+                onRename={jest.fn()}
+                onDelete={jest.fn()}
+                onDismiss={jest.fn()}
+                onEditInterior={jest.fn()}
+                renameLabel="名称修正"
+            />,
+        );
+
+        // Assert: 各ボタンは flexShrink 可能（RN デフォルトは 0 で縮まない）で、
+        // ラベルは 1 行に収めて折り返さない
+        for (const testID of [
+            'selection-edit-interior',
+            'selection-rename',
+            'selection-delete',
+            'selection-dismiss',
+        ]) {
+            const button = screen.getByTestId(testID);
+            const buttonStyle = StyleSheet.flatten(button.props.style);
+            expect(buttonStyle.flexShrink).toBe(1);
+        }
+        expect(screen.getByText('名称修正').props.numberOfLines).toBe(1);
     });
 
     it('does_not_render_edit_interior_button_when_onEditInterior_is_not_provided', () => {

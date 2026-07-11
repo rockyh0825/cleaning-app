@@ -193,7 +193,7 @@ describe('FloorPlanIndexScreen', () => {
         render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
         fireEvent.press(await screen.findByText('リビング'));
 
-        // Act: 「部屋の中を修正」を押す
+        // Act: 「中を修正」を押す
         fireEvent.press(screen.getByTestId('selection-edit-interior'));
 
         // Assert: 家具配置の修正画面（部屋詳細）へ遷移する
@@ -214,7 +214,7 @@ describe('FloorPlanIndexScreen', () => {
             within(screen.getByTestId('room-shape-room-1')).getByText('リビング'),
         );
 
-        // Assert: 遷移は「部屋の中を修正」ボタン経由のみ。選択は維持される
+        // Assert: 遷移は「中を修正」ボタン経由のみ。選択は維持される
         expect(router.push).not.toHaveBeenCalled();
         expect(screen.getByTestId('selection-actions')).toBeTruthy();
     });
@@ -228,11 +228,12 @@ describe('FloorPlanIndexScreen', () => {
         // Act
         fireEvent.press(await screen.findByText('リビング'));
 
-        // Assert: 操作バーに部屋名と「部屋の中を修正」「部屋の名称を修正」「削除」が並ぶ
+        // Assert: 操作バーに部屋名と「中を修正」「名称修正」「削除」が並ぶ
+        // （375pt 幅端末で部屋名が潰れないよう短縮ラベルを使う）
         const actions = screen.getByTestId('selection-actions');
         expect(within(actions).getByText('リビング')).toBeTruthy();
-        expect(within(actions).getByText('部屋の中を修正')).toBeTruthy();
-        expect(within(actions).getByText('部屋の名称を修正')).toBeTruthy();
+        expect(within(actions).getByText('中を修正')).toBeTruthy();
+        expect(within(actions).getByText('名称修正')).toBeTruthy();
         expect(screen.getByTestId('selection-rename')).toBeTruthy();
         expect(screen.getByTestId('selection-delete')).toBeTruthy();
     });
@@ -244,7 +245,7 @@ describe('FloorPlanIndexScreen', () => {
         render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
         fireEvent.press(await screen.findByText('リビング'));
 
-        // Act: 「部屋の名称を修正」を押す
+        // Act: 「名称修正」を押す
         fireEvent.press(screen.getByTestId('selection-rename'));
 
         // Assert: 入力が画面を支配するフルスクリーンの名称変更画面が開く
