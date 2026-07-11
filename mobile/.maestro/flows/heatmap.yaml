@@ -1,0 +1,102 @@
+appId: com.cleaningapp.mobile
+---
+# heatmap E2E（tasks.md フェーズ7 Task12）
+#
+# 検証フロー: 部屋作成（未掃除パーツ入り）→ ヒートマップタブを開く
+#            → エリアが色付き表示（赤=要掃除、スクリーンショット）
+#            → 赤エリアをタップ → エリア詳細で掃除を記録
+#            → タブに戻ると色が変化（緑=きれい、スクリーンショット）
+#
+# 前提:
+# - バックエンド未起動（#64 の MockDefaultApi fallback）でアプリが起動していること
+# - EXPO_PUBLIC_MOCK_START_EMPTY=true でビルドされていること
+# - MockDefaultApi は部屋作成時にデフォルトパーツ「床」をシードする
+#   （掃除記録なし → maxElapsedRatio が Infinity → overdue=赤 で塗られる）
+#
+# 色の検証について:
+# Maestro はピクセル色をアサートできないため、色の変化はスクリーンショット
+# （CI アーティファクト maestro-screenshots）の目視比較で担保する。
+# フロー内では「凡例ラベルの表示」「記録後の最終掃除日時の更新」「タブ復帰後の
+# キャンバス再描画」という色分けの前提条件をアサートして回帰を検知する。
+
+- launchApp:
+    clearState: true
+
+# --- 部屋を作成（空状態から。既存 cleaning-record.yaml と同手順） ---
+- assertVisible:
+    id: "empty-state"
+- tapOn: "部屋を追加"
+- assertVisible: "部屋名"
+- inputText: "テスト部屋"
+# 単一行TextInputはreturnキーでblurされる。キーボードを閉じないと
+# モーダル下部の「追加」ボタンがキーボードに覆われてタップが吸われる
+- pressKey: Enter
+- tapOn: "その他"
+- tapOn: "追加"
+- assertVisible: "テスト部屋"
+
+# --- ヒートマップタブを開く ---
+# タブ項目は iOS で "ヒートマップ, tab, 2 of 3" のように role が付与されて
+# 公開されるため完全一致では見つからない。部分一致させる。
+- tapOn: ".*ヒートマップ.*"
+# useHeatmap（getRooms + getAreaStatuses）のロード完了を、部屋シェイプの
+# 出現で待つ。FallbackApi（実API→モックへ委譲）のレイテンシ対策で長めに待つ。
+- extendedWaitUntil:
+    visible:
+      id: "room-shape-.*"
+    timeout: 15000
+# 凡例（色のみに依存しない状態表示）が出ていること
+- assertVisible: "きれい"
+- assertVisible: "そろそろ"
+- assertVisible: "要掃除"
+- assertVisible: "記録なし"
+# getAreaStatuses 失敗時はエラーバナー＋全エリア neutral（灰）に縮退する。
+# 縮退表示のままアサートが通過しないよう、バナー非表示を機械検知する。
+- assertNotVisible:
+    id: "heatmap-status-error"
+# 未掃除パーツ「床」を持つ部屋は overdue（赤）で塗られているはず
+- takeScreenshot: .maestro/screenshots/heatmap-01-overdue-red
+
+# --- 赤エリアをタップ → エリア詳細へ ---
+# readOnly キャンバスでは選択ステップがなく、1タップで詳細（/area/<id>）へ遷移する。
+# 部屋名テキストは凡例等と多重マッチしうるため、シェイプ testID でタップする。
+- tapOn:
+    id: "room-shape-.*"
+
+# --- 掃除を記録 ---
+# パーツ行は accessibilityRole="checkbox" の1要素にまとまり、iOS では
+# 子テキストが "床 最終掃除: 未記録" のように結合されて公開される。
+# Maestro のテキスト照合は完全一致（正規表現）のため部分一致させる。
+# パーツ一覧は usePartList のデータ取得待ちがあるため extendedWaitUntil で待つ。
+- extendedWaitUntil:
+    visible: ".*床.*"
+    timeout: 15000
+- assertVisible: ".*最終掃除: 未記録.*"
+# 選択トグル・記録ボタンは結合ラベルの曖昧さを避けて testID でタップする
+- tapOn:
+    id: "part-item-.*"
+- tapOn:
+    id: "record-button"
+# 記録が確定し最終掃除日時が更新されるまで待つ
+- extendedWaitUntil:
+    visible: ".*最終掃除: 20.*"
+    timeout: 10000
+- takeScreenshot: .maestro/screenshots/heatmap-02-cleaning-recorded
+
+# --- タブに戻ると色が変化（overdue=赤 → fresh=緑） ---
+- tapOn: "戻る"
+# 掃除記録 mutation が heatmap の query を無効化するため、復帰時に再取得が走る。
+# 再描画完了を部屋シェイプの出現で待つ。
+- extendedWaitUntil:
+    visible:
+      id: "room-shape-.*"
+    timeout: 15000
+- assertVisible: "テスト部屋"
+- waitForAnimationToEnd
+# 掃除状態の取得に失敗して neutral（灰）に縮退していないことを機械検知する
+- assertNotVisible:
+    id: "heatmap-status-error"
+# 記録直後（経過割合 ≒ 0）なので fresh（緑）で塗られているはず
+# 既知の限界: 上の待ち条件は再取得前の古い（赤い）キャンバスでも成立するため、
+# area-statuses の refetch が遅い CI では稀に赤のままの画像が写る（フローは失敗しない）。
+- takeScreenshot: .maestro/screenshots/heatmap-03-fresh-green
