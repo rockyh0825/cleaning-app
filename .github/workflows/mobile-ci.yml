@@ -86,16 +86,32 @@ jobs:
               - 'mobile/**'
               - 'api/openapi.yaml'
               - '.github/workflows/mobile-ci.yml'
+            e2e:
+              - 'mobile/.maestro/**'
+              - '.github/workflows/mobile-ci.yml'
+
+      # E2E は iOS Release ビルドに約30分かかり macOS ランナーで高コストなため、
+      # PR では E2E フロー自体（.maestro/**）か本ワークフローに変更がある場合のみ実行する。
+      # アプリコードの変更による回帰は main への push 時（従来どおり mobile/** 全体）で検知する。
+      - name: Decide whether to run E2E
+        id: decide
+        run: |
+          if [ "${{ steps.filter.outputs.e2e }}" = "true" ] \
+            || { [ "${{ github.event_name }}" = "push" ] && [ "${{ steps.filter.outputs.mobile }}" = "true" ]; }; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
 
       # Expo SDK 53 は Xcode 16 以降が必須（macos-14 ランナーのデフォルトは Xcode 15.4）。
       # 既定のまま prebuild/build すると expo-modules-core の SwiftUI コード
       # （onGeometryChange, iOS 17 SDK以降が必要）がコンパイルできず失敗する。
       - name: Select Xcode 16
-        if: steps.filter.outputs.mobile == 'true'
+        if: steps.decide.outputs.run == 'true'
         run: sudo xcode-select -s /Applications/Xcode_16.2.app
 
       - name: Set up Node.js
-        if: steps.filter.outputs.mobile == 'true'
+        if: steps.decide.outputs.run == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -103,23 +119,23 @@ jobs:
           cache-dependency-path: mobile/package-lock.json
 
       - name: Install dependencies
-        if: steps.filter.outputs.mobile == 'true'
+        if: steps.decide.outputs.run == 'true'
         working-directory: mobile
         run: npm ci --legacy-peer-deps
 
       - name: Generate API client (TypeScript)
-        if: steps.filter.outputs.mobile == 'true'
+        if: steps.decide.outputs.run == 'true'
         working-directory: mobile
         run: npm run generate:api
 
       - name: Install Maestro CLI
-        if: steps.filter.outputs.mobile == 'true'
+        if: steps.decide.outputs.run == 'true'
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
       - name: Prebuild iOS native project
-        if: steps.filter.outputs.mobile == 'true'
+        if: steps.decide.outputs.run == 'true'
         working-directory: mobile
         run: npx expo prebuild --platform ios
 
@@ -134,7 +150,7 @@ jobs:
       # - app.json の name が日本語のため、生成される workspace / scheme 名は決め打ちせず
       #   prebuild の生成物から動的に取得する
       - name: Build app for iOS Simulator (Release)
-        if: steps.filter.outputs.mobile == 'true'
+        if: steps.decide.outputs.run == 'true'
         timeout-minutes: 110
         working-directory: mobile/ios
         env:
@@ -154,7 +170,7 @@ jobs:
 
       # 機種名は決め打ちせず、選択中の Xcode ランタイムで available な最初の iPhone を使う
       - name: Boot iOS Simulator
-        if: steps.filter.outputs.mobile == 'true'
+        if: steps.decide.outputs.run == 'true'
         run: |
           UDID=$(xcrun simctl list devices available --json \
             | jq -r '[.devices[] | .[] | select(.name | startswith("iPhone"))][0].udid')
@@ -173,11 +189,11 @@ jobs:
 
       # アプリの起動は Maestro フロー先頭の launchApp が行うため、install まででよい
       - name: Install app on simulator
-        if: steps.filter.outputs.mobile == 'true'
+        if: steps.decide.outputs.run == 'true'
         run: xcrun simctl install "$SIMULATOR_UDID" mobile/ios/build/Build/Products/Release-iphonesimulator/*.app
 
       - name: Run Maestro E2E flows
-        if: steps.filter.outputs.mobile == 'true'
+        if: steps.decide.outputs.run == 'true'
         working-directory: mobile
         run: |
           mkdir -p .maestro/screenshots
@@ -185,7 +201,7 @@ jobs:
           maestro test .maestro/flows --format junit --output .maestro/report.xml
 
       - name: Upload E2E screenshots
-        if: always() && steps.filter.outputs.mobile == 'true'
+        if: always() && steps.decide.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: maestro-screenshots
@@ -198,7 +214,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload crash diagnostics
-        if: failure() && steps.filter.outputs.mobile == 'true'
+        if: failure() && steps.decide.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: crash-diagnostics
@@ -206,7 +222,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload E2E test report
-        if: always() && steps.filter.outputs.mobile == 'true'
+        if: always() && steps.decide.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: maestro-report
