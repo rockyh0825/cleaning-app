@@ -2,15 +2,18 @@ package com.cleaningapp.cleaningrecord.presentation
 
 import com.cleaningapp.cleaningrecord.application.CreatePartUseCase
 import com.cleaningapp.cleaningrecord.application.DeletePartUseCase
+import com.cleaningapp.cleaningrecord.application.ListPartUseCase
 import com.cleaningapp.cleaningrecord.application.UpdatePartUseCase
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
@@ -24,7 +27,14 @@ class PartController(
     private val createPartUseCase: CreatePartUseCase,
     private val updatePartUseCase: UpdatePartUseCase,
     private val deletePartUseCase: DeletePartUseCase,
+    private val listPartUseCase: ListPartUseCase,
 ) {
+    @GetMapping("/parts")
+    fun list(
+        @RequestHeader("X-User-Id") userId: UUID,
+        @RequestParam(required = false) ownerId: UUID?,
+    ): List<PartResponse> = listPartUseCase.execute(userId, ownerId).map(PartResponse::from)
+
     @PostMapping("/parts")
     @ResponseStatus(HttpStatus.CREATED)
     fun create(
