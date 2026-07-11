@@ -95,6 +95,10 @@ export function RoomShape({
                         left,
                         top,
                         backgroundColor: fillColor ?? accent.fill,
+                        // 家具はキャンバス上で部屋の後に描画される絶対配置の兄弟のため、
+                        // 選択中は部屋を前面に出して中央の移動グリップと四つ角ハンドルが
+                        // 家具に覆われても操作できるようにする（非選択時は家具が上のまま）
+                        zIndex: selected ? 1 : 0,
                         borderRadius: theme.radius.md,
                         // 重なりは警告チャネル（danger 枠）、選択は別オーバーレイで強調する
                         borderWidth: overlapping ? 2 : 1,

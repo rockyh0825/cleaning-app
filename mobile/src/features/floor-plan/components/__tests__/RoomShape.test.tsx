@@ -383,6 +383,43 @@ describe('RoomShape', () => {
         });
     });
 
+    it('raises_room_above_sibling_furniture_when_selected', () => {
+        // Arrange & Act: 家具はキャンバス上で部屋の後に描画される絶対配置の兄弟のため、
+        // 選択中は部屋を前面に出さないと中央の移動グリップが家具に覆われて操作できない
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={true}
+                onPress={jest.fn()}
+                onDragEnd={jest.fn()}
+            />,
+        );
+
+        // Assert
+        const shape = screen.getByTestId('room-shape-room-1');
+        const style = StyleSheet.flatten(shape.props.style);
+        expect(style.zIndex).toBeGreaterThan(0);
+    });
+
+    it('keeps_default_stacking_below_furniture_when_not_selected', () => {
+        // Arrange & Act: 非選択時は従来どおり家具が部屋の上に描画される（家具操作を阻害しない）
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+                onDragEnd={jest.fn()}
+            />,
+        );
+
+        // Assert
+        const shape = screen.getByTestId('room-shape-room-1');
+        const style = StyleSheet.flatten(shape.props.style);
+        expect(style.zIndex ?? 0).toBe(0);
+    });
+
     it('calls_onResizeEnd_with_new_rect_when_bottom_right_resize_commits', async () => {
         // Arrange: cellSize=40 で右へ 56px（1.4 セル分）→ 幅 5 → 6
         const mockOnResizeEnd = jest.fn();

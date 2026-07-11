@@ -715,4 +715,75 @@ describe('FloorPlanCanvas', () => {
             });
         });
     });
+
+    it('stacks_selected_room_above_furniture_covering_the_center_move_grip', () => {
+        // Arrange: 4×4 の部屋の中央 2×2 セル（= 中央 50% の移動グリップ全域）を家具が覆う
+        const floorPlanWithCoveredGrip: FloorPlan = {
+            rooms: [
+                {
+                    id: 'room-1',
+                    name: 'リビング',
+                    type: 'LIVING',
+                    gridX: 0,
+                    gridY: 0,
+                    gridW: 4,
+                    gridH: 4,
+                    createdAt: new Date('2024-01-01'),
+                    updatedAt: new Date('2024-01-01'),
+                    furniture: [
+                        {
+                            id: 'furn-1',
+                            roomId: 'room-1',
+                            name: 'テーブル',
+                            gridX: 1,
+                            gridY: 1,
+                            gridW: 2,
+                            gridH: 2,
+                            createdAt: new Date('2024-01-01'),
+                            updatedAt: new Date('2024-01-01'),
+                        },
+                    ],
+                },
+            ],
+        };
+
+        // Act: 部屋を選択状態で表示する
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorPlanWithCoveredGrip}
+                selectedRoomId="room-1"
+                onRoomDragEnd={jest.fn()}
+            />,
+        );
+
+        // Assert: 家具は部屋の後に描画される兄弟のため、選択中の部屋を前面に出さないと
+        // 中央の移動グリップが家具に覆われて部屋を移動できない（回帰防止）
+        const roomStyle = StyleSheet.flatten(
+            screen.getByTestId('room-shape-room-1').props.style,
+        );
+        const furnitureStyle = StyleSheet.flatten(
+            screen.getByTestId('furniture-item-furn-1').props.style,
+        );
+        expect(roomStyle.zIndex ?? 0).toBeGreaterThan(furnitureStyle.zIndex ?? 0);
+    });
+
+    it('keeps_furniture_above_unselected_rooms', () => {
+        // Arrange & Act: 非選択の部屋は従来どおり家具の下に置く（家具のタップ・操作を阻害しない）
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                selectedRoomId={null}
+                onFurniturePress={jest.fn()}
+            />,
+        );
+
+        // Assert
+        const roomStyle = StyleSheet.flatten(
+            screen.getByTestId('room-shape-room-1').props.style,
+        );
+        const furnitureStyle = StyleSheet.flatten(
+            screen.getByTestId('furniture-item-furn-1').props.style,
+        );
+        expect(roomStyle.zIndex ?? 0).toBe(furnitureStyle.zIndex ?? 0);
+    });
 });
