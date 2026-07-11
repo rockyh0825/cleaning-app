@@ -50,6 +50,10 @@ appId: com.cleaningapp.mobile
 - assertVisible: "そろそろ"
 - assertVisible: "要掃除"
 - assertVisible: "記録なし"
+# getAreaStatuses 失敗時はエラーバナー＋全エリア neutral（灰）に縮退する。
+# 縮退表示のままアサートが通過しないよう、バナー非表示を機械検知する。
+- assertNotVisible:
+    id: "heatmap-status-error"
 # 未掃除パーツ「床」を持つ部屋は overdue（赤）で塗られているはず
 - takeScreenshot: .maestro/screenshots/heatmap-01-overdue-red
 
@@ -89,5 +93,10 @@ appId: com.cleaningapp.mobile
     timeout: 15000
 - assertVisible: "テスト部屋"
 - waitForAnimationToEnd
+# 掃除状態の取得に失敗して neutral（灰）に縮退していないことを機械検知する
+- assertNotVisible:
+    id: "heatmap-status-error"
 # 記録直後（経過割合 ≒ 0）なので fresh（緑）で塗られているはず
+# 既知の限界: 上の待ち条件は再取得前の古い（赤い）キャンバスでも成立するため、
+# area-statuses の refetch が遅い CI では稀に赤のままの画像が写る（フローは失敗しない）。
 - takeScreenshot: .maestro/screenshots/heatmap-03-fresh-green
