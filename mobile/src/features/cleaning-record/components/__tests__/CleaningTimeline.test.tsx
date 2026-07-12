@@ -5,6 +5,7 @@ import {
   fireEvent,
   within,
   waitFor,
+  act,
 } from "@testing-library/react-native";
 import { CleaningTimeline } from "../CleaningTimeline";
 import type { CleaningRecord } from "../../types";
@@ -120,17 +121,17 @@ describe("CleaningTimeline", () => {
       screen.getByTestId("note-input-record-1"),
       "新しいメモ",
     );
-    fireEvent.press(screen.getByTestId("save-note-button-record-1"));
+    // クローズは onUpdateNote の解決後（マイクロタスク）に起きるため、
+    // async act で press とその後の非同期 setState を確実に flush する。
+    // （以前は waitFor でポーリングしていたが、初回チェックが必ず失敗し、
+    //  失敗メッセージ生成＝ホスト要素の pretty-format に数百ms〜数秒かかり
+    //  CI で testTimeout を超えてフレークしていた。issue #151）
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("save-note-button-record-1"));
+    });
 
     // Assert: 成功したら編集UIを閉じる
-    // クローズは onUpdateNote の解決後（非同期）に起きるため、CI の遅い環境でも
-    // タイムアウトしないよう待ち時間を長めに取る。
-    await waitFor(
-      () => {
-        expect(screen.queryByTestId("note-input-record-1")).toBeNull();
-      },
-      { timeout: 5000 },
-    );
+    expect(screen.queryByTestId("note-input-record-1")).toBeNull();
     expect(onUpdateNote).toHaveBeenCalledWith("record-1", "新しいメモ");
   });
 
