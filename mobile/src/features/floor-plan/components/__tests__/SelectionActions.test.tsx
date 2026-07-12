@@ -153,7 +153,9 @@ describe('SelectionActions', () => {
     });
 
     it('keeps_room_name_visible_when_all_action_buttons_are_shown', () => {
-        // Arrange & Act: 全ボタン表示（中を修正・名称修正・削除・✕）でもっとも幅が厳しい構成
+        // Arrange & Act: 全ボタン表示（中を修正・名称修正・削除・✕）でもっとも幅が厳しい構成の一つ。
+        // 家具構成（掃除場所・名称変更・削除・✕）も同等幅で、そちらは
+        // allows_cleaning_parts_button_to_shrink_and_keep_label_on_one_line がカバーする
         render(
             <SelectionActions
                 targetName="リビング"
