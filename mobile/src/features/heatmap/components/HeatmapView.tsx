@@ -33,8 +33,9 @@ export function HeatmapView({
         { floorPlanCapability, cleaningStatusCapability },
     );
 
-    function openAreaDetail(areaId: string) {
-        router.push(`/area/${areaId}`);
+    // パーツ0件のエリアでも正しい所有者種別でパーツを追加できるよう ownerType を引き継ぐ
+    function openAreaDetail(areaId: string, ownerType: "ROOM" | "FURNITURE") {
+        router.push(`/area/${areaId}?ownerType=${ownerType}`);
     }
 
     if (isPending) {
@@ -155,8 +156,10 @@ export function HeatmapView({
                 floorPlan={{ rooms }}
                 readOnly
                 areaColors={areaColors}
-                onRoomPress={openAreaDetail}
-                onFurniturePress={openAreaDetail}
+                onRoomPress={(roomId) => openAreaDetail(roomId, "ROOM")}
+                onFurniturePress={(furnitureId) =>
+                    openAreaDetail(furnitureId, "FURNITURE")
+                }
             />
             <HeatmapLegend />
         </View>

@@ -145,7 +145,9 @@ describe("HeatmapView", () => {
 
             // Assert
             await waitFor(() => {
-                expect(router.push).toHaveBeenCalledWith("/area/room-1");
+                expect(router.push).toHaveBeenCalledWith(
+                    "/area/room-1?ownerType=ROOM",
+                );
             });
         });
 
@@ -165,7 +167,9 @@ describe("HeatmapView", () => {
 
             // Assert
             await waitFor(() => {
-                expect(router.push).toHaveBeenCalledWith("/area/furn-1");
+                expect(router.push).toHaveBeenCalledWith(
+                    "/area/furn-1?ownerType=FURNITURE",
+                );
             });
         });
     });

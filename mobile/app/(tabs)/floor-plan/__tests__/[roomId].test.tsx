@@ -141,7 +141,7 @@ describe('RoomDetailScreen', () => {
 
         // Assert
         await waitFor(() => {
-            expect(router.push).toHaveBeenCalledWith('/area/room-1');
+            expect(router.push).toHaveBeenCalledWith('/area/room-1?ownerType=ROOM');
         });
     });
 
