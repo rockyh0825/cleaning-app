@@ -146,7 +146,7 @@ export function RenameScreen({ visible, title, initialName, onSubmit, onClose }:
                         <Text
                             style={[
                                 theme.typography.label,
-                                { color: theme.colors.surface },
+                                { color: theme.colors.onPrimary },
                             ]}
                         >
                             保存

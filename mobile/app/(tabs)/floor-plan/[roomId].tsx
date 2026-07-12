@@ -213,7 +213,7 @@ export default function RoomDetailScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="掃除を記録"
             >
-                <Text style={[styles.logCleaningLabel, { color: theme.colors.surface }]}>
+                <Text style={[styles.logCleaningLabel, { color: theme.colors.onPrimary }]}>
                     掃除を記録
                 </Text>
             </TouchableOpacity>

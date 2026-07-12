@@ -120,7 +120,7 @@ export function HeatmapView({
                     <Text
                         style={[
                             theme.typography.label,
-                            { color: theme.colors.surface },
+                            { color: theme.colors.onPrimary },
                         ]}
                     >
                         間取りを作る

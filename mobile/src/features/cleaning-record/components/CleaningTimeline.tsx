@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import type { CleaningRecord } from "../types";
 import { formatDateTime } from "@/shared/utils/formatDateTime";
+import { useAppTheme } from "@/shared/theme/useAppTheme";
 
 type CleaningTimelineProps = {
   records: CleaningRecord[];
@@ -30,6 +31,7 @@ export function CleaningTimeline({
   onDelete,
   onUpdateNote,
 }: CleaningTimelineProps) {
+  const theme = useAppTheme();
   // 編集中の記録IDと入力中メモ。一度に編集できるのは1件のみ
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [draftNote, setDraftNote] = useState("");
@@ -37,7 +39,9 @@ export function CleaningTimeline({
   if (records.length === 0) {
     return (
       <View testID="empty-state" style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>履歴がありません</Text>
+        <Text style={[styles.emptyText, { color: theme.colors.textMuted }]}>
+          履歴がありません
+        </Text>
       </View>
     );
   }
@@ -68,34 +72,66 @@ export function CleaningTimeline({
   const renderItem = ({ item }: { item: CleaningRecord }) => {
     const isEditing = editingRecordId === item.id;
     return (
-      <View testID="timeline-item" style={styles.item}>
+      <View
+        testID="timeline-item"
+        style={[
+          styles.item,
+          {
+            borderBottomColor: theme.colors.outline,
+            backgroundColor: theme.colors.surface,
+          },
+        ]}
+      >
         <View style={styles.itemContent}>
-          <Text testID="timeline-item-date" style={styles.date}>
+          <Text
+            testID="timeline-item-date"
+            style={[styles.date, { color: theme.colors.text }]}
+          >
             {formatDateTime(item.cleanedAt)}
           </Text>
-          <Text style={styles.partId} numberOfLines={1}>
+          <Text
+            style={[styles.partId, { color: theme.colors.textMuted }]}
+            numberOfLines={1}
+          >
             パーツ: {item.partId}
           </Text>
           {isEditing ? (
             <View style={styles.editRow}>
               <TextInput
                 testID={`note-input-${item.id}`}
-                style={styles.noteInput}
+                style={[
+                  styles.noteInput,
+                  {
+                    borderColor: theme.colors.outline,
+                    color: theme.colors.text,
+                  },
+                ]}
                 value={draftNote}
                 onChangeText={setDraftNote}
                 placeholder="メモ"
+                placeholderTextColor={theme.colors.textMuted}
                 autoFocus
               />
               <TouchableOpacity
                 testID={`save-note-button-${item.id}`}
-                style={styles.saveButton}
+                style={[
+                  styles.saveButton,
+                  { backgroundColor: theme.colors.primary },
+                ]}
                 onPress={() => {
                   void saveNote(item.id);
                 }}
                 accessibilityRole="button"
                 accessibilityLabel="保存"
               >
-                <Text style={styles.saveButtonText}>保存</Text>
+                <Text
+                  style={[
+                    styles.saveButtonText,
+                    { color: theme.colors.onPrimary },
+                  ]}
+                >
+                  保存
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 testID={`cancel-note-button-${item.id}`}
@@ -104,35 +140,59 @@ export function CleaningTimeline({
                 accessibilityRole="button"
                 accessibilityLabel="キャンセル"
               >
-                <Text style={styles.cancelButtonText}>キャンセル</Text>
+                <Text
+                  style={[
+                    styles.cancelButtonText,
+                    { color: theme.colors.textMuted },
+                  ]}
+                >
+                  キャンセル
+                </Text>
               </TouchableOpacity>
             </View>
           ) : (
             item.note != null &&
-            item.note.length > 0 && <Text style={styles.note}>{item.note}</Text>
+            item.note.length > 0 && (
+              <Text style={[styles.note, { color: theme.colors.text }]}>
+                {item.note}
+              </Text>
+            )
           )}
         </View>
         {/* 編集中は他の行の「修正」を出さない（ドラフトの無警告破棄を防ぐ） */}
         {onUpdateNote != null && !isEditingActive && (
           <TouchableOpacity
             testID={`edit-button-${item.id}`}
-            style={styles.editButton}
+            style={[
+              styles.editButton,
+              { backgroundColor: theme.colors.primarySoft },
+            ]}
             onPress={() => startEditing(item)}
             accessibilityRole="button"
             accessibilityLabel="修正"
           >
-            <Text style={styles.editButtonText}>修正</Text>
+            {/* primarySoft 上の通常テキストは primary だと 4.19:1 のため text を使う */}
+            <Text style={[styles.editButtonText, { color: theme.colors.text }]}>
+              修正
+            </Text>
           </TouchableOpacity>
         )}
         {onDelete != null && !isEditing && (
           <TouchableOpacity
             testID={`delete-button-${item.id}`}
-            style={styles.deleteButton}
+            style={[
+              styles.deleteButton,
+              { backgroundColor: theme.colors.dangerSoft },
+            ]}
             onPress={() => onDelete(item.id)}
             accessibilityRole="button"
             accessibilityLabel="削除"
           >
-            <Text style={styles.deleteButtonText}>削除</Text>
+            <Text
+              style={[styles.deleteButtonText, { color: theme.colors.danger }]}
+            >
+              削除
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -161,8 +221,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-    backgroundColor: "#fff",
   },
   itemContent: {
     flex: 1,
@@ -170,16 +228,13 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#212121",
     marginBottom: 2,
   },
   partId: {
     fontSize: 12,
-    color: "#757575",
   },
   note: {
     fontSize: 13,
-    color: "#424242",
     marginTop: 4,
   },
   editRow: {
@@ -190,22 +245,18 @@ const styles = StyleSheet.create({
   noteInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#BDBDBD",
     borderRadius: 4,
     paddingVertical: 6,
     paddingHorizontal: 8,
     fontSize: 13,
-    color: "#212121",
   },
   saveButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: "#E8F5E9",
     borderRadius: 4,
     marginLeft: 8,
   },
   saveButtonText: {
-    color: "#2E7D32",
     fontSize: 13,
     fontWeight: "500",
   },
@@ -216,30 +267,25 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   cancelButtonText: {
-    color: "#757575",
     fontSize: 13,
   },
   editButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: "#E3F2FD",
     borderRadius: 4,
     marginLeft: 8,
   },
   editButtonText: {
-    color: "#1565C0",
     fontSize: 13,
     fontWeight: "500",
   },
   deleteButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: "#FFEBEE",
     borderRadius: 4,
     marginLeft: 8,
   },
   deleteButtonText: {
-    color: "#D32F2F",
     fontSize: 13,
     fontWeight: "500",
   },
@@ -251,6 +297,5 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: "#9E9E9E",
   },
 });

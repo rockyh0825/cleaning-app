@@ -104,7 +104,7 @@ export function RenameSheet({ visible, initialName, onSubmit, onClose }: Props) 
                     }}
                     onPress={handleSubmit}
                 >
-                    <Text style={[theme.typography.label, { color: theme.colors.surface }]}>
+                    <Text style={[theme.typography.label, { color: theme.colors.onPrimary }]}>
                         変更
                     </Text>
                 </TouchableOpacity>
