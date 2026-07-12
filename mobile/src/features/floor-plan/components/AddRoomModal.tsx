@@ -183,7 +183,7 @@ export function AddRoomModal({ visible, onSubmit, onCancel }: Props) {
                     onPress={handleSubmit}
                 >
                     <Text
-                        style={[theme.typography.label, { color: theme.colors.surface }]}
+                        style={[theme.typography.label, { color: theme.colors.onPrimary }]}
                     >
                         追加
                     </Text>

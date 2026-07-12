@@ -168,7 +168,7 @@ export function PartEditorSheet({
           }}
           onPress={handleSubmit}
         >
-          <Text style={[theme.typography.label, { color: theme.colors.surface }]}>
+          <Text style={[theme.typography.label, { color: theme.colors.onPrimary }]}>
             {isEditing ? "保存" : "追加"}
           </Text>
         </TouchableOpacity>
