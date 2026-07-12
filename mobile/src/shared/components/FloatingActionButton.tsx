@@ -41,7 +41,7 @@ export function FloatingActionButton({
                 },
             ]}
         >
-            <Text style={[styles.label, { color: theme.colors.surface }]}>
+            <Text style={[styles.label, { color: theme.colors.onPrimary }]}>
                 {label}
             </Text>
         </Pressable>
