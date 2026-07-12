@@ -206,7 +206,7 @@ export default function RoomDetailScreen() {
             <TouchableOpacity
                 testID="log-cleaning-button"
                 style={[styles.logCleaningButton, { backgroundColor: theme.colors.primary }]}
-                onPress={() => router.push(`/area/${room.id}`)}
+                onPress={() => router.push(`/area/${room.id}?ownerType=ROOM`)}
                 accessibilityRole="button"
                 accessibilityLabel="掃除を記録"
             >

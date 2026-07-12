@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,6 +15,11 @@ jest.mock('@/features/cleaning-record/hooks/useLogCleaning', () => ({
     useLogCleaning: jest.fn(),
 }));
 
+// useManageParts をモック
+jest.mock('@/features/cleaning-record/hooks/useManageParts', () => ({
+    useManageParts: jest.fn(),
+}));
+
 // リポジトリをモック（listParts のフィクスチャを返す）
 const mockListParts = jest.fn();
 jest.mock('@/features/cleaning-record/repositories/CleaningRecordRepository', () => ({
@@ -24,10 +30,12 @@ jest.mock('@/features/cleaning-record/repositories/CleaningRecordRepository', ()
 
 import { useLocalSearchParams } from 'expo-router';
 import { useLogCleaning } from '@/features/cleaning-record/hooks/useLogCleaning';
+import { useManageParts } from '@/features/cleaning-record/hooks/useManageParts';
 import { resetUserIdCacheForTest } from '@/shared/hooks/useUserId';
 
 const mockUseLocalSearchParams = useLocalSearchParams as jest.Mock;
 const mockUseLogCleaning = useLogCleaning as jest.Mock;
+const mockUseManageParts = useManageParts as jest.Mock;
 
 function createWrapper() {
     const queryClient = new QueryClient({
@@ -89,6 +97,13 @@ describe('AreaDetailScreen', () => {
         mockListParts.mockResolvedValue(PARTS);
         mockUseLogCleaning.mockReturnValue({
             mutate: jest.fn(),
+            isPending: false,
+            error: null,
+        });
+        mockUseManageParts.mockReturnValue({
+            addPart: jest.fn(),
+            updatePart: jest.fn(),
+            deletePart: jest.fn(),
             isPending: false,
             error: null,
         });
@@ -160,6 +175,193 @@ describe('AreaDetailScreen', () => {
         ).toBeTruthy();
         expect(screen.getByText('エアコンフィルター')).toBeTruthy();
         expect(screen.getByTestId('record-button')).toBeTruthy();
+    });
+
+    it('adds_part_for_the_area_when_submitted_from_part_editor', async () => {
+        // Arrange
+        const mockAddPart = jest.fn();
+        mockUseManageParts.mockReturnValue({
+            addPart: mockAddPart,
+            updatePart: jest.fn(),
+            deletePart: jest.fn(),
+            isPending: false,
+            error: null,
+        });
+        render(<AreaDetailScreen />, { wrapper: createWrapper() });
+        await screen.findByText('エアコンフィルター');
+
+        // Act: 追加ボタン → 名前入力 → 追加
+        fireEvent.press(screen.getByTestId('add-part-button'));
+        fireEvent.changeText(screen.getByTestId('part-name-input'), '換気扇');
+        fireEvent.press(screen.getByTestId('part-editor-submit'));
+
+        // Assert: エリアの ownerType/ownerId でパーツが追加される
+        expect(mockAddPart).toHaveBeenCalledWith({
+            ownerType: 'ROOM',
+            ownerId: 'room-1',
+            name: '換気扇',
+            recommendedCycleDays: 7,
+        });
+    });
+
+    it('shows_add_part_button_even_when_area_has_no_parts', async () => {
+        // Arrange
+        mockListParts.mockResolvedValue([]);
+
+        // Act
+        render(<AreaDetailScreen />, { wrapper: createWrapper() });
+
+        // Assert: 空状態でもパーツを追加できる導線がある
+        await waitFor(() => {
+            expect(screen.getByTestId('empty-state')).toBeTruthy();
+        });
+        expect(screen.getByTestId('add-part-button')).toBeTruthy();
+    });
+
+    it('updates_part_when_submitted_from_part_editor_in_edit_mode', async () => {
+        // Arrange
+        const mockUpdatePart = jest.fn();
+        mockUseManageParts.mockReturnValue({
+            addPart: jest.fn(),
+            updatePart: mockUpdatePart,
+            deletePart: jest.fn(),
+            isPending: false,
+            error: null,
+        });
+        render(<AreaDetailScreen />, { wrapper: createWrapper() });
+        await screen.findByText('エアコンフィルター');
+
+        // Act: パーツの編集ボタン → 値を変更 → 保存
+        fireEvent.press(screen.getByTestId('part-edit-part-1'));
+        fireEvent.changeText(screen.getByTestId('part-name-input'), '天井');
+        fireEvent.changeText(screen.getByTestId('part-cycle-input'), '30');
+        fireEvent.press(screen.getByTestId('part-editor-submit'));
+
+        // Assert
+        expect(mockUpdatePart).toHaveBeenCalledWith({
+            partId: 'part-1',
+            input: { name: '天井', recommendedCycleDays: 30 },
+        });
+    });
+
+    it('deletes_part_only_after_confirming_in_alert_dialog', async () => {
+        // Arrange
+        const alertSpy = jest.spyOn(Alert, 'alert');
+        const mockDeletePart = jest.fn();
+        mockUseManageParts.mockReturnValue({
+            addPart: jest.fn(),
+            updatePart: jest.fn(),
+            deletePart: mockDeletePart,
+            isPending: false,
+            error: null,
+        });
+        render(<AreaDetailScreen />, { wrapper: createWrapper() });
+        await screen.findByText('エアコンフィルター');
+
+        // Act: 削除ボタンを押した時点では確認ダイアログのみ
+        fireEvent.press(screen.getByTestId('part-edit-part-1'));
+        fireEvent.press(screen.getByTestId('part-editor-delete'));
+
+        // Assert: 確認前は削除されない
+        expect(alertSpy).toHaveBeenCalled();
+        expect(mockDeletePart).not.toHaveBeenCalled();
+
+        // Act: 確認ダイアログの「削除する」を押す
+        const buttons = alertSpy.mock.calls[0]![2];
+        const destructive = buttons!.find((b) => b.style === 'destructive');
+        destructive!.onPress!();
+
+        // Assert
+        expect(mockDeletePart).toHaveBeenCalledWith('part-1');
+    });
+
+    it('adds_part_with_owner_type_from_route_param_when_area_has_no_parts', async () => {
+        // Arrange: パーツ0件の家具エリア（ヒートマップから ownerType 付きで遷移）
+        mockUseLocalSearchParams.mockReturnValue({
+            areaId: 'furniture-1',
+            ownerType: 'FURNITURE',
+        });
+        mockListParts.mockResolvedValue([]);
+        const mockAddPart = jest.fn();
+        mockUseManageParts.mockReturnValue({
+            addPart: mockAddPart,
+            updatePart: jest.fn(),
+            deletePart: jest.fn(),
+            isPending: false,
+            error: null,
+        });
+        render(<AreaDetailScreen />, { wrapper: createWrapper() });
+        await screen.findByTestId('empty-state');
+
+        // Act
+        fireEvent.press(screen.getByTestId('add-part-button'));
+        fireEvent.changeText(screen.getByTestId('part-name-input'), '棚');
+        fireEvent.press(screen.getByTestId('part-editor-submit'));
+
+        // Assert: ルートパラメータの ownerType が使われる
+        expect(mockAddPart).toHaveBeenCalledWith({
+            ownerType: 'FURNITURE',
+            ownerId: 'furniture-1',
+            name: '棚',
+            recommendedCycleDays: 7,
+        });
+    });
+
+    it('infers_furniture_owner_type_from_existing_parts_when_route_param_is_missing', async () => {
+        // Arrange: ownerType パラメータなしで家具エリアを開いた場合
+        mockUseLocalSearchParams.mockReturnValue({ areaId: 'furniture-1' });
+        mockListParts.mockResolvedValue([
+            {
+                ...PARTS[0]!,
+                id: 'part-f1',
+                ownerType: 'FURNITURE' as const,
+                ownerId: 'furniture-1',
+                name: '棚板',
+            },
+        ]);
+        const mockAddPart = jest.fn();
+        mockUseManageParts.mockReturnValue({
+            addPart: mockAddPart,
+            updatePart: jest.fn(),
+            deletePart: jest.fn(),
+            isPending: false,
+            error: null,
+        });
+        render(<AreaDetailScreen />, { wrapper: createWrapper() });
+        await screen.findByText('棚板');
+
+        // Act
+        fireEvent.press(screen.getByTestId('add-part-button'));
+        fireEvent.changeText(screen.getByTestId('part-name-input'), '引き出し');
+        fireEvent.press(screen.getByTestId('part-editor-submit'));
+
+        // Assert: 表示中パーツの ownerType から推定される
+        expect(mockAddPart).toHaveBeenCalledWith({
+            ownerType: 'FURNITURE',
+            ownerId: 'furniture-1',
+            name: '引き出し',
+            recommendedCycleDays: 7,
+        });
+    });
+
+    it('shows_error_banner_when_part_mutation_fails', async () => {
+        // Arrange
+        mockUseManageParts.mockReturnValue({
+            addPart: jest.fn(),
+            updatePart: jest.fn(),
+            deletePart: jest.fn(),
+            isPending: false,
+            error: new Error('network error'),
+        });
+
+        // Act
+        render(<AreaDetailScreen />, { wrapper: createWrapper() });
+
+        // Assert: パーツ操作の失敗バナーが表示され、チェックリストは残る
+        await waitFor(() => {
+            expect(screen.getByTestId('manage-part-error')).toBeTruthy();
+        });
+        expect(screen.getByText('エアコンフィルター')).toBeTruthy();
     });
 
     it('shows_error_state_when_parts_fetch_fails', async () => {
