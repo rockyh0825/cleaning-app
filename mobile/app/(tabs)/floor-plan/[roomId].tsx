@@ -195,6 +195,9 @@ export default function RoomDetailScreen() {
                         targetName={selectedFurniture.name}
                         onRename={() => setRenamingFurnitureId(selectedFurniture.id)}
                         onDelete={handleDeletePress}
+                        onOpenCleaningParts={() =>
+                            router.push(`/area/${selectedFurniture.id}?ownerType=FURNITURE`)
+                        }
                         onDismiss={() => {
                             setSelectedFurnitureId(null);
                             setRenamingFurnitureId(null);

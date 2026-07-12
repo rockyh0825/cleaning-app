@@ -14,6 +14,11 @@ type Props = {
      * 部屋詳細（家具配置編集）への導線。読み上げ名は「部屋の中を修正」。
      */
     onEditInterior?: () => void;
+    /**
+     * 指定時のみ「掃除場所」ボタンを表示する（部屋詳細の家具選択のみ）。
+     * 家具のエリア詳細（パーツの閲覧・追加・編集）への導線。読み上げ名は「掃除場所を編集」。
+     */
+    onOpenCleaningParts?: () => void;
     /** 名称変更ボタンの文言（省略時「名称変更」。部屋では「名称修正」を渡す） */
     renameLabel?: string;
 };
@@ -66,7 +71,7 @@ function ActionButton({
 
 /**
  * 選択中の対象（部屋・家具）に対する操作バー。
- * 名称と「名称変更」「削除」ボタン（部屋では「中を修正」も）を表示する。
+ * 名称と「名称変更」「削除」ボタン（部屋では「中を修正」、家具では「掃除場所」も）を表示する。
  * ラベルは 375pt 幅端末でも名称が視認できるよう短い文言にする。
  * 色はテーマトークンのみ参照する。
  */
@@ -76,6 +81,7 @@ export function SelectionActions({
     onDelete,
     onDismiss,
     onEditInterior,
+    onOpenCleaningParts,
     renameLabel = '名称変更',
 }: Props) {
     const theme = useAppTheme();
@@ -108,6 +114,15 @@ export function SelectionActions({
                     accessibilityLabel="部屋の中を修正"
                     color={theme.colors.primary}
                     onPress={onEditInterior}
+                />
+            )}
+            {onOpenCleaningParts && (
+                <ActionButton
+                    testID="selection-cleaning-parts"
+                    label="掃除場所"
+                    accessibilityLabel="掃除場所を編集"
+                    color={theme.colors.primary}
+                    onPress={onOpenCleaningParts}
                 />
             )}
             <ActionButton

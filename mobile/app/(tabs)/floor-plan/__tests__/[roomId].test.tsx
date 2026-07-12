@@ -160,6 +160,21 @@ describe('RoomDetailScreen', () => {
         expect(screen.getByTestId('selection-delete')).toBeTruthy();
     });
 
+    it('navigates_to_furniture_area_detail_when_cleaning_parts_button_is_pressed', async () => {
+        // Arrange
+        mockHookWithFurniture([sofa]);
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+
+        // Act: 操作バーの「掃除場所」を押す
+        fireEvent.press(screen.getByTestId('selection-cleaning-parts'));
+
+        // Assert: 家具のエリア詳細へ ownerType 付きで遷移する
+        await waitFor(() => {
+            expect(router.push).toHaveBeenCalledWith('/area/furn-1?ownerType=FURNITURE');
+        });
+    });
+
     it('shows_irreversible_confirmation_when_furniture_delete_is_pressed', async () => {
         // Arrange
         const alertSpy = jest.spyOn(Alert, 'alert');
