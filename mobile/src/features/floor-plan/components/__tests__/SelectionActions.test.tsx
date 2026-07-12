@@ -101,6 +101,57 @@ describe('SelectionActions', () => {
         expect(screen.getByLabelText('部屋の中を修正')).toBeTruthy();
     });
 
+    it('calls_onOpenCleaningParts_when_cleaning_parts_button_pressed', () => {
+        // Arrange: 家具選択時にパーツ（掃除場所）管理への導線を出す。
+        // 表示ラベルは短縮し、読み上げは説明的な名前を保つ
+        const mockOnOpenCleaningParts = jest.fn();
+        render(
+            <SelectionActions
+                targetName="ソファ"
+                onRename={jest.fn()}
+                onDelete={jest.fn()}
+                onOpenCleaningParts={mockOnOpenCleaningParts}
+            />,
+        );
+
+        // Act
+        fireEvent.press(screen.getByTestId('selection-cleaning-parts'));
+
+        // Assert
+        expect(mockOnOpenCleaningParts).toHaveBeenCalledTimes(1);
+        expect(screen.getByText('掃除場所')).toBeTruthy();
+        expect(screen.getByLabelText('掃除場所を編集')).toBeTruthy();
+    });
+
+    it('does_not_render_cleaning_parts_button_when_onOpenCleaningParts_is_not_provided', () => {
+        // Arrange & Act: 部屋選択（間取り一覧画面）ではこの導線を出さない
+        render(
+            <SelectionActions targetName="リビング" onRename={jest.fn()} onDelete={jest.fn()} />,
+        );
+
+        // Assert
+        expect(screen.queryByTestId('selection-cleaning-parts')).toBeNull();
+    });
+
+    it('allows_cleaning_parts_button_to_shrink_and_keep_label_on_one_line', () => {
+        // Arrange & Act: 長い家具名でも掃除場所ボタンがバー外にはみ出さないこと
+        render(
+            <SelectionActions
+                targetName="とても長い名前の家具ソファベッド"
+                onRename={jest.fn()}
+                onDelete={jest.fn()}
+                onDismiss={jest.fn()}
+                onOpenCleaningParts={jest.fn()}
+            />,
+        );
+
+        // Assert
+        const button = screen.getByTestId('selection-cleaning-parts');
+        const buttonStyle = StyleSheet.flatten(button.props.style);
+        expect(buttonStyle.flexShrink).toBe(1);
+        expect(screen.getByText('掃除場所').props.numberOfLines).toBe(1);
+    });
+
     it('keeps_room_name_visible_when_all_action_buttons_are_shown', () => {
         // Arrange & Act: 全ボタン表示（中を修正・名称修正・削除・✕）でもっとも幅が厳しい構成
         render(
