@@ -42,7 +42,13 @@ describe("CleaningTimeline", () => {
     const onDelete = jest.fn();
 
     // Act
-    render(<CleaningTimeline records={records} onDelete={onDelete} />);
+    render(
+      <CleaningTimeline
+        records={records}
+        partNamesById={{}}
+        onDelete={onDelete}
+      />,
+    );
 
     // Assert: 削除ボタンの testID（record-id を含む）で表示順（新→古）を検証する
     const items = screen.getAllByTestId("timeline-item");
@@ -60,7 +66,13 @@ describe("CleaningTimeline", () => {
     const onDelete = jest.fn();
 
     // Act
-    render(<CleaningTimeline records={records} onDelete={onDelete} />);
+    render(
+      <CleaningTimeline
+        records={records}
+        partNamesById={{}}
+        onDelete={onDelete}
+      />,
+    );
     fireEvent.press(screen.getByTestId("delete-button-record-1"));
 
     // Assert
@@ -76,7 +88,13 @@ describe("CleaningTimeline", () => {
     const onUpdateNote = jest.fn();
 
     // Act
-    render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
+    render(
+      <CleaningTimeline
+        records={records}
+        partNamesById={{}}
+        onUpdateNote={onUpdateNote}
+      />,
+    );
     fireEvent.press(screen.getByTestId("edit-button-record-1"));
 
     // Assert
@@ -92,7 +110,13 @@ describe("CleaningTimeline", () => {
     const onUpdateNote = jest.fn().mockResolvedValue(undefined);
 
     // Act
-    render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
+    render(
+      <CleaningTimeline
+        records={records}
+        partNamesById={{}}
+        onUpdateNote={onUpdateNote}
+      />,
+    );
     fireEvent.press(screen.getByTestId("edit-button-record-1"));
     fireEvent.changeText(
       screen.getByTestId("note-input-record-1"),
@@ -115,7 +139,13 @@ describe("CleaningTimeline", () => {
     const onUpdateNote = jest.fn().mockResolvedValue(undefined);
 
     // Act
-    render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
+    render(
+      <CleaningTimeline
+        records={records}
+        partNamesById={{}}
+        onUpdateNote={onUpdateNote}
+      />,
+    );
     fireEvent.press(screen.getByTestId("edit-button-record-1"));
     fireEvent.changeText(
       screen.getByTestId("note-input-record-1"),
@@ -143,7 +173,13 @@ describe("CleaningTimeline", () => {
     const onUpdateNote = jest.fn().mockRejectedValue(new Error("update failed"));
 
     // Act
-    render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
+    render(
+      <CleaningTimeline
+        records={records}
+        partNamesById={{}}
+        onUpdateNote={onUpdateNote}
+      />,
+    );
     fireEvent.press(screen.getByTestId("edit-button-record-1"));
     fireEvent.changeText(
       screen.getByTestId("note-input-record-1"),
@@ -170,7 +206,13 @@ describe("CleaningTimeline", () => {
     const onUpdateNote = jest.fn();
 
     // Act
-    render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
+    render(
+      <CleaningTimeline
+        records={records}
+        partNamesById={{}}
+        onUpdateNote={onUpdateNote}
+      />,
+    );
     fireEvent.press(screen.getByTestId("edit-button-record-1"));
     fireEvent.changeText(
       screen.getByTestId("note-input-record-1"),
@@ -199,7 +241,13 @@ describe("CleaningTimeline", () => {
     const onUpdateNote = jest.fn();
 
     // Act
-    render(<CleaningTimeline records={records} onUpdateNote={onUpdateNote} />);
+    render(
+      <CleaningTimeline
+        records={records}
+        partNamesById={{}}
+        onUpdateNote={onUpdateNote}
+      />,
+    );
     fireEvent.press(screen.getByTestId("edit-button-record-1"));
 
     // Assert: 編集中は他の行の「修正」ボタンを表示しない（ドラフトの無警告破棄を防ぐ）
@@ -221,7 +269,11 @@ describe("CleaningTimeline", () => {
     ];
     const onUpdateNote = jest.fn();
     const { rerender } = render(
-      <CleaningTimeline records={records} onUpdateNote={onUpdateNote} />,
+      <CleaningTimeline
+        records={records}
+        partNamesById={{}}
+        onUpdateNote={onUpdateNote}
+      />,
     );
     fireEvent.press(screen.getByTestId("edit-button-record-1"));
 
@@ -229,6 +281,7 @@ describe("CleaningTimeline", () => {
     rerender(
       <CleaningTimeline
         records={records.filter((r) => r.id !== "record-1")}
+        partNamesById={{}}
         onUpdateNote={onUpdateNote}
       />,
     );
@@ -242,7 +295,7 @@ describe("CleaningTimeline", () => {
     const records: CleaningRecord[] = [makeRecord({ id: "record-1" })];
 
     // Act
-    render(<CleaningTimeline records={records} />);
+    render(<CleaningTimeline records={records} partNamesById={{}} />);
 
     // Assert
     expect(screen.queryByTestId("edit-button-record-1")).toBeNull();
@@ -287,7 +340,7 @@ describe("CleaningTimeline", () => {
     const records: CleaningRecord[] = [];
 
     // Act
-    render(<CleaningTimeline records={records} />);
+    render(<CleaningTimeline records={records} partNamesById={{}} />);
 
     // Assert
     expect(screen.getByTestId("empty-state")).toBeTruthy();

@@ -13,9 +13,10 @@ import { useAppTheme } from "@/shared/theme/useAppTheme";
 
 type CleaningTimelineProps = {
   records: CleaningRecord[];
-  // partId → パーツ名。未解決（削除済みパーツ等）は UUID ではなく
+  // partId → パーツ名。渡し忘れ（全行フォールバック表示）を型エラーで
+  // 防ぐため必須。エントリが未解決（削除済みパーツ等）の行は UUID ではなく
   // フォールバック表示にする（issue #152）
-  partNamesById?: Record<string, string>;
+  partNamesById: Record<string, string>;
   onDelete?: (recordId: string) => void;
   // 更新の成否を待てるよう Promise を返せるようにする。
   // 成功時のみ編集UIを閉じ、失敗時はドラフトを保持して再試行できるようにする。
@@ -97,7 +98,7 @@ export function CleaningTimeline({
             style={[styles.partName, { color: theme.colors.textMuted }]}
             numberOfLines={1}
           >
-            パーツ: {partNamesById?.[item.partId] ?? "不明なパーツ"}
+            パーツ: {partNamesById[item.partId] ?? "不明なパーツ"}
           </Text>
           {isEditing ? (
             <View style={styles.editRow}>

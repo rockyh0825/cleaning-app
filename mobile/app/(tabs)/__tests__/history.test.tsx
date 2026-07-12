@@ -138,6 +138,32 @@ describe('HistoryScreen', () => {
         expect(screen.queryAllByTestId('timeline-item')).toHaveLength(0);
     });
 
+    it('shows_error_banner_and_keeps_timeline_when_part_names_fetch_fails', async () => {
+        // Arrange: 履歴は取得済みだがパーツ名の取得（GET /parts）が失敗した状態
+        mockUseCleaningHistory.mockReturnValue({
+            records: RECORDS,
+            isLoading: false,
+            error: null,
+            deleteRecord: { mutate: jest.fn() },
+            updateRecord: { mutate: jest.fn() },
+        });
+        mockUsePartNames.mockReturnValue({
+            partNamesById: {},
+            isPending: false,
+            isError: true,
+        });
+
+        // Act
+        render(<HistoryScreen />, { wrapper: createWrapper() });
+
+        // Assert: エラーバナーで通知しつつ、履歴自体は取得できているためタイムラインは表示を継続する
+        await waitFor(() => {
+            expect(screen.getByTestId('part-names-error')).toBeTruthy();
+        });
+        expect(screen.getByText('パーツ名の取得に失敗しました')).toBeTruthy();
+        expect(screen.getAllByTestId('timeline-item')).toHaveLength(2);
+    });
+
     it('shows_empty_state_when_no_records_exist', async () => {
         // Arrange
         mockUseCleaningHistory.mockReturnValue({

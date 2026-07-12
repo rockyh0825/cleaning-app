@@ -22,10 +22,11 @@ export default function HistoryScreen() {
     // 履歴の partId をパーツ名で表示するための対応表（issue #152）。
     // 名前未解決のままタイムラインを出すと「不明なパーツ」が一瞬表示されて
     // ちらつくため、ローディング判定に含める。
-    const { partNamesById, isPending: isPartNamesPending } = usePartNames(
-        userId ?? '',
-        repository,
-    );
+    const {
+        partNamesById,
+        isPending: isPartNamesPending,
+        isError: isPartNamesError,
+    } = usePartNames(userId ?? '', repository);
 
     if (userId == null || isLoading || isPartNamesPending) {
         return (
@@ -53,6 +54,13 @@ export default function HistoryScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            {isPartNamesError && (
+                <View testID="part-names-error" style={styles.errorBanner}>
+                    <Text style={[theme.typography.body, { color: theme.colors.danger }]}>
+                        パーツ名の取得に失敗しました
+                    </Text>
+                </View>
+            )}
             {deleteRecord.isError && (
                 <View testID="delete-record-error" style={styles.errorBanner}>
                     <Text style={[theme.typography.body, { color: theme.colors.danger }]}>
