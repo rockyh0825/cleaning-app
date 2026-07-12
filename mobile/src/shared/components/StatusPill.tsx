@@ -41,11 +41,16 @@ function resolveHeatPair(status: HeatStatus, theme: AppTheme): { fill: string; b
 export function StatusPill({ status, label, testID = 'status-pill' }: Props) {
     const theme = useAppTheme();
     const pair = resolveHeatPair(status, theme);
+    // カスタムラベル（例: "130%"）でも状態名が読み上げから消えないよう常に合成する
+    const statusName = DEFAULT_LABELS[status];
+    const accessibilityLabel = label != null ? `${statusName} ${label}` : statusName;
 
     return (
         <View
             testID={testID}
-            accessibilityLabel={label ?? DEFAULT_LABELS[status]}
+            accessible
+            accessibilityRole="text"
+            accessibilityLabel={accessibilityLabel}
             style={[
                 styles.pill,
                 {

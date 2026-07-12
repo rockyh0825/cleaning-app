@@ -18,7 +18,8 @@ type Props = {
 type VariantStyle = {
     backgroundColor: string;
     labelColor: string;
-    borderColor?: string;
+    // 全バリアントで borderWidth を揃えるため、縁のないバリアントは transparent を指定する
+    borderColor: string;
 };
 
 function resolveVariantStyle(
@@ -26,22 +27,38 @@ function resolveVariantStyle(
     disabled: boolean,
     theme: AppTheme,
 ): VariantStyle {
-    if (disabled) {
-        return { backgroundColor: theme.colors.surfaceAlt, labelColor: theme.colors.textMuted };
-    }
+    // disabled はバリアントの性格（透明・危険の色相）を保ったままラベルを muted にする
     switch (variant) {
         case 'primary':
-            return { backgroundColor: theme.colors.primary, labelColor: theme.colors.onPrimary };
+            return disabled
+                ? {
+                      backgroundColor: theme.colors.surfaceAlt,
+                      labelColor: theme.colors.textMuted,
+                      borderColor: 'transparent',
+                  }
+                : {
+                      backgroundColor: theme.colors.primary,
+                      labelColor: theme.colors.onPrimary,
+                      borderColor: 'transparent',
+                  };
         case 'secondary':
             return {
                 backgroundColor: theme.colors.surface,
-                labelColor: theme.colors.primary,
-                borderColor: theme.colors.primary,
+                labelColor: disabled ? theme.colors.textMuted : theme.colors.primary,
+                borderColor: disabled ? theme.colors.outline : theme.colors.primary,
             };
         case 'ghost':
-            return { backgroundColor: 'transparent', labelColor: theme.colors.textMuted };
+            return {
+                backgroundColor: 'transparent',
+                labelColor: theme.colors.textMuted,
+                borderColor: 'transparent',
+            };
         case 'danger':
-            return { backgroundColor: theme.colors.dangerSoft, labelColor: theme.colors.danger };
+            return {
+                backgroundColor: theme.colors.dangerSoft,
+                labelColor: disabled ? theme.colors.textMuted : theme.colors.danger,
+                borderColor: 'transparent',
+            };
     }
 }
 
@@ -72,14 +89,13 @@ export function Button({
                 styles.button,
                 {
                     backgroundColor: variantStyle.backgroundColor,
+                    // 縁のないバリアントも transparent の border を持たせて高さを揃える
+                    borderWidth: 1.5,
+                    borderColor: variantStyle.borderColor,
                     borderRadius: theme.radius.md,
                     paddingVertical: theme.spacing.md,
                     paddingHorizontal: theme.spacing.lg,
                     opacity: pressed ? 0.85 : 1,
-                },
-                variantStyle.borderColor != null && {
-                    borderWidth: 1.5,
-                    borderColor: variantStyle.borderColor,
                 },
             ]}
         >

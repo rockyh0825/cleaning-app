@@ -46,4 +46,30 @@ describe('StatusPill', () => {
         expect(pillStyle.backgroundColor).toBe(lightTheme.colors.heatNeutral);
         expect(pillStyle.borderColor).toBe(lightTheme.colors.heatNeutralBorder);
     });
+
+    it('exposes_pill_as_single_accessible_text_element', () => {
+        // Arrange & Act
+        render(<StatusPill status="fresh" testID="pill" />);
+
+        // Assert
+        const pill = screen.getByTestId('pill');
+        expect(pill.props.accessible).toBe(true);
+        expect(pill.props.accessibilityRole).toBe('text');
+    });
+
+    it('announces_status_name_together_with_custom_label', () => {
+        // Arrange & Act（カスタムラベルでも状態情報が読み上げから消えないこと）
+        render(<StatusPill status="overdue" label="130%" testID="pill" />);
+
+        // Assert
+        expect(screen.getByTestId('pill').props.accessibilityLabel).toBe('要掃除 130%');
+    });
+
+    it('announces_status_name_only_when_no_custom_label', () => {
+        // Arrange & Act
+        render(<StatusPill status="due" testID="pill" />);
+
+        // Assert
+        expect(screen.getByTestId('pill').props.accessibilityLabel).toBe('そろそろ');
+    });
 });
