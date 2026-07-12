@@ -40,8 +40,13 @@ export function PartChecklist({
     });
   };
 
+  // 選択後に削除されたパーツの ID を除外する（stale な選択で記録しない）
+  const validSelectedPartIds = parts
+    .filter((part) => selectedPartIds.has(part.id))
+    .map((part) => part.id);
+
   const handleRecord = () => {
-    onLogCleaning(Array.from(selectedPartIds));
+    onLogCleaning(validSelectedPartIds);
   };
 
   const renderItem = ({ item }: { item: Part }) => {
@@ -91,7 +96,7 @@ export function PartChecklist({
       />
       <View style={styles.footer}>
         <RecordButton
-          selectedCount={selectedPartIds.size}
+          selectedCount={validSelectedPartIds.length}
           onPress={handleRecord}
           isLoading={isLoading}
         />
