@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { PartChecklist } from '@/features/cleaning-record/components/PartChecklist';
 import { PartEditorSheet } from '@/features/cleaning-record/components/PartEditorSheet';
@@ -17,7 +17,10 @@ const repository = new CleaningRecordRepository(api);
 
 export default function AreaDetailScreen() {
     const theme = useAppTheme();
-    const { areaId } = useLocalSearchParams<{ areaId: string }>();
+    const { areaId, ownerType: ownerTypeParam } = useLocalSearchParams<{
+        areaId: string;
+        ownerType?: string;
+    }>();
     const userId = useUserId();
 
     const partList = usePartList(userId ?? '', areaId ?? '', repository);
@@ -32,9 +35,6 @@ export default function AreaDetailScreen() {
 
     const [editingPart, setEditingPart] = useState<Part | null>(null);
     const [isEditorVisible, setEditorVisible] = useState(false);
-
-    // パーツを全削除した直後の追加でも所有者種別を維持するため、判明した値を保持する
-    const lastKnownOwnerType = useRef<OwnerType | null>(null);
 
     if (userId == null || partList.isPending) {
         return (
@@ -62,11 +62,11 @@ export default function AreaDetailScreen() {
 
     const parts = partList.parts;
 
-    if (parts.length > 0) {
-        lastKnownOwnerType.current = parts[0]!.ownerType;
-    }
+    // 遷移元が知っている所有者種別を最優先し、なければ表示中パーツから推定する
     const ownerType: OwnerType =
-        parts[0]?.ownerType ?? lastKnownOwnerType.current ?? 'ROOM';
+        ownerTypeParam === 'ROOM' || ownerTypeParam === 'FURNITURE'
+            ? ownerTypeParam
+            : (parts[0]?.ownerType ?? 'ROOM');
 
     const openAddEditor = () => {
         setEditingPart(null);
@@ -98,8 +98,22 @@ export default function AreaDetailScreen() {
     };
 
     const handleEditorDelete = (partId: string) => {
-        deletePart(partId);
-        closeEditor();
+        const partName = editingPart?.name ?? 'このパーツ';
+        Alert.alert(
+            `「${partName}」を削除しますか？`,
+            'このパーツに紐づく掃除記録もまとめて削除されます。この操作は取り消せません。',
+            [
+                { text: 'キャンセル', style: 'cancel' },
+                {
+                    text: '削除する',
+                    style: 'destructive',
+                    onPress: () => {
+                        deletePart(partId);
+                        closeEditor();
+                    },
+                },
+            ],
+        );
     };
 
     return (

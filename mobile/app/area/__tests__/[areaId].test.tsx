@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -243,8 +244,9 @@ describe('AreaDetailScreen', () => {
         });
     });
 
-    it('deletes_part_when_delete_button_is_pressed_in_part_editor', async () => {
+    it('deletes_part_only_after_confirming_in_alert_dialog', async () => {
         // Arrange
+        const alertSpy = jest.spyOn(Alert, 'alert');
         const mockDeletePart = jest.fn();
         mockUseManageParts.mockReturnValue({
             addPart: jest.fn(),
@@ -256,12 +258,90 @@ describe('AreaDetailScreen', () => {
         render(<AreaDetailScreen />, { wrapper: createWrapper() });
         await screen.findByText('エアコンフィルター');
 
-        // Act
+        // Act: 削除ボタンを押した時点では確認ダイアログのみ
         fireEvent.press(screen.getByTestId('part-edit-part-1'));
         fireEvent.press(screen.getByTestId('part-editor-delete'));
 
+        // Assert: 確認前は削除されない
+        expect(alertSpy).toHaveBeenCalled();
+        expect(mockDeletePart).not.toHaveBeenCalled();
+
+        // Act: 確認ダイアログの「削除する」を押す
+        const buttons = alertSpy.mock.calls[0]![2];
+        const destructive = buttons!.find((b) => b.style === 'destructive');
+        destructive!.onPress!();
+
         // Assert
         expect(mockDeletePart).toHaveBeenCalledWith('part-1');
+    });
+
+    it('adds_part_with_owner_type_from_route_param_when_area_has_no_parts', async () => {
+        // Arrange: パーツ0件の家具エリア（ヒートマップから ownerType 付きで遷移）
+        mockUseLocalSearchParams.mockReturnValue({
+            areaId: 'furniture-1',
+            ownerType: 'FURNITURE',
+        });
+        mockListParts.mockResolvedValue([]);
+        const mockAddPart = jest.fn();
+        mockUseManageParts.mockReturnValue({
+            addPart: mockAddPart,
+            updatePart: jest.fn(),
+            deletePart: jest.fn(),
+            isPending: false,
+            error: null,
+        });
+        render(<AreaDetailScreen />, { wrapper: createWrapper() });
+        await screen.findByTestId('empty-state');
+
+        // Act
+        fireEvent.press(screen.getByTestId('add-part-button'));
+        fireEvent.changeText(screen.getByTestId('part-name-input'), '棚');
+        fireEvent.press(screen.getByTestId('part-editor-submit'));
+
+        // Assert: ルートパラメータの ownerType が使われる
+        expect(mockAddPart).toHaveBeenCalledWith({
+            ownerType: 'FURNITURE',
+            ownerId: 'furniture-1',
+            name: '棚',
+            recommendedCycleDays: 7,
+        });
+    });
+
+    it('infers_furniture_owner_type_from_existing_parts_when_route_param_is_missing', async () => {
+        // Arrange: ownerType パラメータなしで家具エリアを開いた場合
+        mockUseLocalSearchParams.mockReturnValue({ areaId: 'furniture-1' });
+        mockListParts.mockResolvedValue([
+            {
+                ...PARTS[0]!,
+                id: 'part-f1',
+                ownerType: 'FURNITURE' as const,
+                ownerId: 'furniture-1',
+                name: '棚板',
+            },
+        ]);
+        const mockAddPart = jest.fn();
+        mockUseManageParts.mockReturnValue({
+            addPart: mockAddPart,
+            updatePart: jest.fn(),
+            deletePart: jest.fn(),
+            isPending: false,
+            error: null,
+        });
+        render(<AreaDetailScreen />, { wrapper: createWrapper() });
+        await screen.findByText('棚板');
+
+        // Act
+        fireEvent.press(screen.getByTestId('add-part-button'));
+        fireEvent.changeText(screen.getByTestId('part-name-input'), '引き出し');
+        fireEvent.press(screen.getByTestId('part-editor-submit'));
+
+        // Assert: 表示中パーツの ownerType から推定される
+        expect(mockAddPart).toHaveBeenCalledWith({
+            ownerType: 'FURNITURE',
+            ownerId: 'furniture-1',
+            name: '引き出し',
+            recommendedCycleDays: 7,
+        });
     });
 
     it('shows_error_banner_when_part_mutation_fails', async () => {
