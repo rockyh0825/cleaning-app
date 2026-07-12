@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { CleaningTimeline } from '@/features/cleaning-record/components/CleaningTimeline';
 import { useCleaningHistory } from '@/features/cleaning-record/hooks/useCleaningHistory';
+import { usePartNames } from '@/features/cleaning-record/hooks/usePartList';
 import { CleaningRecordRepository } from '@/features/cleaning-record/repositories/CleaningRecordRepository';
 import { useUserId } from '@/shared/hooks/useUserId';
 import { api } from '@/shared/app-root/providers/di';
@@ -18,8 +19,15 @@ export default function HistoryScreen() {
         {},
         repository,
     );
+    // 履歴の partId をパーツ名で表示するための対応表（issue #152）。
+    // 名前未解決のままタイムラインを出すと「不明なパーツ」が一瞬表示されて
+    // ちらつくため、ローディング判定に含める。
+    const { partNamesById, isPending: isPartNamesPending } = usePartNames(
+        userId ?? '',
+        repository,
+    );
 
-    if (userId == null || isLoading) {
+    if (userId == null || isLoading || isPartNamesPending) {
         return (
             <View
                 testID="history-loading"
@@ -61,6 +69,7 @@ export default function HistoryScreen() {
             )}
             <CleaningTimeline
                 records={records}
+                partNamesById={partNamesById}
                 onDelete={(recordId) => deleteRecord.mutate(recordId)}
                 onUpdateNote={(recordId, note) =>
                     // mutateAsync で成否を CleaningTimeline に伝える。

@@ -248,6 +248,40 @@ describe("CleaningTimeline", () => {
     expect(screen.queryByTestId("edit-button-record-1")).toBeNull();
   });
 
+  it("displays_part_name_instead_of_part_id_when_name_is_resolved", () => {
+    // Arrange
+    const records: CleaningRecord[] = [
+      makeRecord({ id: "record-1", partId: "part-1" }),
+    ];
+    const partNamesById = { "part-1": "キッチンシンク" };
+
+    // Act
+    render(
+      <CleaningTimeline records={records} partNamesById={partNamesById} />,
+    );
+
+    // Assert: パーツ名を表示し、UUID（partId）は表示しない
+    expect(screen.getByText("パーツ: キッチンシンク")).toBeTruthy();
+    expect(screen.queryByText(/part-1/)).toBeNull();
+  });
+
+  it("displays_fallback_label_instead_of_uuid_when_part_name_is_not_resolved", () => {
+    // Arrange: 削除済みパーツ等で partNamesById に partId が存在しないケース
+    const records: CleaningRecord[] = [
+      makeRecord({
+        id: "record-1",
+        partId: "3f2b9c4e-0000-0000-0000-000000000000",
+      }),
+    ];
+
+    // Act
+    render(<CleaningTimeline records={records} partNamesById={{}} />);
+
+    // Assert: UUID をそのまま表示せず、フォールバック文言を表示する
+    expect(screen.getByText("パーツ: 不明なパーツ")).toBeTruthy();
+    expect(screen.queryByText(/3f2b9c4e/)).toBeNull();
+  });
+
   it("shows_empty_state_message_when_records_list_is_empty", () => {
     // Arrange
     const records: CleaningRecord[] = [];
