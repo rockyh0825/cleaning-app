@@ -3,7 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
 import type { AppTheme } from '@/shared/theme/tokens';
 
-export type HeatStatus = 'fresh' | 'due' | 'overdue' | 'none';
+// features/heatmap/usecases/resolveHeatStatus.ts の HeatStatus と互換の状態集合。
+// shared は feature に依存できないため、値の集合をここでも定義する
+export type HeatStatus = 'fresh' | 'due' | 'overdue' | 'neutral';
 
 type Props = {
     status: HeatStatus;
@@ -16,7 +18,7 @@ const DEFAULT_LABELS: Record<HeatStatus, string> = {
     fresh: 'きれい',
     due: 'そろそろ',
     overdue: '要掃除',
-    none: '記録なし',
+    neutral: '記録なし',
 };
 
 function resolveHeatPair(status: HeatStatus, theme: AppTheme): { fill: string; border: string } {
@@ -27,7 +29,7 @@ function resolveHeatPair(status: HeatStatus, theme: AppTheme): { fill: string; b
             return { fill: theme.colors.heatDue, border: theme.colors.heatDueBorder };
         case 'overdue':
             return { fill: theme.colors.heatOverdue, border: theme.colors.heatOverdueBorder };
-        case 'none':
+        case 'neutral':
             return { fill: theme.colors.heatNeutral, border: theme.colors.heatNeutralBorder };
     }
 }

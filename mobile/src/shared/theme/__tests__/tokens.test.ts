@@ -114,4 +114,89 @@ describe('theme tokens', () => {
         // 数字の桁揃えのため tabular-nums を指定する
         expect(theme.typography.number.fontVariant).toContain('tabular-nums');
     });
+
+    describe('WCAG AA contrast (>= 4.5:1 for normal text)', () => {
+        // WCAG 2.x relative luminance（sRGB）
+        function relativeLuminance(hex: string): number {
+            const value = hex.replace('#', '');
+            const [r, g, b] = [0, 2, 4]
+                .map((i) => parseInt(value.slice(i, i + 2), 16) / 255)
+                .map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        }
+
+        function contrastRatio(a: string, b: string): number {
+            const [lighter, darker] = [relativeLuminance(a), relativeLuminance(b)].sort(
+                (x, y) => y - x,
+            );
+            return (lighter + 0.05) / (darker + 0.05);
+        }
+
+        const AA_NORMAL_TEXT = 4.5;
+
+        it.each([
+            ['heatFresh'],
+            ['heatDue'],
+            ['heatOverdue'],
+            ['heatNeutral'],
+        ] as const)('keeps_text_readable_on_%s_fill_in_dark_theme', (key) => {
+            // Arrange
+            const fill = darkTheme.colors[key];
+            const text = darkTheme.colors.text;
+
+            // Act
+            const ratio = contrastRatio(fill, text);
+
+            // Assert
+            expect(ratio).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+        });
+
+        it.each([
+            ['heatFresh'],
+            ['heatDue'],
+            ['heatOverdue'],
+            ['heatNeutral'],
+        ] as const)('keeps_text_readable_on_%s_fill_in_light_theme', (key) => {
+            // Arrange
+            const fill = lightTheme.colors[key];
+            const text = lightTheme.colors.text;
+
+            // Act
+            const ratio = contrastRatio(fill, text);
+
+            // Assert
+            expect(ratio).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+        });
+
+        it.each(themes)('keeps_on_primary_readable_on_primary_in_%s_theme', (_name, theme) => {
+            // Arrange & Act
+            const ratio = contrastRatio(theme.colors.primary, theme.colors.onPrimary);
+
+            // Assert
+            expect(ratio).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+        });
+
+        it.each(themes)('keeps_primary_readable_on_surface_in_%s_theme', (_name, theme) => {
+            // Arrange & Act（secondary ボタンのラベル = primary on surface）
+            const ratio = contrastRatio(theme.colors.primary, theme.colors.surface);
+
+            // Assert
+            expect(ratio).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+        });
+
+        it.each([
+            ['heatFresh', 'heatFreshBorder'],
+            ['heatDue', 'heatDueBorder'],
+            ['heatOverdue', 'heatOverdueBorder'],
+        ] as const)(
+            'keeps_%s_fill_distinguishable_from_its_border_in_dark_theme',
+            (fillKey, borderKey) => {
+                // Arrange & Act（塗りと縁取りのペアが判別できること）
+                const ratio = contrastRatio(darkTheme.colors[fillKey], darkTheme.colors[borderKey]);
+
+                // Assert
+                expect(ratio).toBeGreaterThanOrEqual(1.5);
+            },
+        );
+    });
 });

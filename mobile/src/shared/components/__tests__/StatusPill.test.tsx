@@ -9,7 +9,7 @@ describe('StatusPill', () => {
         ['fresh', 'きれい'],
         ['due', 'そろそろ'],
         ['overdue', '要掃除'],
-        ['none', '記録なし'],
+        ['neutral', '記録なし'],
     ] as const)('renders_default_label_for_%s_status', (status, expectedLabel) => {
         // Arrange & Act
         render(<StatusPill status={status} />);
@@ -37,9 +37,9 @@ describe('StatusPill', () => {
         expect(pillStyle.borderColor).toBe(lightTheme.colors.heatFreshBorder);
     });
 
-    it('uses_neutral_heat_pair_for_none_status', () => {
+    it('uses_neutral_heat_pair_for_neutral_status', () => {
         // Arrange & Act
-        render(<StatusPill status="none" testID="pill" />);
+        render(<StatusPill status="neutral" testID="pill" />);
 
         // Assert
         const pillStyle = StyleSheet.flatten(screen.getByTestId('pill').props.style);

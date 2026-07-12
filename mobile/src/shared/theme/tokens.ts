@@ -17,7 +17,8 @@ const palette = {
     night800: '#1D2B28',
     night700: '#26362F',
     // ブランド（ティール = 水・清潔さ）
-    teal600: '#0E9488',
+    // teal600 は白ラベルと 5.01:1（WCAG AA）を確保するトーン
+    teal600: '#0C7D72',
     teal300: '#3FC1B3',
     tealSoft: '#D7F0EC',
     tealSoftDark: '#143B36',
@@ -28,17 +29,18 @@ const palette = {
     coralSoft: '#FBE9E5',
     coralSoftDark: '#3A1F1A',
     // ヒートマップ状態色（塗り + 縁取りのペア）
+    // *FillDark はダークテーマの text #E8F1EE と 4.5:1 以上（WCAG AA）を確保する暗さにする
     freshFill: '#7BDDB0',
     freshBorder: '#3BAE7E',
-    freshFillDark: '#2E8E66',
+    freshFillDark: '#236E4E',
     freshBorderDark: '#57C795',
     dueFill: '#F6CE67',
     dueBorder: '#C79A2A',
-    dueFillDark: '#A57F1C',
+    dueFillDark: '#7D6015',
     dueBorderDark: '#E0B54D',
     overdueFill: '#F49382',
     overdueBorder: '#CE5643',
-    overdueFillDark: '#B4503D',
+    overdueFillDark: '#9E4635',
     overdueBorderDark: '#EF8271',
     neutralFill: '#E7EDEB',
     neutralBorder: '#C2CFCB',
