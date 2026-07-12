@@ -96,6 +96,39 @@ describe("PartChecklist", () => {
     expect(screen.getByText("最終掃除: 未記録")).toBeTruthy();
   });
 
+  it("calls_onEditPart_without_toggling_selection_when_edit_button_pressed", () => {
+    // Arrange
+    const part = makePart({ id: "part-1", name: "キッチン床" });
+    const onLogCleaning = jest.fn();
+    const onEditPart = jest.fn();
+
+    // Act
+    render(
+      <PartChecklist
+        parts={[part]}
+        onLogCleaning={onLogCleaning}
+        onEditPart={onEditPart}
+      />,
+    );
+    fireEvent.press(screen.getByTestId("part-edit-part-1"));
+
+    // Assert: 編集コールバックが呼ばれ、選択状態は変わらない（記録ボタンは無効のまま）
+    expect(onEditPart).toHaveBeenCalledWith(part);
+    const recordButton = screen.getByTestId("record-button");
+    expect(recordButton.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it("hides_edit_button_when_onEditPart_is_not_provided", () => {
+    // Arrange
+    const parts: Part[] = [makePart({ id: "part-1", name: "キッチン床" })];
+
+    // Act
+    render(<PartChecklist parts={parts} onLogCleaning={jest.fn()} />);
+
+    // Assert
+    expect(screen.queryByTestId("part-edit-part-1")).toBeNull();
+  });
+
   it("disables_record_button_when_no_parts_selected", () => {
     // Arrange
     const parts: Part[] = [makePart({ id: "part-1", name: "キッチン床" })];

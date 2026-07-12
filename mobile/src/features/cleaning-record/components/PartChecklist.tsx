@@ -13,12 +13,15 @@ import { RecordButton } from "./RecordButton";
 type PartChecklistProps = {
   parts: Part[];
   onLogCleaning: (partIds: string[]) => void;
+  /** 指定するとパーツごとに編集ボタンを表示する */
+  onEditPart?: (part: Part) => void;
   isLoading?: boolean;
 };
 
 export function PartChecklist({
   parts,
   onLogCleaning,
+  onEditPart,
   isLoading = false,
 }: PartChecklistProps) {
   const [selectedPartIds, setSelectedPartIds] = useState<Set<string>>(
@@ -63,6 +66,17 @@ export function PartChecklist({
               : "未記録"}
           </Text>
         </View>
+        {onEditPart != null && (
+          <TouchableOpacity
+            testID={`part-edit-${item.id}`}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.name}を編集`}
+            style={styles.editButton}
+            onPress={() => onEditPart(item)}
+          >
+            <Text style={styles.editButtonLabel}>編集</Text>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
     );
   };
@@ -126,6 +140,18 @@ const styles = StyleSheet.create({
   },
   partInfo: {
     flex: 1,
+  },
+  editButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#BDBDBD",
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  editButtonLabel: {
+    fontSize: 12,
+    color: "#616161",
   },
   partName: {
     fontSize: 16,
