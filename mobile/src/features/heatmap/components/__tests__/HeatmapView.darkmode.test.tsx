@@ -42,8 +42,9 @@ function renderEmptyHeatmapView() {
 
 describe("HeatmapView（ダークモード）", () => {
     it("labels_empty_state_cta_with_on_primary_token_when_color_scheme_is_dark", async () => {
-        // Arrange: primary 背景の CTA ラベルに surface（ダークでは night900）を
-        // 使うとほぼ読めなくなるため、onPrimary が使われることを検証する
+        // Arrange: primary 背景の CTA ラベルには意味的に正しい onPrimary トークンを使う
+        // （surface の流用は primary のトーン変更に追従できないため）。
+        // light では onPrimary と surface が同値のため、ダークテーマで検証する
         mockUseColorScheme.mockReturnValue("dark");
 
         // Act

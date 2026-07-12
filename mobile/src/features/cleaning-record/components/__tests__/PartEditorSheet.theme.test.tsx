@@ -12,8 +12,9 @@ const mockUseColorScheme = useColorScheme as jest.Mock;
 
 describe("PartEditorSheet（テーマトークン）", () => {
   it("labels_submit_button_with_on_primary_token_when_color_scheme_is_dark", () => {
-    // Arrange: ダークでは surface(night900) だと primary 背景上で読めないため
-    // onPrimary(tealInk) が使われることを検証する
+    // Arrange: primary 背景のラベルには意味的に正しい onPrimary トークンを使う
+    // （surface の流用は primary のトーン変更に追従できないため）。
+    // light では onPrimary と surface が同値のため、ダークテーマで検証する
     mockUseColorScheme.mockReturnValue("dark");
 
     // Act

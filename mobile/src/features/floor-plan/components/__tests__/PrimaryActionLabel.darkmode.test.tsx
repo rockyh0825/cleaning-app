@@ -17,8 +17,9 @@ function renderWithTheme(ui: React.ReactElement) {
     return render(<ThemeProvider>{ui}</ThemeProvider>);
 }
 
-// primary 背景のボタンラベルに surface（ダークでは night900）を使うと
-// ほぼ読めなくなるため、onPrimary（tealInk）が使われることを検証する
+// primary 背景のボタンラベルには意味的に正しい onPrimary トークンを使う
+// （surface の流用は primary のトーン変更に追従できないため）。
+// light では onPrimary と surface が同値のため、ダークテーマで検証する
 describe('primary ボタンのラベル色（ダークモード）', () => {
     beforeEach(() => {
         mockUseColorScheme.mockReturnValue('dark');

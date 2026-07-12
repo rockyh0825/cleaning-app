@@ -158,7 +158,7 @@ export default function FloorPlanIndexScreen() {
             onPress={() => setIsModalVisible(true)}
           >
             <Text
-              style={[theme.typography.label, { color: theme.colors.surface }]}
+              style={[theme.typography.label, { color: theme.colors.onPrimary }]}
             >
               最初の部屋を追加
             </Text>
