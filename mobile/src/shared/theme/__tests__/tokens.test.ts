@@ -83,4 +83,35 @@ describe('theme tokens', () => {
         // Assert
         expect(lightTheme.colors[key]).not.toBe(darkTheme.colors[key]);
     });
+
+    it.each(themes)('defines_soft_and_on_primary_tokens_in_%s_theme', (_name, theme) => {
+        // Assert
+        expect(theme.colors.primarySoft).toMatch(/^#[0-9A-F]{6}$/i);
+        expect(theme.colors.onPrimary).toMatch(/^#[0-9A-F]{6}$/i);
+        expect(theme.colors.dangerSoft).toMatch(/^#[0-9A-F]{6}$/i);
+    });
+
+    it.each(themes)('defines_border_pair_for_every_heat_state_in_%s_theme', (_name, theme) => {
+        // Arrange
+        const heatBorderKeys = [
+            'heatFreshBorder',
+            'heatDueBorder',
+            'heatOverdueBorder',
+            'heatNeutralBorder',
+        ] as const;
+
+        // Assert
+        for (const key of heatBorderKeys) {
+            expect(theme.colors[key]).toMatch(/^#[0-9A-F]{6}$/i);
+        }
+    });
+
+    it.each(themes)('defines_display_and_number_typography_in_%s_theme', (_name, theme) => {
+        // Assert
+        expect(theme.typography.display.fontSize).toEqual(expect.any(Number));
+        expect(theme.typography.display.fontWeight).toBe('800');
+        expect(theme.typography.number.fontSize).toEqual(expect.any(Number));
+        // 数字の桁揃えのため tabular-nums を指定する
+        expect(theme.typography.number.fontVariant).toContain('tabular-nums');
+    });
 });
