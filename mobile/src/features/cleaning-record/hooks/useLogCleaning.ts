@@ -6,6 +6,7 @@ import {
 import type { CleaningRecord, CreateRecordInput } from "../types";
 import { LogCleaningUseCase } from "../usecases/LogCleaningUseCase";
 import type { CleaningRecordRepository } from "../repositories/CleaningRecordRepository";
+import { hapticSuccess, hapticError } from "@/shared/haptics/haptics";
 
 type LogCleaningExecutor = {
   execute: (
@@ -49,11 +50,20 @@ export function buildLogCleaningMutationOptions(
 
       return { previous };
     },
+    onSuccess: (
+      _data: CleaningRecord[],
+      _input: CreateRecordInput,
+      _context: { previous: CleaningRecord[] | undefined } | undefined,
+    ) => {
+      // 記録完了の主要操作フィードバック（非対応環境ではラッパー側で無視される）
+      hapticSuccess();
+    },
     onError: (
       _err: unknown,
       _input: CreateRecordInput,
       context: { previous: CleaningRecord[] | undefined } | undefined,
     ) => {
+      hapticError();
       queryClient.setQueryData<CleaningRecord[]>(
         ["cleaning-records", { userId }],
         context?.previous,

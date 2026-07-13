@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, StyleSheet, FlatList } from "react-native";
 import type { Part } from "../types";
 import { useAppTheme } from "@/shared/theme/useAppTheme";
+import { hapticSelection } from "@/shared/haptics/haptics";
 import { PartChecklistItem } from "./PartChecklistItem";
 import { RecordButton } from "./RecordButton";
 
@@ -30,6 +31,8 @@ export function PartChecklist({
   );
 
   const togglePart = (partId: string) => {
+    // チェック ON/OFF どちらも選択変更としてフィードバックする
+    hapticSelection();
     setSelectedPartIds((prev) => {
       const next = new Set(prev);
       if (next.has(partId)) {
