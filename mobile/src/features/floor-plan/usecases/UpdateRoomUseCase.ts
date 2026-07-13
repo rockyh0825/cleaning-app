@@ -1,6 +1,6 @@
 import type { FloorPlanRepository } from '../repositories/FloorPlanRepository';
-import type { Furniture, Room, UpdateRoomInput } from '../types';
-import { clampWithin } from '@/shared/utils/grid';
+import type { Furniture, Room, UpdateFurnitureInput, UpdateRoomInput } from '../types';
+import { clampWithin, fitWithin } from '@/shared/utils/grid';
 import type { Rect } from '@/shared/utils/grid';
 import { GRID_COLS, GRID_ROWS } from '../constants';
 
@@ -45,11 +45,13 @@ export class UpdateRoomUseCase {
     }
 
     /**
-     * 新しい部屋サイズからはみ出した内包家具を境界内にクランプし追随更新する（Requirement 2.3）。
+     * 新しい部屋サイズからはみ出した内包家具を「①押し戻し → ②縮小」の2段階で
+     * 追随更新する（Requirement 2.3 / issue #148 Step 3）。
+     * まずサイズを保ったまま境界内へ押し戻し、それでも収まらない軸だけ
+     * 部屋サイズまで縮小する（最小 1×1、fitWithin の仕様）。
      * 家具の座標は部屋相対（0基点）のため、可動域は部屋の位置に依存しない 0 起点の相対矩形
      * （新しい部屋サイズ）を親 bounds として使う。これにより部屋を移動しただけ（サイズ不変）
      * では相対座標が変わらず、家具は部屋に追従する（保存座標を書き換えない）。
-     * 家具が部屋より大きい場合は clampWithin の仕様に従い相対原点 (0,0) に揃える。
      */
     private async clampContainedFurniture(
         userId: string,
@@ -60,19 +62,27 @@ export class UpdateRoomUseCase {
         const updates = furniture
             .map((f) => ({
                 furniture: f,
-                clamped: clampWithin(
+                fitted: fitWithin(
                     { x: f.gridX, y: f.gridY, w: f.gridW, h: f.gridH },
                     relativeBounds,
                 ),
             }))
-            .filter(({ furniture: f, clamped }) => clamped.x !== f.gridX || clamped.y !== f.gridY);
+            .map(({ furniture: f, fitted }) => {
+                // 変化した組（位置・サイズ）だけを更新ペイロードに含める
+                const positionChanged = fitted.x !== f.gridX || fitted.y !== f.gridY;
+                const sizeChanged = fitted.w !== f.gridW || fitted.h !== f.gridH;
+                if (!positionChanged && !sizeChanged) return null;
+                const input = {
+                    ...(positionChanged ? { gridX: fitted.x, gridY: fitted.y } : {}),
+                    ...(sizeChanged ? { gridW: fitted.w, gridH: fitted.h } : {}),
+                } as UpdateFurnitureInput;
+                return { id: f.id, input };
+            })
+            .filter((update): update is { id: string; input: UpdateFurnitureInput } => update !== null);
 
         await Promise.all(
-            updates.map(({ furniture: f, clamped }) =>
-                this.repository.updateFurniture(userId, f.id, {
-                    gridX: clamped.x,
-                    gridY: clamped.y,
-                }),
+            updates.map(({ id, input }) =>
+                this.repository.updateFurniture(userId, id, input),
             ),
         );
     }
