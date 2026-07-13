@@ -357,6 +357,22 @@ describe('RoomShape', () => {
         expect(getByGestureTestId('room-pan-room-1').config.enabled).toBe(true);
     });
 
+    it('disables_pan_gesture_when_onDragEnd_is_not_provided', () => {
+        // Arrange & Act: onDragEnd 未指定（部屋詳細画面など読み取り用途）では
+        // 長押し pan を無効化し、指への追従だけして戻る「幻のドラッグ」を防ぐ
+        render(
+            <RoomShape
+                room={testRoom}
+                cellSize={40}
+                selected={false}
+                onPress={jest.fn()}
+            />,
+        );
+
+        // Assert
+        expect(getByGestureTestId('room-pan-room-1').config.enabled).toBe(false);
+    });
+
     it('calls_onPress_on_tap_even_when_dragDisabled', async () => {
         // Arrange: dragDisabled はドラッグのみ無効化し、タップ（選択導線）は残す
         const mockOnPress = jest.fn();

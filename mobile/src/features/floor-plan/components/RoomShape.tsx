@@ -72,7 +72,9 @@ export function RoomShape({
         onCommit: (rect) => onDragEnd?.(rect),
         testID: `room-pan-${room.id}`,
         blocksExternal: canvasPanGesture,
-        enabled: !dragDisabled,
+        // onDragEnd 未指定（読み取り用途）では長押し pan 自体を無効化し、
+        // 指への追従だけして戻る「幻のドラッグ」やキャンバスパンの待機を防ぐ
+        enabled: !dragDisabled && onDragEnd != null,
         activateAfterLongPressMs: MOVE_ACTIVATION_MS,
     });
 
