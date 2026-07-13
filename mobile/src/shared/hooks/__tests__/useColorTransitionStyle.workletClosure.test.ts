@@ -15,13 +15,11 @@ describe('useColorTransitionStyle worklet closure', () => {
         const hookPath = path.resolve(__dirname, '../useColorTransitionStyle.ts');
         const source = fs.readFileSync(hookPath, 'utf8');
 
-        // Act
+        // Act: presets/plugins は複製せず、実機と同じ babel.config.js をそのまま読み込む
         const result = transformSync(source, {
             filename: hookPath,
-            presets: ['babel-preset-expo'],
-            plugins: ['react-native-reanimated/plugin'],
             babelrc: false,
-            configFile: false,
+            configFile: path.resolve(__dirname, '../../../../babel.config.js'),
         });
 
         // Assert: useAnimatedStyle worklet（progress を参照するもの）の閉包に
