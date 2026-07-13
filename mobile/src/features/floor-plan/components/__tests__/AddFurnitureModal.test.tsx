@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
-import { FURNITURE_PRESETS } from '../../constants';
+import { FURNITURE_CATEGORIES, FURNITURE_PRESETS } from '../../constants';
 import { AddFurnitureModal } from '../AddFurnitureModal';
 
 describe('AddFurnitureModal', () => {
@@ -146,8 +146,8 @@ describe('AddFurnitureModal', () => {
         });
     });
 
-    it('renders_icon_and_accessibility_label_on_each_preset_chip', () => {
-        // Arrange & Act
+    it('renders_glyph_preview_and_accessibility_label_on_each_preset_chip', () => {
+        // Arrange
         render(
             <AddFurnitureModal
                 visible={true}
@@ -157,13 +157,129 @@ describe('AddFurnitureModal', () => {
             />,
         );
 
-        // Assert: 全プリセットチップにアイコンが表示され、
-        // ラベルが accessibilityLabel として公開される（E2E のテキストマッチ用）
-        for (const preset of FURNITURE_PRESETS) {
-            const chip = screen.getByTestId(`furniture-preset-chip-${preset.key}`);
-            expect(within(chip).getByText(preset.icon)).toBeTruthy();
-            expect(chip.props.accessibilityLabel).toBe(preset.label);
+        // Act & Assert: カテゴリタブを順に開き、全プリセットチップに
+        // グリフのプレビューが表示され、ラベルが accessibilityLabel として
+        // 公開される（E2E のテキストマッチ用）
+        for (const category of FURNITURE_CATEGORIES) {
+            fireEvent.press(
+                screen.getByTestId(`furniture-category-tab-${category.key}`),
+            );
+            const presets = FURNITURE_PRESETS.filter(
+                (p) => p.category === category.key,
+            );
+            expect(presets.length).toBeGreaterThan(0);
+            for (const preset of presets) {
+                const chip = screen.getByTestId(
+                    `furniture-preset-chip-${preset.key}`,
+                );
+                expect(
+                    within(chip).getByTestId(`furniture-glyph-${preset.key}`),
+                ).toBeTruthy();
+                expect(chip.props.accessibilityLabel).toBe(preset.label);
+            }
         }
+    });
+
+    describe('カテゴリタブ', () => {
+        it('shows_living_category_presets_by_default', () => {
+            // Arrange & Act
+            render(
+                <AddFurnitureModal
+                    visible={true}
+                    roomId={testRoomId}
+                    onSubmit={mockOnSubmit}
+                    onCancel={mockOnCancel}
+                />,
+            );
+
+            // Assert: 既定タブは「リビング・寝室」。ソファ・ベッドが見え、
+            // キッチン・水まわりのプリセットは見えない
+            const livingTab = screen.getByTestId('furniture-category-tab-living');
+            expect(livingTab.props.accessibilityState).toEqual(
+                expect.objectContaining({ selected: true }),
+            );
+            expect(screen.getByTestId('furniture-preset-chip-sofa')).toBeTruthy();
+            expect(screen.getByTestId('furniture-preset-chip-bed')).toBeTruthy();
+            expect(screen.queryByTestId('furniture-preset-chip-fridge')).toBeNull();
+            expect(screen.queryByTestId('furniture-preset-chip-bathtub')).toBeNull();
+        });
+
+        it('switches_to_kitchen_presets_when_kitchen_tab_pressed', () => {
+            // Arrange
+            render(
+                <AddFurnitureModal
+                    visible={true}
+                    roomId={testRoomId}
+                    onSubmit={mockOnSubmit}
+                    onCancel={mockOnCancel}
+                />,
+            );
+
+            // Act
+            fireEvent.press(screen.getByTestId('furniture-category-tab-kitchen'));
+
+            // Assert
+            expect(screen.getByTestId('furniture-preset-chip-fridge')).toBeTruthy();
+            expect(screen.getByTestId('furniture-preset-chip-stove')).toBeTruthy();
+            expect(screen.queryByTestId('furniture-preset-chip-sofa')).toBeNull();
+        });
+
+        it('switches_to_water_presets_when_water_tab_pressed', () => {
+            // Arrange
+            render(
+                <AddFurnitureModal
+                    visible={true}
+                    roomId={testRoomId}
+                    onSubmit={mockOnSubmit}
+                    onCancel={mockOnCancel}
+                />,
+            );
+
+            // Act
+            fireEvent.press(screen.getByTestId('furniture-category-tab-water'));
+
+            // Assert
+            expect(screen.getByTestId('furniture-preset-chip-bathtub')).toBeTruthy();
+            expect(screen.getByTestId('furniture-preset-chip-toilet')).toBeTruthy();
+            expect(screen.queryByTestId('furniture-preset-chip-sofa')).toBeNull();
+        });
+
+        it('submits_preset_from_non_default_tab_with_its_default_size', () => {
+            // Arrange
+            render(
+                <AddFurnitureModal
+                    visible={true}
+                    roomId={testRoomId}
+                    onSubmit={mockOnSubmit}
+                    onCancel={mockOnCancel}
+                />,
+            );
+
+            // Act: 水まわりタブの浴槽を選択して送信
+            fireEvent.press(screen.getByTestId('furniture-category-tab-water'));
+            fireEvent.press(screen.getByTestId('furniture-preset-chip-bathtub'));
+            fireEvent.press(screen.getByText('追加'));
+
+            // Assert
+            expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+            expect(mockOnSubmit).toHaveBeenCalledWith({
+                name: '浴槽',
+                presetKey: 'bathtub',
+                gridW: 2,
+                gridH: 1,
+            });
+        });
+    });
+
+    describe('プリセットカタログ（承認済みデザインの18種）', () => {
+        it('defines_eighteen_presets_with_unique_keys_across_three_categories', () => {
+            // Arrange & Act & Assert
+            expect(FURNITURE_PRESETS).toHaveLength(18);
+            const keys = FURNITURE_PRESETS.map((p) => p.key);
+            expect(new Set(keys).size).toBe(18);
+            const categories = new Set(FURNITURE_PRESETS.map((p) => p.category));
+            expect(categories).toEqual(new Set(['living', 'kitchen', 'water']));
+        });
     });
 
     it('marks_selected_preset_chip_as_selected', () => {
