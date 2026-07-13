@@ -7,8 +7,13 @@ import {
   FlatList,
 } from "react-native";
 import type { Part } from "../types";
+import {
+  computeCycleElapsedRate,
+  resolveElapsedRateBadge,
+} from "../usecases/computeCycleElapsedRate";
 import { formatDateTime } from "@/shared/utils/formatDateTime";
 import { useAppTheme } from "@/shared/theme/useAppTheme";
+import { StatusPill } from "@/shared/components/StatusPill";
 import { RecordButton } from "./RecordButton";
 
 type PartChecklistProps = {
@@ -17,6 +22,8 @@ type PartChecklistProps = {
   /** 指定するとパーツごとに編集ボタンを表示する */
   onEditPart?: (part: Part) => void;
   isLoading?: boolean;
+  /** 経過率バッジの基準時刻。テスト用に注入可能（省略時は現在時刻） */
+  now?: Date;
 };
 
 export function PartChecklist({
@@ -24,8 +31,11 @@ export function PartChecklist({
   onLogCleaning,
   onEditPart,
   isLoading = false,
+  now,
 }: PartChecklistProps) {
   const theme = useAppTheme();
+  // 経過率はレンダリング時点の時刻で算出する（画面再訪・refetch で自然に更新される）
+  const nowMs = (now ?? new Date()).getTime();
   const [selectedPartIds, setSelectedPartIds] = useState<Set<string>>(
     new Set(),
   );
@@ -53,6 +63,10 @@ export function PartChecklist({
 
   const renderItem = ({ item }: { item: Part }) => {
     const isSelected = selectedPartIds.has(item.id);
+    // 周期に対する経過率（例: 71%）。周期未設定は null でバッジ非表示
+    const badge = resolveElapsedRateBadge(
+      computeCycleElapsedRate(item.lastCleanedAt, item.recommendedCycleDays, nowMs),
+    );
     return (
       <TouchableOpacity
         testID={`part-item-${item.id}`}
@@ -87,9 +101,21 @@ export function PartChecklist({
           )}
         </View>
         <View style={styles.partInfo}>
-          <Text style={[styles.partName, { color: theme.colors.text }]}>
-            {item.name}
-          </Text>
+          <View style={styles.nameRow}>
+            <Text
+              style={[styles.partName, { color: theme.colors.text }]}
+              numberOfLines={1}
+            >
+              {item.name}
+            </Text>
+            {badge != null && (
+              <StatusPill
+                status={badge.status}
+                label={badge.label}
+                testID={`part-elapsed-badge-${item.id}`}
+              />
+            )}
+          </View>
           <Text
             style={[styles.lastCleanedAt, { color: theme.colors.textMuted }]}
           >
@@ -170,6 +196,11 @@ const styles = StyleSheet.create({
   partInfo: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   editButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -182,6 +213,8 @@ const styles = StyleSheet.create({
   },
   partName: {
     fontSize: 16,
+    // 長いパーツ名でも経過率バッジを押し出さないよう名前側を縮める
+    flexShrink: 1,
   },
   lastCleanedAt: {
     fontSize: 12,
