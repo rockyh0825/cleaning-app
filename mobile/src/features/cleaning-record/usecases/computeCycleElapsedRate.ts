@@ -39,6 +39,13 @@ export function computeCycleElapsedRate(
   now: number,
 ): CycleElapsedRate {
   if (lastCleanedAt === null) return { kind: "uncleaned" };
+  // 周期未設定（0 以下）はバッジ非表示（noCycle）にする。heatmap 側
+  // （heatmap/usecases/computeElapsedRatio と
+  // cleaning-record/repositories/CleaningStatusCapabilityImpl）は同じケースを
+  // Infinity → overdue（赤塗り）として扱っており、これは意図的な非対称。
+  // 「経過率が定義できないパーツに数値バッジを出さない」本関数と、
+  // 「塗り分けに色なしを作らない」ヒートマップの UI 都合の違いによる。
+  // どちらかの扱いを変えるときは同期漏れがないか両方を確認すること。
   if (recommendedCycleDays <= 0) return { kind: "noCycle" };
 
   const cycleMs = recommendedCycleDays * DAY_MS;
