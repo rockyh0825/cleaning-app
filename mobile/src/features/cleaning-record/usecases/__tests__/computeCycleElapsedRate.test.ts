@@ -10,6 +10,12 @@ function daysAgo(days: number): Date {
   return new Date(NOW - days * DAY_MS);
 }
 
+const HOUR_MS = 60 * 60 * 1000;
+
+function hoursAgo(hours: number): Date {
+  return new Date(NOW - hours * HOUR_MS);
+}
+
 describe("computeCycleElapsedRate", () => {
   describe("正常系: 経過率の算出と状態分類", () => {
     it("returns_zero_percent_fresh_immediately_after_cleaning", () => {
@@ -61,6 +67,24 @@ describe("computeCycleElapsedRate", () => {
         percent: 200,
         status: "overdue",
       });
+    });
+
+    it("floors_displayed_percent_so_fresh_badge_never_shows_80_percent", () => {
+      // Arrange: 25日周期（600時間）で477時間経過 = 79.5%。四捨五入だと
+      // 「80%」表示なのに緑（fresh）という表示矛盾になるため切り捨てる
+      const rate = computeCycleElapsedRate(hoursAgo(477), 25, NOW);
+
+      // Assert
+      expect(rate).toEqual({ kind: "measured", percent: 79, status: "fresh" });
+    });
+
+    it("floors_displayed_percent_so_due_badge_never_shows_100_percent", () => {
+      // Arrange: 25日周期（600時間）で597時間経過 = 99.5%。四捨五入だと
+      // 「100%」表示なのに黄（due）という表示矛盾になるため切り捨てる
+      const rate = computeCycleElapsedRate(hoursAgo(597), 25, NOW);
+
+      // Assert
+      expect(rate).toEqual({ kind: "measured", percent: 99, status: "due" });
     });
 
     it("clamps_future_last_cleaned_at_to_zero_percent_fresh", () => {

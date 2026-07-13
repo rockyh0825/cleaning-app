@@ -29,6 +29,8 @@ export type CycleElapsedRate =
  * 前回掃除からの経過率（経過日数 ÷ 推奨周期）を求める純粋関数。
  * 現在時刻は引数注入（now: エポックms）でテスト可能にする。
  * 状態分類は表示丸め前の比率で行い、ヒートマップの塗り分けとズレないようにする。
+ * 表示 percent は切り捨て（floor）にする。四捨五入だと閾値際で
+ * 「80% なのに緑」「100% なのに黄」という表示と状態の食い違いが起きるため。
  * 未来の lastCleanedAt（端末時計のズレ等）は 0% に丸める。
  */
 export function computeCycleElapsedRate(
@@ -44,7 +46,7 @@ export function computeCycleElapsedRate(
   const status =
     ratio < GREEN_THRESHOLD ? "fresh" : ratio < RED_THRESHOLD ? "due" : "overdue";
 
-  return { kind: "measured", percent: Math.round(ratio * 100), status };
+  return { kind: "measured", percent: Math.floor(ratio * 100), status };
 }
 
 /**
