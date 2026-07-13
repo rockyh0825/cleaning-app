@@ -55,7 +55,7 @@ jobs:
       - name: ESLint
         if: steps.filter.outputs.mobile == 'true'
         working-directory: mobile
-        run: npx eslint src/
+        run: npm run lint
 
       - name: TypeScript type check
         if: steps.filter.outputs.mobile == 'true'

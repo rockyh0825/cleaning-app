@@ -194,7 +194,7 @@ npx expo run:ios                # iOS シミュレーターで起動（初回ビ
 npx expo start --dev-client     # 開発サーバーのみ起動（再ビルド不要）
 npx jest                        # 全テスト実行
 npx jest path/to/test.ts        # 単一テスト実行
-npx eslint src/                 # 静的解析
+npx eslint src/ app/            # 静的解析
 npx tsc --noEmit                # 型チェック
 ```
 

@@ -109,7 +109,7 @@ if [ "$MOBILE_CHANGED" = true ]; then
   # ESLint を全体にかけるのではなく、対象を絞るか CI に任せるのも手です
   info "ESLint を実行中..."
   if ! npm run lint; then
-    error "ESLint に失敗しました。npx eslint src/ --fix で自動修正してください。"
+    error "ESLint に失敗しました。npx eslint src/ app/ --fix で自動修正してください。"
     exit 1
   fi
 fi

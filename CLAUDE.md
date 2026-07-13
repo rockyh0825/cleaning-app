@@ -71,7 +71,7 @@ npx expo start               # 開発サーバー起動（Expo Go）
 npx expo start --dev-client  # Expo Dev Client使用時
 npx jest                     # 全テスト実行
 npx jest path/to/test.ts     # 単一テスト実行
-npx eslint src/              # 静的解析
+npx eslint src/ app/         # 静的解析
 npx prettier --write src/    # フォーマット
 ```
 
