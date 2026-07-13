@@ -8,7 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "test": "jest --passWithNoTests",
-    "lint": "eslint src/",
+    "lint": "eslint src/ app/",
     "generate:api": "npx --yes @openapitools/openapi-generator-cli generate --input-spec ../api/openapi.yaml --generator-name typescript-fetch --output src/shared/api --additional-properties=typescriptThreePlus=true"
   },
   "dependencies": {
