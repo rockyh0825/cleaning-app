@@ -176,6 +176,14 @@ describe('theme tokens', () => {
             expect(ratio).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
         });
 
+        it.each(themes)('keeps_danger_readable_on_danger_soft_in_%s_theme', (_name, theme) => {
+            // Arrange & Act（danger ボタン/削除チップのラベル = danger on dangerSoft）
+            const ratio = contrastRatio(theme.colors.danger, theme.colors.dangerSoft);
+
+            // Assert
+            expect(ratio).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+        });
+
         it.each(themes)('keeps_primary_readable_on_surface_in_%s_theme', (_name, theme) => {
             // Arrange & Act（secondary ボタンのラベル = primary on surface）
             const ratio = contrastRatio(theme.colors.primary, theme.colors.surface);
