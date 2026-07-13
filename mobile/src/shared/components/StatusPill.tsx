@@ -1,6 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
+import { useColorTransitionStyle } from '@/shared/hooks/useColorTransitionStyle';
 import type { AppTheme } from '@/shared/theme/tokens';
 
 // features/heatmap/usecases/resolveHeatStatus.ts の HeatStatus と互換の状態集合。
@@ -41,12 +43,16 @@ function resolveHeatPair(status: HeatStatus, theme: AppTheme): { fill: string; b
 export function StatusPill({ status, label, testID = 'status-pill' }: Props) {
     const theme = useAppTheme();
     const pair = resolveHeatPair(status, theme);
+    // 状態変化（記録完了の赤→緑など）を瞬時切替でなくクロスフェードにする。
+    // 静的な塗り・縁取りの後ろに重ね、実行時は animated style が上書きする
+    const fillTransitionStyle = useColorTransitionStyle('backgroundColor', pair.fill);
+    const borderTransitionStyle = useColorTransitionStyle('borderColor', pair.border);
     // カスタムラベル（例: "130%"）でも状態名が読み上げから消えないよう常に合成する
     const statusName = DEFAULT_LABELS[status];
     const accessibilityLabel = label != null ? `${statusName} ${label}` : statusName;
 
     return (
-        <View
+        <Animated.View
             testID={testID}
             accessible
             accessibilityRole="text"
@@ -59,12 +65,14 @@ export function StatusPill({ status, label, testID = 'status-pill' }: Props) {
                     paddingHorizontal: theme.spacing.md,
                     paddingVertical: theme.spacing.xs,
                 },
+                fillTransitionStyle,
+                borderTransitionStyle,
             ]}
         >
             <Text style={[theme.typography.caption, styles.label, { color: theme.colors.text }]}>
                 {label ?? DEFAULT_LABELS[status]}
             </Text>
-        </View>
+        </Animated.View>
     );
 }
 
