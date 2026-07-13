@@ -36,9 +36,12 @@ export function useColorTransitionStyle(
         );
         transitionRef.current = transition;
         if (!changed) return;
+        // progress のリセットを最初に書く。toColor 更新後に progress = 0 より前の
+        // UI フレームが挟まると progress === 1 の収束分岐が新色を1フレーム
+        // 先出しする理論上の窓ができるため、先に収束分岐を抜けておく
+        progress.value = 0;
         fromColor.value = transition.from;
         toColor.value = transition.to;
-        progress.value = 0;
         progress.value = withTiming(1, {
             duration: COLOR_TRANSITION_DURATION_MS,
             reduceMotion: ReduceMotion.System,
