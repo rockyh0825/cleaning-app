@@ -1,6 +1,6 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { Tabs } from 'expo-router';
+import { TabIcon } from '@/shared/components/TabIcon';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
 
 export default function TabsLayout() {
@@ -24,8 +24,8 @@ export default function TabsLayout() {
                     title: '間取り',
                     // 内側の Stack がヘッダーを持つため Tabs 側は非表示
                     headerShown: false,
-                    tabBarIcon: ({ color }) => (
-                        <Text style={{ color, fontSize: 18 }}>🏠</Text>
+                    tabBarIcon: ({ color, size }) => (
+                        <TabIcon name="floor-plan" color={color} size={size} />
                     ),
                 }}
             />
@@ -33,8 +33,8 @@ export default function TabsLayout() {
                 name="heatmap"
                 options={{
                     title: 'ヒートマップ',
-                    tabBarIcon: ({ color }) => (
-                        <Text style={{ color, fontSize: 18 }}>🔥</Text>
+                    tabBarIcon: ({ color, size }) => (
+                        <TabIcon name="heatmap" color={color} size={size} />
                     ),
                 }}
             />
@@ -42,8 +42,8 @@ export default function TabsLayout() {
                 name="history"
                 options={{
                     title: '履歴',
-                    tabBarIcon: ({ color }) => (
-                        <Text style={{ color, fontSize: 18 }}>🕒</Text>
+                    tabBarIcon: ({ color, size }) => (
+                        <TabIcon name="history" color={color} size={size} />
                     ),
                 }}
             />
