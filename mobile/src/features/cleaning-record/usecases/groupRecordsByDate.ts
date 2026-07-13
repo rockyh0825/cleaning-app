@@ -33,14 +33,16 @@ function titleOf(date: Date, now: Date): string {
  * 掃除記録をローカル暦日でグルーピングし、新しい日付順のセクション一覧にする純粋関数。
  * セクション内の記録も cleanedAt の降順（新しい順）に並べる。
  * 現在時刻は引数注入（now）でテスト可能にする。
+ * cleanedAt が Invalid Date の記録は除外する（「NaN/NaN/NaN（NaN年前）」
+ * 見出しを作らないためのフェイルセーフ。API マッパー経由では通常到達しない）。
  */
 export function groupRecordsByDate(
   records: CleaningRecord[],
   now: Date,
 ): RecordDateSection[] {
-  const sorted = [...records].sort(
-    (a, b) => b.cleanedAt.getTime() - a.cleanedAt.getTime(),
-  );
+  const sorted = records
+    .filter((record) => !Number.isNaN(record.cleanedAt.getTime()))
+    .sort((a, b) => b.cleanedAt.getTime() - a.cleanedAt.getTime());
 
   const sections: RecordDateSection[] = [];
   for (const record of sorted) {

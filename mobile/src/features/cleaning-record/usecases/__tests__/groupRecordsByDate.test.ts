@@ -93,6 +93,23 @@ describe("groupRecordsByDate", () => {
     ]);
   });
 
+  it("excludes_records_with_invalid_cleaned_at_and_keeps_grouping_the_rest", () => {
+    // Arrange: API マッパーの想定外等で Invalid Date が混ざっても
+    // 「NaN/NaN/NaN（NaN年前）」見出しのセクションを作らない
+    const records = [
+      makeRecord("r-valid", new Date(2026, 6, 13, 8, 0)),
+      makeRecord("r-invalid", new Date(NaN)),
+    ];
+
+    // Act
+    const sections = groupRecordsByDate(records, NOW);
+
+    // Assert: 不正レコードだけ除外し、正常レコードは通常どおりグルーピングする
+    expect(sections).toHaveLength(1);
+    expect(sections[0].title).toBe("今日");
+    expect(sections[0].data.map((r) => r.id)).toEqual(["r-valid"]);
+  });
+
   it("assigns_unique_keys_per_calendar_day", () => {
     // Arrange
     const records = [
