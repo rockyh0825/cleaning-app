@@ -34,7 +34,7 @@ describe("CleaningTimeline（テーマトークン）", () => {
 
   it("paints_timeline_items_with_surface_and_text_tokens", () => {
     // Arrange & Act
-    renderWithTheme(<CleaningTimeline records={[makeRecord()]} />);
+    renderWithTheme(<CleaningTimeline records={[makeRecord()]} partNamesById={{}} />);
 
     // Assert: 行の面・区切り線・日付・パーツIDがトークンで塗られる
     const itemStyle = StyleSheet.flatten(
@@ -55,7 +55,7 @@ describe("CleaningTimeline（テーマトークン）", () => {
   it("uses_danger_soft_pair_for_delete_button", () => {
     // Arrange & Act
     renderWithTheme(
-      <CleaningTimeline records={[makeRecord()]} onDelete={jest.fn()} />,
+      <CleaningTimeline records={[makeRecord()]} partNamesById={{}} onDelete={jest.fn()} />,
     );
 
     // Assert: shared/components/Button の danger バリアントと同じ配色
@@ -70,7 +70,7 @@ describe("CleaningTimeline（テーマトークン）", () => {
   it("uses_primary_soft_background_with_text_label_for_edit_button", () => {
     // Arrange & Act
     renderWithTheme(
-      <CleaningTimeline records={[makeRecord()]} onUpdateNote={jest.fn()} />,
+      <CleaningTimeline records={[makeRecord()]} partNamesById={{}} onUpdateNote={jest.fn()} />,
     );
 
     // Assert: primarySoft 上の通常テキストは primary を使わず text にする（4.19:1 のため）
@@ -85,7 +85,7 @@ describe("CleaningTimeline（テーマトークン）", () => {
   it("uses_primary_pair_for_save_button_and_tokens_for_note_editor", () => {
     // Arrange: 編集モードに入る
     renderWithTheme(
-      <CleaningTimeline records={[makeRecord()]} onUpdateNote={jest.fn()} />,
+      <CleaningTimeline records={[makeRecord()]} partNamesById={{}} onUpdateNote={jest.fn()} />,
     );
 
     // Act
@@ -113,7 +113,7 @@ describe("CleaningTimeline（テーマトークン）", () => {
 
   it("mutes_empty_state_text_with_text_muted_token", () => {
     // Arrange & Act
-    renderWithTheme(<CleaningTimeline records={[]} />);
+    renderWithTheme(<CleaningTimeline records={[]} partNamesById={{}} />);
 
     // Assert
     const emptyStyle = StyleSheet.flatten(
@@ -128,7 +128,7 @@ describe("CleaningTimeline（テーマトークン）", () => {
 
     // Act
     renderWithTheme(
-      <CleaningTimeline records={[makeRecord()]} onDelete={jest.fn()} />,
+      <CleaningTimeline records={[makeRecord()]} partNamesById={{}} onDelete={jest.fn()} />,
     );
 
     // Assert: ダークテーマの surface / dangerSoft に切り替わる
