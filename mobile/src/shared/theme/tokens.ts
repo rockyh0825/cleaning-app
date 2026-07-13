@@ -24,7 +24,8 @@ const palette = {
     tealSoftDark: '#143B36',
     tealInk: '#06211D',
     // 注意・削除（コーラル）
-    coral600: '#D95744',
+    // coral600 はライトの dangerSoft #FBE9E5 上で 4.74:1（WCAG AA）を確保するトーン
+    coral600: '#BD3926',
     coral300: '#EF8271',
     coralSoft: '#FBE9E5',
     coralSoftDark: '#3A1F1A',
