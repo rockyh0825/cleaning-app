@@ -5,10 +5,11 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  FlatList,
+  SectionList,
 } from "react-native";
 import type { CleaningRecord } from "../types";
-import { formatDateTime } from "@/shared/utils/formatDateTime";
+import { groupRecordsByDate } from "../usecases/groupRecordsByDate";
+import { formatTime } from "@/shared/utils/formatDateTime";
 import { useAppTheme } from "@/shared/theme/useAppTheme";
 
 type CleaningTimelineProps = {
@@ -21,20 +22,16 @@ type CleaningTimelineProps = {
   // 更新の成否を待てるよう Promise を返せるようにする。
   // 成功時のみ編集UIを閉じ、失敗時はドラフトを保持して再試行できるようにする。
   onUpdateNote?: (recordId: string, note: string) => void | Promise<unknown>;
+  /** 日付グルーピング（今日/昨日）の基準時刻。テスト用に注入可能（省略時は現在時刻） */
+  now?: Date;
 };
-
-// cleanedAt の降順（新しい順）でソート
-function sortByCleanedAtDesc(records: CleaningRecord[]): CleaningRecord[] {
-  return [...records].sort(
-    (a, b) => b.cleanedAt.getTime() - a.cleanedAt.getTime(),
-  );
-}
 
 export function CleaningTimeline({
   records,
   partNamesById,
   onDelete,
   onUpdateNote,
+  now,
 }: CleaningTimelineProps) {
   const theme = useAppTheme();
   // 編集中の記録IDと入力中メモ。一度に編集できるのは1件のみ
@@ -51,7 +48,8 @@ export function CleaningTimeline({
     );
   }
 
-  const sorted = sortByCleanedAtDesc(records);
+  // 日付（今日/昨日/それ以前）ごとのセクションに分け、新しい順に表示する
+  const sections = groupRecordsByDate(records, now ?? new Date());
 
   // 編集中の記録が refetch 等で records から消えた場合、stale な
   // editingRecordId は無効として扱う（修正ボタンが復帰しなくなるのを防ぐ）
@@ -88,11 +86,12 @@ export function CleaningTimeline({
         ]}
       >
         <View style={styles.itemContent}>
+          {/* 日付はセクション見出しが持つため、行内は時刻のみ表示する */}
           <Text
             testID="timeline-item-date"
             style={[styles.date, { color: theme.colors.text }]}
           >
-            {formatDateTime(item.cleanedAt)}
+            {formatTime(item.cleanedAt)}
           </Text>
           <Text
             style={[styles.partName, { color: theme.colors.textMuted }]}
@@ -205,10 +204,27 @@ export function CleaningTimeline({
   };
 
   return (
-    <FlatList
-      data={sorted}
+    <SectionList
+      sections={sections}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
+      renderSectionHeader={({ section }) => (
+        <Text
+          testID={`timeline-section-${section.key}`}
+          style={[
+            theme.typography.label,
+            styles.sectionHeader,
+            {
+              color: theme.colors.textMuted,
+              backgroundColor: theme.colors.background,
+            },
+          ]}
+        >
+          {section.title}
+        </Text>
+      )}
+      // 見出しが行に重なって操作を妨げないよう固定表示はしない
+      stickySectionHeadersEnabled={false}
       // キーボード表示中でも「保存」等のタップが1回目で届くようにする
       keyboardShouldPersistTaps="handled"
       style={styles.list}
@@ -219,6 +235,11 @@ export function CleaningTimeline({
 const styles = StyleSheet.create({
   list: {
     flex: 1,
+  },
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
   },
   item: {
     flexDirection: "row",
