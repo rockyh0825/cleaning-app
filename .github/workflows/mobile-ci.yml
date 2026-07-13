@@ -73,6 +73,9 @@ jobs:
     needs: ci
     # iOS の Release ビルドは実測約29分（run 28521747001）。余裕を持って2時間確保する
     timeout-minutes: 120
+    permissions:
+      contents: write # e2e-screenshots ブランチへのスクリーンショット push
+      pull-requests: write # VRT 結果コメントの投稿
 
     steps:
       - uses: actions/checkout@v4
@@ -168,12 +171,27 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build | xcbeautify --quiet
 
-      # 機種名は決め打ちせず、選択中の Xcode ランタイムで available な最初の iPhone を使う
+      # VRT（ベースライン画像との差分比較）のため機種を固定する。機種が変わると解像度が
+      # 変わり、全スクリーンショットが差分として検出されてしまう。
+      # ランナーイメージ更新でランタイムから機種が消える場合に備えて優先順リストで解決し、
+      # どれも無い場合のみ従来どおり「available な最初の iPhone」にフォールバックする
       - name: Boot iOS Simulator
         if: steps.decide.outputs.run == 'true'
         run: |
-          UDID=$(xcrun simctl list devices available --json \
-            | jq -r '[.devices[] | .[] | select(.name | startswith("iPhone"))][0].udid')
+          UDID=""
+          for NAME in "iPhone 16" "iPhone 16 Pro" "iPhone 15"; do
+            UDID=$(xcrun simctl list devices available --json \
+              | jq -r --arg n "$NAME" '[.devices[] | .[] | select(.name == $n)][0].udid // empty')
+            if [ -n "$UDID" ]; then
+              echo "Simulator device: $NAME"
+              break
+            fi
+          done
+          if [ -z "$UDID" ]; then
+            echo "::warning::VRT 用の固定機種が見つかりません。解像度が変わりベースラインと全画面差分になる可能性があります"
+            UDID=$(xcrun simctl list devices available --json \
+              | jq -r '[.devices[] | .[] | select(.name | startswith("iPhone"))][0].udid')
+          fi
           echo "Booting simulator: $UDID"
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
@@ -185,6 +203,11 @@ jobs:
           xcrun simctl spawn "$UDID" defaults write com.apple.keyboard.preferences DidShowGestureKeyboardIntroduction -bool true
           xcrun simctl spawn "$UDID" defaults write com.apple.Preferences KeyboardAutocorrection -bool false
           xcrun simctl spawn "$UDID" defaults write com.apple.Preferences KeyboardPrediction -bool false
+          # VRT のためステータスバーを固定する（時刻・バッテリー残量は実行ごとに変わり、
+          # ピクセル比較で毎回差分になってしまう）
+          xcrun simctl status_bar "$UDID" override \
+            --time "9:41" --dataNetwork wifi --wifiBars 3 \
+            --batteryState charged --batteryLevel 100 --cellularBars 4
           echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
 
       # アプリの起動は Maestro フロー先頭の launchApp が行うため、install まででよい
@@ -193,6 +216,7 @@ jobs:
         run: xcrun simctl install "$SIMULATOR_UDID" mobile/ios/build/Build/Products/Release-iphonesimulator/*.app
 
       - name: Run Maestro E2E flows
+        id: maestro
         if: steps.decide.outputs.run == 'true'
         working-directory: mobile
         run: |
@@ -228,3 +252,109 @@ jobs:
           name: maestro-report
           path: mobile/.maestro/report.xml
           if-no-files-found: warn
+
+      # ビジュアルリグレッション（issue #174）:
+      # スクリーンショットを orphan ブランチ e2e-screenshots に保存し、
+      # - main push: ベースライン（baseline/）を更新（全フロー成功時のみ。失敗時の
+      #   部分的なスクショでベースラインを壊さない）
+      # - PR: reg-cli でベースラインと比較し、actual/diff を pr-<番号>/ に push して
+      #   sticky コメント（マーカーで upsert）に画像をインライン表示する
+      # fork からの PR は GITHUB_TOKEN が read-only のためスキップする
+      - name: Publish screenshots & visual regression report
+        if: >-
+          always() && steps.decide.outputs.run == 'true' &&
+          (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAESTRO_STATUS: ${{ steps.maestro.outcome }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          # 撮影されたスクショを収集（フォールバックの CWD 直下 screenshots/ も統合）
+          ACTUAL_SRC="$RUNNER_TEMP/actual"
+          mkdir -p "$ACTUAL_SRC"
+          cp mobile/.maestro/screenshots/*.png "$ACTUAL_SRC"/ 2>/dev/null || true
+          cp mobile/screenshots/*.png "$ACTUAL_SRC"/ 2>/dev/null || true
+          if [ -z "$(ls "$ACTUAL_SRC")" ]; then
+            echo "::warning::スクリーンショットが1枚もないため VRT をスキップします"
+            exit 0
+          fi
+
+          # e2e-screenshots ブランチを取得（初回はブランチごと作成）
+          SHOTS_DIR="$RUNNER_TEMP/e2e-screenshots"
+          REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if ! git clone --depth 1 --branch e2e-screenshots "$REPO_URL" "$SHOTS_DIR" 2>/dev/null; then
+            mkdir -p "$SHOTS_DIR"
+            git -C "$SHOTS_DIR" init -b e2e-screenshots
+            git -C "$SHOTS_DIR" remote add origin "$REPO_URL"
+          fi
+          git -C "$SHOTS_DIR" config user.name "github-actions[bot]"
+          git -C "$SHOTS_DIR" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # 同一ブランチへの並行 push に備えたリトライ付き push
+          push_with_retry() {
+            git -C "$SHOTS_DIR" push origin e2e-screenshots \
+              || { git -C "$SHOTS_DIR" pull --rebase origin e2e-screenshots && git -C "$SHOTS_DIR" push origin e2e-screenshots; }
+          }
+
+          if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            # main: 全フロー成功時のみベースラインを更新する
+            if [ "$MAESTRO_STATUS" != "success" ]; then
+              echo "E2E が失敗したためベースラインは更新しません（前回のベースラインを維持）"
+              exit 0
+            fi
+            rm -rf "${SHOTS_DIR:?}/baseline"
+            mkdir -p "$SHOTS_DIR/baseline"
+            cp "$ACTUAL_SRC"/*.png "$SHOTS_DIR/baseline/"
+            git -C "$SHOTS_DIR" add -A
+            git -C "$SHOTS_DIR" commit -m "baseline: update from ${GITHUB_SHA}" || { echo "ベースラインに変更なし"; exit 0; }
+            push_with_retry
+            exit 0
+          fi
+
+          # PR: ベースラインと比較して結果を push し、コメントを upsert する
+          # 初回判定はディレクトリの実在で行う（--depth 1 クローンでは git log -1 -- baseline が
+          # 「最新コミットが baseline を触っていない」だけで空になり、誤って初回扱いになるため）
+          PR_DIR="pr-${PR_NUMBER}"
+          if [ -n "$(ls -A "$SHOTS_DIR/baseline" 2>/dev/null)" ]; then
+            BASELINE_SHA=$(git -C "$SHOTS_DIR" log -1 --format=%h -- baseline 2>/dev/null || true)
+            BASELINE_SHA=${BASELINE_SHA:-$(git -C "$SHOTS_DIR" rev-parse --short HEAD)}
+          else
+            BASELINE_SHA=""
+          fi
+          mkdir -p "$SHOTS_DIR/baseline" # 初回（ベースライン未生成）でも reg-cli は全画像を newItems として扱える
+          rm -rf "${SHOTS_DIR:?}/${PR_DIR}"
+          mkdir -p "$SHOTS_DIR/$PR_DIR/actual" "$SHOTS_DIR/$PR_DIR/diff"
+          cp "$ACTUAL_SRC"/*.png "$SHOTS_DIR/$PR_DIR/actual/"
+
+          # -M: サブピクセルの描画揺れを吸収する色差閾値（実データを見てチューニングする）
+          # -I: 差分があってもここでは exit 0（report-only 運用。差分の判断はレビュアーが行う）
+          npx --yes reg-cli@0.18.16 \
+            "$SHOTS_DIR/$PR_DIR/actual" "$SHOTS_DIR/baseline" "$SHOTS_DIR/$PR_DIR/diff" \
+            -J "$RUNNER_TEMP/reg.json" -R "$SHOTS_DIR/$PR_DIR/report/index.html" \
+            -M 0.05 --diffFormat png -I
+
+          git -C "$SHOTS_DIR" add -A
+          git -C "$SHOTS_DIR" commit -m "${PR_DIR}: screenshots from ${GITHUB_SHA}" || echo "スクショに変更なし"
+          push_with_retry
+          HEAD_SHA=$(git -C "$SHOTS_DIR" rev-parse HEAD)
+
+          node mobile/scripts/vrt/generate-comment.js \
+            --reg "$RUNNER_TEMP/reg.json" \
+            --repo "$GITHUB_REPOSITORY" \
+            --sha "$HEAD_SHA" \
+            --pr-dir "$PR_DIR" \
+            --run-url "$RUN_URL" \
+            --maestro-status "$MAESTRO_STATUS" \
+            --baseline-sha "$BASELINE_SHA" > "$RUNNER_TEMP/comment.md"
+
+          # マーカー付きの既存コメントがあれば更新、なければ新規作成（sticky コメント）
+          EXISTING=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate \
+            --jq '[.[] | select(.body | startswith("<!-- e2e-vrt-report -->"))][0].id // empty')
+          if [ -n "$EXISTING" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${EXISTING}" -F body=@"$RUNNER_TEMP/comment.md" > /dev/null
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" -F body=@"$RUNNER_TEMP/comment.md" > /dev/null
+          fi
