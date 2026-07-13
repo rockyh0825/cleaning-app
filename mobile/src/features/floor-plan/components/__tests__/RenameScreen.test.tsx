@@ -1,6 +1,13 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { lightTheme } from '@/shared/theme/tokens';
 import { RenameScreen } from '../RenameScreen';
+
+// ホームインジケータのある端末（bottom=34pt）を再現する
+jest.mock('react-native-safe-area-context', () => ({
+    useSafeAreaInsets: () => ({ top: 59, right: 0, bottom: 34, left: 0 }),
+}));
 
 describe('RenameScreen', () => {
     const mockOnSubmit = jest.fn();
@@ -118,6 +125,17 @@ describe('RenameScreen', () => {
 
         // Assert: 編集中の入力は破棄されない
         expect(screen.getByTestId('rename-input').props.value).toBe('和室');
+    });
+
+    it('adds_safe_area_bottom_inset_to_button_row_bottom_padding', () => {
+        // Arrange & Act
+        render(<RenameScreen {...defaultProps} />);
+
+        // Assert: ボタン行の下 padding に safe area の bottom（ホームインジケータ領域）が加算される
+        const buttonRowStyle = StyleSheet.flatten(
+            screen.getByTestId('rename-button-row').props.style,
+        );
+        expect(buttonRowStyle.paddingBottom).toBe(lightTheme.spacing.xl + 34);
     });
 
     it('resets_input_to_initial_name_when_reopened', () => {

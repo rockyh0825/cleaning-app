@@ -9,6 +9,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
 
 type Props = {
@@ -33,6 +34,7 @@ const INPUT_FONT_SIZE = 28;
  */
 export function RenameScreen({ visible, title, initialName, onSubmit, onClose }: Props) {
     const theme = useAppTheme();
+    const insets = useSafeAreaInsets();
     const [name, setName] = useState(initialName);
     const prevVisibleRef = useRef(visible);
 
@@ -99,9 +101,15 @@ export function RenameScreen({ visible, title, initialName, onSubmit, onClose }:
                 </View>
 
                 <View
+                    testID="rename-button-row"
                     style={[
                         styles.buttonRow,
-                        { gap: theme.spacing.md, padding: theme.spacing.xl },
+                        {
+                            gap: theme.spacing.md,
+                            padding: theme.spacing.xl,
+                            // ホームインジケータ領域と重ならないよう safe area の下端を加算する
+                            paddingBottom: theme.spacing.xl + insets.bottom,
+                        },
                     ]}
                 >
                     <TouchableOpacity
