@@ -34,6 +34,20 @@ export function clampWithin(child: Rect, parent: Rect): Rect {
 }
 
 /**
+ * child 矩形を parent 矩形内へ「①押し戻し → ②縮小」の2段階で収める。
+ * まずサイズを保ったまま境界内へ押し戻し（clampWithin）、それでも
+ * 収まらない軸だけ parent のサイズまで縮小する（最小 1×1）。
+ * 部屋リサイズ時の内包家具の追従に使う。
+ */
+export function fitWithin(child: Rect, parent: Rect): Rect {
+    // clampWithin と同様に UI スレッド（reanimated worklet）から呼べるようにする
+    'worklet';
+    const w = Math.max(1, Math.min(child.w, parent.w));
+    const h = Math.max(1, Math.min(child.h, parent.h));
+    return clampWithin({ x: child.x, y: child.y, w, h }, parent);
+}
+
+/**
  * bounds 内を左上から行優先で走査し、既存矩形と重ならない最初の位置を返す。
  * 空きが無い場合や size が bounds に収まらない場合は null。
  * 部屋追加時の自動空き配置に使う。

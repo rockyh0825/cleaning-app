@@ -7,6 +7,7 @@ import {
 } from 'react-native-gesture-handler/jest-utils';
 import { StyleSheet } from 'react-native';
 import { lightTheme } from '@/shared/theme/tokens';
+import { withAlpha } from '@/shared/utils/color';
 import { FurnitureItem } from '../FurnitureItem';
 import type { Rect } from '@/shared/utils/grid';
 import type { Furniture } from '../../types';
@@ -416,6 +417,140 @@ describe('FurnitureItem', () => {
         // Assert: runOnJS 経由のためコールバックは非同期に呼ばれる
         await waitFor(() => {
             expect(mockOnPress).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('トップダウン・グリフの組み込み', () => {
+        it('renders_topdown_glyph_for_preset_furniture', () => {
+            // Arrange: presetKey 付きの家具
+            const sofa: Furniture = { ...testFurniture, presetKey: 'sofa' };
+
+            // Act
+            render(
+                <FurnitureItem
+                    furniture={sofa}
+                    cellSize={40}
+                    selected={false}
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                />,
+            );
+
+            // Assert
+            expect(screen.getByTestId('furniture-glyph-sofa')).toBeTruthy();
+        });
+
+        it('renders_generic_glyph_when_furniture_has_no_preset', () => {
+            // Arrange & Act: presetKey なし（自由入力）は汎用グリフ
+            render(
+                <FurnitureItem
+                    furniture={testFurniture}
+                    cellSize={40}
+                    selected={false}
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                />,
+            );
+
+            // Assert
+            expect(screen.getByTestId('furniture-glyph-generic')).toBeTruthy();
+        });
+
+        it('does_not_intercept_touches_on_glyph_layer', () => {
+            // Arrange & Act: グリフはドラッグ・タップ・リサイズを妨げない
+            render(
+                <FurnitureItem
+                    furniture={{ ...testFurniture, presetKey: 'sofa' }}
+                    cellSize={40}
+                    selected={false}
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                />,
+            );
+
+            // Assert
+            const layer = screen.getByTestId('furniture-glyph-layer-furn-1');
+            expect(layer.props.pointerEvents).toBe('none');
+        });
+
+        it('switches_glyph_to_silhouette_when_fillColor_is_provided', () => {
+            // Arrange & Act: ヒートマップ表示（fillColor 指定）では状態色シルエット
+            render(
+                <FurnitureItem
+                    furniture={{ ...testFurniture, presetKey: 'sofa' }}
+                    cellSize={40}
+                    selected={false}
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                    fillColor="#FF0000"
+                />,
+            );
+
+            // Assert: ボディは透明（fillColor の状態色がそのまま見える）
+            const body = screen.getByTestId('furniture-glyph-sofa-body');
+            expect(body.props.fill.payload).toBe(0);
+        });
+
+        it('does_not_clip_resize_handles_with_overflow_hidden', () => {
+            // Arrange & Act: 角のリサイズハンドルは枠の外にはみ出して描画されるため
+            // コンテナに overflow: hidden を付けてはいけない（回帰ガード）
+            render(
+                <FurnitureItem
+                    furniture={{ ...testFurniture, presetKey: 'sofa' }}
+                    cellSize={40}
+                    selected={true}
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                    onResizeEnd={jest.fn()}
+                />,
+            );
+
+            // Assert
+            const item = screen.getByTestId('furniture-item-furn-1');
+            const style = StyleSheet.flatten(item.props.style);
+            expect(style.overflow).not.toBe('hidden');
+            expect(screen.getByTestId('resize-handle-furn-1-br')).toBeTruthy();
+        });
+
+        it('shows_furniture_name_as_bottom_chip_over_glyph', () => {
+            // Arrange & Act: 絵が主役になり、名前は下端のチップに移る
+            render(
+                <FurnitureItem
+                    furniture={{ ...testFurniture, presetKey: 'sofa' }}
+                    cellSize={40}
+                    selected={false}
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                />,
+            );
+
+            // Assert: 名前は引き続き表示され、下端に絶対配置される
+            const label = screen.getByText('ソファ');
+            const style = StyleSheet.flatten(label.props.style);
+            expect(style.position).toBe('absolute');
+            expect(style.bottom).toBeDefined();
+        });
+
+        it('paints_name_chip_with_translucent_surface_via_alpha_helper', () => {
+            // Arrange & Act: hex 連結（`${surface}E6`）は surface が 6桁 hex で
+            // ある暗黙前提に依存するため、withAlpha ヘルパー経由の rgba にする
+            render(
+                <FurnitureItem
+                    furniture={{ ...testFurniture, presetKey: 'sofa' }}
+                    cellSize={40}
+                    selected={false}
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                />,
+            );
+
+            // Assert
+            const label = screen.getByText('ソファ');
+            const style = StyleSheet.flatten(label.props.style);
+            expect(style.backgroundColor).toBe(
+                withAlpha(lightTheme.colors.surface, 0.9),
+            );
+            expect(style.backgroundColor).toMatch(/^rgba\(/);
         });
     });
 

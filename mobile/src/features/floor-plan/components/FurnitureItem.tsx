@@ -1,12 +1,14 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { GestureType } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
+import { withAlpha } from '@/shared/utils/color';
 import type { Rect } from '@/shared/utils/grid';
 import { useDragToGrid } from '../hooks/useDragToGrid';
 import { CORNERS } from '../utils/cornerResize';
+import { FurnitureGlyph } from './glyphs/FurnitureGlyph';
 import { ResizeHandle } from './ResizeHandle';
 import type { Furniture } from '../types';
 
@@ -110,8 +112,34 @@ export function FurnitureItem({
                     animatedStyle,
                 ]}
             >
+                {/* トップダウン・グリフ。ジェスチャーを妨げないよう pointerEvents="none" の
+                    レイヤーに絶対配置する（overflow: hidden は角ハンドルが切れるため使わない）。
+                    ヒートマップ表示（fillColor 指定）では状態色シルエットに切り替える */}
+                <View
+                    testID={`furniture-glyph-layer-${furniture.id}`}
+                    pointerEvents="none"
+                    style={StyleSheet.absoluteFill}
+                >
+                    <FurnitureGlyph
+                        presetKey={furniture.presetKey}
+                        gridW={furniture.gridW}
+                        gridH={furniture.gridH}
+                        cellSize={cellSize}
+                        silhouette={fillColor != null}
+                    />
+                </View>
                 <Text
-                    style={[styles.label, { color: theme.colors.textMuted }]}
+                    style={[
+                        styles.label,
+                        {
+                            color: theme.colors.textMuted,
+                            // 下端の名前チップ。グリフの上でも読めるよう半透明の面を敷く
+                            // （hex 連結はトークンが 6桁 hex である前提に依存するため
+                            // withAlpha で rgba 化する）
+                            backgroundColor: withAlpha(theme.colors.surface, 0.9),
+                            borderRadius: theme.radius.sm,
+                        },
+                    ]}
                     numberOfLines={1}
                 >
                     {furniture.name}
@@ -149,5 +177,11 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 9,
+        position: 'absolute',
+        bottom: 2,
+        maxWidth: '92%',
+        paddingHorizontal: 4,
+        paddingVertical: 1,
+        overflow: 'hidden',
     },
 });

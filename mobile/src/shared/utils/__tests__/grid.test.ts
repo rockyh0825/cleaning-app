@@ -1,4 +1,4 @@
-import { clampWithin, findFreePosition, pxOffsetToGridDelta, rectsOverlap, snapToGrid } from '../grid';
+import { clampWithin, findFreePosition, fitWithin, pxOffsetToGridDelta, rectsOverlap, snapToGrid } from '../grid';
 import type { Point, Rect } from '../grid';
 
 describe('snapToGrid', () => {
@@ -274,6 +274,95 @@ describe('clampWithin', () => {
         // Assert
         expect(result.x).toBe(parent.x);
         expect(result.y).toBe(parent.y);
+    });
+});
+
+describe('fitWithin', () => {
+    it('returns_child_unchanged_when_already_within_parent', () => {
+        // Arrange
+        const child: Rect = { x: 1, y: 1, w: 2, h: 2 };
+        const parent: Rect = { x: 0, y: 0, w: 5, h: 4 };
+
+        // Act
+        const result = fitWithin(child, parent);
+
+        // Assert
+        expect(result).toEqual({ x: 1, y: 1, w: 2, h: 2 });
+    });
+
+    it('pushes_child_back_inside_keeping_size_when_size_still_fits', () => {
+        // Arrange: ①押し戻し — サイズを保ったまま境界内へ移動できる場合
+        const child: Rect = { x: 4, y: 3, w: 2, h: 2 };
+        const parent: Rect = { x: 0, y: 0, w: 5, h: 4 };
+
+        // Act
+        const result = fitWithin(child, parent);
+
+        // Assert: サイズは不変で右下端に収まる
+        expect(result).toEqual({ x: 3, y: 2, w: 2, h: 2 });
+    });
+
+    it('shrinks_child_to_parent_size_only_when_push_back_is_not_enough', () => {
+        // Arrange: ②縮小 — 幅 4 は親の幅 3 に収まらないため 3 に縮む。
+        // 高さ 2 は収まるので保たれる（縮小は必要な軸だけ）
+        const child: Rect = { x: 1, y: 1, w: 4, h: 2 };
+        const parent: Rect = { x: 0, y: 0, w: 3, h: 4 };
+
+        // Act
+        const result = fitWithin(child, parent);
+
+        // Assert
+        expect(result).toEqual({ x: 0, y: 1, w: 3, h: 2 });
+    });
+
+    it('shrinks_both_axes_and_aligns_to_origin_when_child_exceeds_parent_entirely', () => {
+        // Arrange
+        const child: Rect = { x: 2, y: 2, w: 10, h: 10 };
+        const parent: Rect = { x: 0, y: 0, w: 3, h: 4 };
+
+        // Act
+        const result = fitWithin(child, parent);
+
+        // Assert
+        expect(result).toEqual({ x: 0, y: 0, w: 3, h: 4 });
+    });
+
+    it('keeps_minimum_one_by_one_size_even_when_parent_is_degenerate', () => {
+        // Arrange: 親が幅 0 でも家具が消えない（最小 1×1）
+        const child: Rect = { x: 0, y: 0, w: 3, h: 3 };
+        const parent: Rect = { x: 0, y: 0, w: 0, h: 1 };
+
+        // Act
+        const result = fitWithin(child, parent);
+
+        // Assert
+        expect(result.w).toBe(1);
+        expect(result.h).toBe(1);
+    });
+
+    it('pushes_child_back_within_offset_parent_keeping_size', () => {
+        // Arrange: 親矩形が非原点（家具の bounds は部屋相対 {0,0,w,h} だが、
+        // fitWithin は汎用 util としてオフセット親でも正しく動くことを保証する）
+        const child: Rect = { x: 8, y: 1, w: 2, h: 2 };
+        const parent: Rect = { x: 3, y: 3, w: 4, h: 4 };
+
+        // Act
+        const result = fitWithin(child, parent);
+
+        // Assert: 親の右端 (3+4-2=5)・上端 (3) に押し戻される
+        expect(result).toEqual({ x: 5, y: 3, w: 2, h: 2 });
+    });
+
+    it('shrinks_and_aligns_to_offset_parent_origin_when_child_exceeds_parent', () => {
+        // Arrange: 幅 10 は親の幅 3 に収まらないため縮小し、原点は (2,2) に揃う
+        const child: Rect = { x: 0, y: 0, w: 10, h: 2 };
+        const parent: Rect = { x: 2, y: 2, w: 3, h: 4 };
+
+        // Act
+        const result = fitWithin(child, parent);
+
+        // Assert: 縮小は必要な軸（幅）だけで、位置は親の起点にクランプされる
+        expect(result).toEqual({ x: 2, y: 2, w: 3, h: 2 });
     });
 });
 
