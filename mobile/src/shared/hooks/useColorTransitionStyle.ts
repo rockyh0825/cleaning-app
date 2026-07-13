@@ -49,19 +49,22 @@ export function useColorTransitionStyle(
     }, [color, fromColor, toColor, progress]);
 
     // 依存配列は Babel プラグイン無しの環境（ts-jest でのテスト実行）でも動くよう明示する
-    return useAnimatedStyle(
-        () => ({
-            // 収束後は interpolateColor の rgba 変換を通さずトークンの生値を返す。
-            // 静的スタイルと完全一致させ、スタイル検証（テーマテスト）を表現揺れなく保つ
-            [property]:
-                progress.value === 1
-                    ? toColor.value
-                    : interpolateColor(
-                          progress.value,
-                          [0, 1],
-                          [fromColor.value, toColor.value],
-                      ),
-        }),
-        [property, progress, fromColor, toColor],
-    );
+    return useAnimatedStyle(() => {
+        // 収束後は interpolateColor の rgba 変換を通さずトークンの生値を返す。
+        // 静的スタイルと完全一致させ、スタイル検証（テーマテスト）を表現揺れなく保つ
+        const animatedColor =
+            progress.value === 1
+                ? toColor.value
+                : interpolateColor(
+                      progress.value,
+                      [0, 1],
+                      [fromColor.value, toColor.value],
+                  );
+        // computed key（[property]: ...）だけの参照だと Reanimated の Babel プラグインが
+        // property をクロージャに捕捉せず、UI スレッドで
+        // 「Property 'property' doesn't exist」でクラッシュするため通常の式で分岐する
+        return property === 'backgroundColor'
+            ? { backgroundColor: animatedColor }
+            : { borderColor: animatedColor };
+    }, [property, progress, fromColor, toColor]);
 }
