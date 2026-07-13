@@ -16,6 +16,7 @@ import {
     resolveHeatStatus,
     type HeatStatus,
 } from "../usecases/resolveHeatStatus";
+import { summarizeHeatStatuses } from "../usecases/summarizeHeatStatuses";
 
 /** heat 状態 → 具体色（hex）。テーマ（ライト／ダーク）から解決する */
 export type HeatColors = Record<HeatStatus, string>;
@@ -153,9 +154,16 @@ export function useHeatmap(userId: string, deps: UseHeatmapDeps) {
         [rooms, statuses, themeColors],
     );
 
+    // サマリー行用の状態別件数。塗り分け（areaColors）と同じ分類ルールで数える
+    const statusSummary = useMemo(
+        () => summarizeHeatStatuses(rooms, statuses),
+        [rooms, statuses],
+    );
+
     return {
         rooms,
         areaColors,
+        statusSummary,
         isPending: roomsQuery.isPending || statusesQuery.isPending,
         isError: roomsQuery.isError,
         /** 掃除状態のみ取得失敗（全エリア neutral フォールバック中）を表す */

@@ -4,8 +4,11 @@ import { useAppTheme } from "@/shared/theme/useAppTheme";
 import type { HeatStatus } from "../usecases/resolveHeatStatus";
 import { resolveHeatColors } from "../hooks/useHeatmap";
 
-/** 状態→ラベル。色覚特性に配慮し、色のみに依存せずテキストでも意味を示す */
-const LEGEND_ITEMS: ReadonlyArray<{ status: HeatStatus; label: string }> = [
+/**
+ * 状態→ラベル。色覚特性に配慮し、色のみに依存せずテキストでも意味を示す。
+ * サマリー行（HeatmapSummary）でも同じ語彙を使い、画面内で表記を揃える
+ */
+export const LEGEND_ITEMS: ReadonlyArray<{ status: HeatStatus; label: string }> = [
     { status: "fresh", label: "きれい" },
     { status: "due", label: "そろそろ" },
     { status: "overdue", label: "要掃除" },
