@@ -16,6 +16,14 @@ permissions:
   contents: read
   pull-requests: read  # dorny/paths-filter が PR の差分を GitHub API 経由で取得するために必要
 
+# 同一 PR で連続 push した際に e2e ジョブ同士が並走し、e2e-screenshots ブランチへの
+# push がバイナリ PNG の add/add コンフリクトで競合するのを防ぐ。
+# PR は古い run をキャンセルして最新だけ走らせる。main push はベースライン更新を
+# 取りこぼさないようキャンセルせず直列に待たせる
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   ci:
     name: ESLint / TypeScript / Jest
@@ -178,10 +186,14 @@ jobs:
       - name: Boot iOS Simulator
         if: steps.decide.outputs.run == 'true'
         run: |
+          # 同名機種が複数の iOS ランタイムに存在しうる（ランナーイメージによる）ため、
+          # ランタイムキー（例: com.apple.CoreSimulator.SimRuntime.iOS-18-2）の降順ソートで
+          # 最新ランタイムから優先的に探し、main と PR で同じ iOS バージョンに決定的に解決する
           UDID=""
           for NAME in "iPhone 16" "iPhone 16 Pro" "iPhone 15"; do
             UDID=$(xcrun simctl list devices available --json \
-              | jq -r --arg n "$NAME" '[.devices[] | .[] | select(.name == $n)][0].udid // empty')
+              | jq -r --arg n "$NAME" \
+                '[.devices | to_entries | sort_by(.key) | reverse | .[].value[] | select(.name == $n)][0].udid // empty')
             if [ -n "$UDID" ]; then
               echo "Simulator device: $NAME"
               break
@@ -190,7 +202,10 @@ jobs:
           if [ -z "$UDID" ]; then
             echo "::warning::VRT 用の固定機種が見つかりません。解像度が変わりベースラインと全画面差分になる可能性があります"
             UDID=$(xcrun simctl list devices available --json \
-              | jq -r '[.devices[] | .[] | select(.name | startswith("iPhone"))][0].udid')
+              | jq -r '[.devices | to_entries | sort_by(.key) | reverse | .[].value[] | select(.name | startswith("iPhone"))][0].udid')
+            # フォールバック機種の解像度で main のベースラインを静かに上書きしないよう、
+            # publish ステップに伝えてベースライン更新をスキップさせる
+            echo "SIMULATOR_DEVICE_FALLBACK=true" >> "$GITHUB_ENV"
           fi
           echo "Booting simulator: $UDID"
           xcrun simctl boot "$UDID" || true
@@ -272,6 +287,20 @@ jobs:
         run: |
           set -euo pipefail
 
+          # マーカー付きの既存コメントがあれば更新、なければ新規作成（sticky コメント）。
+          # --paginate は「ページごと」に --jq が走るため、マーカー付きコメントが複数ページに
+          # またがると ID が複数行で返りうる → head -n 1 で先頭の1件のみ使う
+          upsert_sticky_comment() {
+            local body_file="$1" existing
+            existing=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate \
+              --jq '[.[] | select(.body | startswith("<!-- e2e-vrt-report -->"))][0].id // empty' | head -n 1)
+            if [ -n "$existing" ]; then
+              gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" -F body=@"$body_file" > /dev/null
+            else
+              gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" -F body=@"$body_file" > /dev/null
+            fi
+          }
+
           # 撮影されたスクショを収集（フォールバックの CWD 直下 screenshots/ も統合）
           ACTUAL_SRC="$RUNNER_TEMP/actual"
           mkdir -p "$ACTUAL_SRC"
@@ -279,24 +308,66 @@ jobs:
           cp mobile/screenshots/*.png "$ACTUAL_SRC"/ 2>/dev/null || true
           if [ -z "$(ls "$ACTUAL_SRC")" ]; then
             echo "::warning::スクリーンショットが1枚もないため VRT をスキップします"
+            # PR では exit だけすると前回 run のコメントが「最新の結果」のまま残ってしまうため、
+            # スクショ0枚だった旨で sticky コメントを更新してから終了する
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              {
+                echo "<!-- e2e-vrt-report -->"
+                echo "## 📸 E2E スクリーンショット / ビジュアルリグレッション"
+                echo ""
+                echo "> [!WARNING]"
+                echo "> 今回の run ではスクリーンショットが撮影されませんでした（E2E が撮影前に失敗した可能性があります）。"
+                echo ""
+                echo "[workflow run](${RUN_URL})"
+              } > "$RUNNER_TEMP/comment.md"
+              upsert_sticky_comment "$RUNNER_TEMP/comment.md"
+            fi
             exit 0
           fi
 
-          # e2e-screenshots ブランチを取得（初回はブランチごと作成）
+          # e2e-screenshots ブランチを取得（初回はブランチごと作成）。
+          # --filter=blob:none（partial clone）: blob はチェックアウトに必要な分だけ取得しつつ
+          # 履歴は完全に持つ。--depth 1 だと grafted HEAD が全パスを「触った」扱いになり、
+          # 後段の git log -1 -- baseline が常に HEAD を返してベースラインの SHA を誤るため使わない
           SHOTS_DIR="$RUNNER_TEMP/e2e-screenshots"
           REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          if ! git clone --depth 1 --branch e2e-screenshots "$REPO_URL" "$SHOTS_DIR" 2>/dev/null; then
+          # clone の失敗（ネットワークエラー等）を「ブランチが無い」と混同しないよう、
+          # 先に ls-remote でブランチの存在を確認する（--exit-code: ref が無い場合のみ exit 2）
+          set +e
+          git ls-remote --exit-code --heads "$REPO_URL" e2e-screenshots > /dev/null
+          LS_REMOTE_STATUS=$?
+          set -e
+          if [ "$LS_REMOTE_STATUS" -eq 0 ]; then
+            # ブランチが存在するのに clone に失敗した場合はステップごと失敗させる
+            git clone --filter=blob:none --branch e2e-screenshots "$REPO_URL" "$SHOTS_DIR"
+          elif [ "$LS_REMOTE_STATUS" -eq 2 ]; then
             mkdir -p "$SHOTS_DIR"
             git -C "$SHOTS_DIR" init -b e2e-screenshots
             git -C "$SHOTS_DIR" remote add origin "$REPO_URL"
+          else
+            echo "::error::e2e-screenshots ブランチの存在確認（git ls-remote）に失敗しました（exit ${LS_REMOTE_STATUS}）"
+            exit 1
           fi
           git -C "$SHOTS_DIR" config user.name "github-actions[bot]"
           git -C "$SHOTS_DIR" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # 同一ブランチへの並行 push に備えたリトライ付き push
+          # 同一ブランチへの並行 push に備えたリトライ付き push。
+          # バイナリ PNG の add/add コンフリクトは rebase では解決できないため、失敗したら
+          # origin の最新に reset --hard してから自分の変更（引数の関数 = 該当ディレクトリの
+          # 差し替え＋コミット）を作り直し、push し直す（最大3回）
           push_with_retry() {
-            git -C "$SHOTS_DIR" push origin e2e-screenshots \
-              || { git -C "$SHOTS_DIR" pull --rebase origin e2e-screenshots && git -C "$SHOTS_DIR" push origin e2e-screenshots; }
+            local apply_changes="$1" attempt
+            for attempt in 1 2 3; do
+              if git -C "$SHOTS_DIR" push origin e2e-screenshots; then
+                return 0
+              fi
+              echo "push が競合しました（${attempt}/3）。origin の最新へ載せ替えて再試行します"
+              git -C "$SHOTS_DIR" fetch origin e2e-screenshots
+              git -C "$SHOTS_DIR" reset --hard origin/e2e-screenshots
+              "$apply_changes"
+            done
+            echo "::error::e2e-screenshots への push に3回失敗しました"
+            return 1
           }
 
           if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
@@ -305,18 +376,26 @@ jobs:
               echo "E2E が失敗したためベースラインは更新しません（前回のベースラインを維持）"
               exit 0
             fi
-            rm -rf "${SHOTS_DIR:?}/baseline"
-            mkdir -p "$SHOTS_DIR/baseline"
-            cp "$ACTUAL_SRC"/*.png "$SHOTS_DIR/baseline/"
-            git -C "$SHOTS_DIR" add -A
-            git -C "$SHOTS_DIR" commit -m "baseline: update from ${GITHUB_SHA}" || { echo "ベースラインに変更なし"; exit 0; }
-            push_with_retry
+            # フォールバック機種（Boot ステップ参照）で撮影した場合、解像度の異なる画像で
+            # ベースラインを静かに上書きしてしまうため更新しない
+            if [ "${SIMULATOR_DEVICE_FALLBACK:-false}" = "true" ]; then
+              echo "::warning::フォールバック機種で撮影されたためベースラインは更新しません（前回のベースラインを維持）"
+              exit 0
+            fi
+            apply_baseline() {
+              rm -rf "${SHOTS_DIR:?}/baseline"
+              mkdir -p "$SHOTS_DIR/baseline"
+              cp "$ACTUAL_SRC"/*.png "$SHOTS_DIR/baseline/"
+              git -C "$SHOTS_DIR" add -A
+              git -C "$SHOTS_DIR" commit -m "baseline: update from ${GITHUB_SHA}" || echo "ベースラインに変更なし"
+            }
+            apply_baseline
+            push_with_retry apply_baseline
             exit 0
           fi
 
           # PR: ベースラインと比較して結果を push し、コメントを upsert する
-          # 初回判定はディレクトリの実在で行う（--depth 1 クローンでは git log -1 -- baseline が
-          # 「最新コミットが baseline を触っていない」だけで空になり、誤って初回扱いになるため）
+          # 初回（ベースライン未生成）の判定はディレクトリの実在で行う
           PR_DIR="pr-${PR_NUMBER}"
           if [ -n "$(ls -A "$SHOTS_DIR/baseline" 2>/dev/null)" ]; then
             BASELINE_SHA=$(git -C "$SHOTS_DIR" log -1 --format=%h -- baseline 2>/dev/null || true)
@@ -325,20 +404,30 @@ jobs:
             BASELINE_SHA=""
           fi
           mkdir -p "$SHOTS_DIR/baseline" # 初回（ベースライン未生成）でも reg-cli は全画像を newItems として扱える
-          rm -rf "${SHOTS_DIR:?}/${PR_DIR}"
-          mkdir -p "$SHOTS_DIR/$PR_DIR/actual" "$SHOTS_DIR/$PR_DIR/diff"
-          cp "$ACTUAL_SRC"/*.png "$SHOTS_DIR/$PR_DIR/actual/"
+
+          # 比較結果は RUNNER_TEMP 側に生成しておく（push リトライで reset --hard しても
+          # コピーし直すだけで再適用できるようにするため）
+          PR_OUT="$RUNNER_TEMP/pr-out"
+          rm -rf "$PR_OUT"
+          mkdir -p "$PR_OUT/actual" "$PR_OUT/diff"
+          cp "$ACTUAL_SRC"/*.png "$PR_OUT/actual/"
 
           # -M: サブピクセルの描画揺れを吸収する色差閾値（実データを見てチューニングする）
           # -I: 差分があってもここでは exit 0（report-only 運用。差分の判断はレビュアーが行う）
-          npx --yes reg-cli@0.18.16 \
-            "$SHOTS_DIR/$PR_DIR/actual" "$SHOTS_DIR/baseline" "$SHOTS_DIR/$PR_DIR/diff" \
-            -J "$RUNNER_TEMP/reg.json" -R "$SHOTS_DIR/$PR_DIR/report/index.html" \
-            -M 0.05 --diffFormat png -I
+          # diff 出力はデフォルトで PNG（0.18.16 で確認済み）
+          mobile/node_modules/.bin/reg-cli \
+            "$PR_OUT/actual" "$SHOTS_DIR/baseline" "$PR_OUT/diff" \
+            -J "$RUNNER_TEMP/reg.json" -R "$PR_OUT/report/index.html" \
+            -M 0.05 -I
 
-          git -C "$SHOTS_DIR" add -A
-          git -C "$SHOTS_DIR" commit -m "${PR_DIR}: screenshots from ${GITHUB_SHA}" || echo "スクショに変更なし"
-          push_with_retry
+          apply_pr_results() {
+            rm -rf "${SHOTS_DIR:?}/${PR_DIR}"
+            cp -R "$PR_OUT" "$SHOTS_DIR/$PR_DIR"
+            git -C "$SHOTS_DIR" add -A
+            git -C "$SHOTS_DIR" commit -m "${PR_DIR}: screenshots from ${GITHUB_SHA}" || echo "スクショに変更なし"
+          }
+          apply_pr_results
+          push_with_retry apply_pr_results
           HEAD_SHA=$(git -C "$SHOTS_DIR" rev-parse HEAD)
 
           node mobile/scripts/vrt/generate-comment.js \
@@ -350,11 +439,4 @@ jobs:
             --maestro-status "$MAESTRO_STATUS" \
             --baseline-sha "$BASELINE_SHA" > "$RUNNER_TEMP/comment.md"
 
-          # マーカー付きの既存コメントがあれば更新、なければ新規作成（sticky コメント）
-          EXISTING=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate \
-            --jq '[.[] | select(.body | startswith("<!-- e2e-vrt-report -->"))][0].id // empty')
-          if [ -n "$EXISTING" ]; then
-            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${EXISTING}" -F body=@"$RUNNER_TEMP/comment.md" > /dev/null
-          else
-            gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" -F body=@"$RUNNER_TEMP/comment.md" > /dev/null
-          fi
+          upsert_sticky_comment "$RUNNER_TEMP/comment.md"

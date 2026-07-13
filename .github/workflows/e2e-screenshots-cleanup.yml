@@ -20,10 +20,21 @@ jobs:
         run: |
           set -euo pipefail
           REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          if ! git clone --depth 1 --branch e2e-screenshots "$REPO_URL" shots 2>/dev/null; then
+          # clone の失敗（ネットワークエラー等）を「ブランチが無い」と混同しないよう、
+          # 先に ls-remote でブランチの存在を確認する（--exit-code: ref が無い場合のみ exit 2）
+          set +e
+          git ls-remote --exit-code --heads "$REPO_URL" e2e-screenshots > /dev/null
+          LS_REMOTE_STATUS=$?
+          set -e
+          if [ "$LS_REMOTE_STATUS" -eq 2 ]; then
             echo "e2e-screenshots ブランチが存在しないためスキップ"
             exit 0
+          elif [ "$LS_REMOTE_STATUS" -ne 0 ]; then
+            echo "::error::e2e-screenshots ブランチの存在確認（git ls-remote）に失敗しました（exit ${LS_REMOTE_STATUS}）"
+            exit 1
           fi
+          # ブランチが存在するのに clone に失敗した場合はステップごと失敗させる
+          git clone --depth 1 --branch e2e-screenshots "$REPO_URL" shots
           cd shots
           if [ ! -d "pr-${PR_NUMBER}" ]; then
             echo "pr-${PR_NUMBER} ディレクトリが存在しないためスキップ"
