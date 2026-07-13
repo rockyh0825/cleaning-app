@@ -192,6 +192,7 @@ eas build --profile development --platform ios
 npm install                     # 依存インストール
 npx expo run:ios                # iOS シミュレーターで起動（初回ビルド含む）
 npx expo start --dev-client     # 開発サーバーのみ起動（再ビルド不要）
+npm run generate:api            # APIクライアント生成（テスト実行前に必要）
 npx jest                        # 全テスト実行
 npx jest path/to/test.ts        # 単一テスト実行
 npx eslint src/                 # 静的解析
@@ -257,7 +258,14 @@ mobile/
 
 ### テストコマンド
 
+> **前提**: APIクライアント（`src/shared/api/`）は OpenAPI 定義からの生成物で Git 管理対象外です。  
+> フレッシュクローン直後はテスト実行前に `npm run generate:api` を実行してください。  
+> 未生成のままだと `di.ts` 経由の3スイートがモジュール解決エラーで失敗します。
+
 ```bash
+# APIクライアント生成（フレッシュクローン後、テスト実行前に必要）
+cd mobile && npm run generate:api
+
 # 全テスト実行
 cd mobile && npx jest
 
