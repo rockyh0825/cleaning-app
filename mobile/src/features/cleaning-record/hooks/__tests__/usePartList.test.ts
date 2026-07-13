@@ -1,6 +1,10 @@
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import type { Part } from "../../types";
-import { buildPartListQuery, filterPartsByOwner } from "../usePartList";
+import {
+  buildPartListQuery,
+  buildPartNamesById,
+  filterPartsByOwner,
+} from "../usePartList";
 
 const mockPart1: Part = {
   id: "part-1",
@@ -88,6 +92,27 @@ describe("usePartList", () => {
 
       // Assert
       expect(filtered).toEqual([]);
+    });
+  });
+
+  describe("正常系: partId → パーツ名の対応表を組み立てる", () => {
+    it("builds_part_name_map_keyed_by_part_id", () => {
+      // Arrange & Act
+      const namesById = buildPartNamesById([mockPart1, mockPart2]);
+
+      // Assert
+      expect(namesById).toEqual({
+        "part-1": "エアコンフィルター",
+        "part-2": "床",
+      });
+    });
+
+    it("returns_empty_map_when_parts_are_undefined", () => {
+      // Arrange & Act
+      const namesById = buildPartNamesById(undefined);
+
+      // Assert
+      expect(namesById).toEqual({});
     });
   });
 

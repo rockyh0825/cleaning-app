@@ -9,9 +9,16 @@ jest.mock('@/features/cleaning-record/hooks/useCleaningHistory', () => ({
     useCleaningHistory: jest.fn(),
 }));
 
+// usePartNames をモック（usePartList モジュール内）
+jest.mock('@/features/cleaning-record/hooks/usePartList', () => ({
+    usePartNames: jest.fn(),
+}));
+
 import { useCleaningHistory } from '@/features/cleaning-record/hooks/useCleaningHistory';
+import { usePartNames } from '@/features/cleaning-record/hooks/usePartList';
 import { resetUserIdCacheForTest } from '@/shared/hooks/useUserId';
 const mockUseCleaningHistory = useCleaningHistory as jest.Mock;
+const mockUsePartNames = usePartNames as jest.Mock;
 
 function createWrapper() {
     const queryClient = new QueryClient({
@@ -55,6 +62,14 @@ describe('HistoryScreen', () => {
         resetUserIdCacheForTest();
         (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
         (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
+        mockUsePartNames.mockReturnValue({
+            partNamesById: {
+                'part-1': 'キッチンシンク',
+                'part-2': 'エアコンフィルター',
+            },
+            isPending: false,
+            isError: false,
+        });
     });
 
     it('renders_cleaning_timeline_with_records_on_history_tab', async () => {
@@ -74,6 +89,79 @@ describe('HistoryScreen', () => {
         await waitFor(() => {
             expect(screen.getAllByTestId('timeline-item')).toHaveLength(2);
         });
+    });
+
+    it('displays_part_names_instead_of_part_ids_in_timeline', async () => {
+        // Arrange
+        mockUseCleaningHistory.mockReturnValue({
+            records: RECORDS,
+            isLoading: false,
+            error: null,
+            deleteRecord: { mutate: jest.fn() },
+            updateRecord: { mutate: jest.fn() },
+        });
+
+        // Act
+        render(<HistoryScreen />, { wrapper: createWrapper() });
+
+        // Assert: partId（UUID）ではなくパーツ名が表示される
+        await waitFor(() => {
+            expect(screen.getByText('パーツ: キッチンシンク')).toBeTruthy();
+        });
+        expect(screen.getByText('パーツ: エアコンフィルター')).toBeTruthy();
+        expect(screen.queryByText(/part-1/)).toBeNull();
+        expect(screen.queryByText(/part-2/)).toBeNull();
+    });
+
+    it('shows_loading_indicator_while_part_names_are_pending', async () => {
+        // Arrange: 履歴は取得済みだがパーツ名が未解決
+        mockUseCleaningHistory.mockReturnValue({
+            records: RECORDS,
+            isLoading: false,
+            error: null,
+            deleteRecord: { mutate: jest.fn() },
+            updateRecord: { mutate: jest.fn() },
+        });
+        mockUsePartNames.mockReturnValue({
+            partNamesById: {},
+            isPending: true,
+            isError: false,
+        });
+
+        // Act
+        render(<HistoryScreen />, { wrapper: createWrapper() });
+
+        // Assert: 名前未解決の状態でタイムラインを出さず、ローディングを表示する
+        await waitFor(() => {
+            expect(screen.getByTestId('history-loading')).toBeTruthy();
+        });
+        expect(screen.queryAllByTestId('timeline-item')).toHaveLength(0);
+    });
+
+    it('shows_error_banner_and_keeps_timeline_when_part_names_fetch_fails', async () => {
+        // Arrange: 履歴は取得済みだがパーツ名の取得（GET /parts）が失敗した状態
+        mockUseCleaningHistory.mockReturnValue({
+            records: RECORDS,
+            isLoading: false,
+            error: null,
+            deleteRecord: { mutate: jest.fn() },
+            updateRecord: { mutate: jest.fn() },
+        });
+        mockUsePartNames.mockReturnValue({
+            partNamesById: {},
+            isPending: false,
+            isError: true,
+        });
+
+        // Act
+        render(<HistoryScreen />, { wrapper: createWrapper() });
+
+        // Assert: エラーバナーで通知しつつ、履歴自体は取得できているためタイムラインは表示を継続する
+        await waitFor(() => {
+            expect(screen.getByTestId('part-names-error')).toBeTruthy();
+        });
+        expect(screen.getByText('パーツ名の取得に失敗しました')).toBeTruthy();
+        expect(screen.getAllByTestId('timeline-item')).toHaveLength(2);
     });
 
     it('shows_empty_state_when_no_records_exist', async () => {
