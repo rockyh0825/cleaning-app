@@ -16,7 +16,11 @@ type Props = {
     cellSize: number;
     selected: boolean;
     onPress: () => void;
-    /** ドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
+    /**
+     * ドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る。
+     * 未指定時は長押し pan 自体が無効になる（指に追従して戻るだけの
+     * 「幻のドラッグ」やキャンバスパンの待機を防ぐ）
+     */
     onDragEnd?: (rect: Rect) => void;
     /** 他の部屋と重なっているとき警告スタイルを表示する */
     overlapping?: boolean;

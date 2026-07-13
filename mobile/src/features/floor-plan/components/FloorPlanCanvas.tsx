@@ -223,8 +223,13 @@ export function FloorPlanCanvas({
                                     !readOnly && resolvedSelectedRoomId === room.id
                                 }
                                 onPress={() => handleRoomPress(room.id)}
-                                onDragEnd={(rect) =>
-                                    effectiveOnRoomDragEnd?.(room.id, rect)
+                                onDragEnd={
+                                    // 未指定時は undefined を渡して RoomShape 側で
+                                    // 長押し pan 自体を無効化する（issue #140 幻のドラッグ防止）
+                                    effectiveOnRoomDragEnd
+                                        ? (rect) =>
+                                              effectiveOnRoomDragEnd(room.id, rect)
+                                        : undefined
                                 }
                                 overlapping={overlappingRoomIds.has(room.id)}
                                 fillColor={areaColors?.get(room.id)}

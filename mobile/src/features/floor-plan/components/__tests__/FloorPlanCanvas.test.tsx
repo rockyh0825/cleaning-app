@@ -649,11 +649,35 @@ describe('FloorPlanCanvas', () => {
     });
 
     it('keeps_pan_gestures_enabled_when_readOnly_is_omitted', () => {
-        // Arrange & Act: readOnly 未指定なら従来どおりドラッグ可能（後方互換）
-        render(<FloorPlanCanvas floorPlan={floorplanWithRoom} />);
+        // Arrange & Act: readOnly 未指定でドラッグコールバックがあれば従来どおりドラッグ可能
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onRoomDragEnd={jest.fn()}
+                onFurnitureDragEnd={jest.fn()}
+            />,
+        );
 
         // Assert
         expect(getByGestureTestId('room-pan-room-1').config.enabled).toBe(true);
+        expect(getByGestureTestId('furniture-pan-furn-1').config.enabled).toBe(
+            true,
+        );
+    });
+
+    it('disables_room_pan_gesture_when_onRoomDragEnd_is_omitted', () => {
+        // Arrange & Act: 部屋詳細画面と同じ渡し方（onRoomDragEnd 未指定・readOnly なし）。
+        // 移動を確定させる先がないのに pan が有効だと、指に追従して戻るだけの
+        // 「幻のドラッグ」になる（issue #140）ため pan 自体を無効化する
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onFurnitureDragEnd={jest.fn()}
+            />,
+        );
+
+        // Assert: 部屋の pan は無効。家具ドラッグ（詳細画面で必要）は有効のまま
+        expect(getByGestureTestId('room-pan-room-1').config.enabled).toBe(false);
         expect(getByGestureTestId('furniture-pan-furn-1').config.enabled).toBe(
             true,
         );
