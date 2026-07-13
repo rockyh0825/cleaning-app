@@ -339,6 +339,31 @@ describe('fitWithin', () => {
         expect(result.w).toBe(1);
         expect(result.h).toBe(1);
     });
+
+    it('pushes_child_back_within_offset_parent_keeping_size', () => {
+        // Arrange: 親矩形が非原点（家具の bounds は部屋相対 {0,0,w,h} だが、
+        // fitWithin は汎用 util としてオフセット親でも正しく動くことを保証する）
+        const child: Rect = { x: 8, y: 1, w: 2, h: 2 };
+        const parent: Rect = { x: 3, y: 3, w: 4, h: 4 };
+
+        // Act
+        const result = fitWithin(child, parent);
+
+        // Assert: 親の右端 (3+4-2=5)・上端 (3) に押し戻される
+        expect(result).toEqual({ x: 5, y: 3, w: 2, h: 2 });
+    });
+
+    it('shrinks_and_aligns_to_offset_parent_origin_when_child_exceeds_parent', () => {
+        // Arrange: 幅 10 は親の幅 3 に収まらないため縮小し、原点は (2,2) に揃う
+        const child: Rect = { x: 0, y: 0, w: 10, h: 2 };
+        const parent: Rect = { x: 2, y: 2, w: 3, h: 4 };
+
+        // Act
+        const result = fitWithin(child, parent);
+
+        // Assert: 縮小は必要な軸（幅）だけで、位置は親の起点にクランプされる
+        expect(result).toEqual({ x: 2, y: 2, w: 3, h: 2 });
+    });
 });
 
 describe('findFreePosition', () => {

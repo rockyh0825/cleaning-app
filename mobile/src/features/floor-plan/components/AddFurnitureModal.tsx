@@ -108,6 +108,9 @@ export function AddFurnitureModal({ visible, onSubmit, onCancel }: Props) {
             />
 
             <View
+                testID="furniture-category-tablist"
+                // タブのグルーピングを支援技術に伝える（各タブは role="tab"）
+                accessibilityRole="tablist"
                 style={[
                     styles.categoryTabs,
                     { gap: theme.spacing.xs, marginBottom: theme.spacing.md },
@@ -140,8 +143,12 @@ export function AddFurnitureModal({ visible, onSubmit, onCancel }: Props) {
                                 style={[
                                     theme.typography.caption,
                                     {
+                                        // primarySoft 上の通常テキストは primary だと
+                                        // 4.19:1 で WCAG AA 未達のため text を使う
+                                        // （CleaningTimeline と同じ規約）。選択の手がかりは
+                                        // borderColor: primary + fontWeight で担保する
                                         color: isActive
-                                            ? theme.colors.primary
+                                            ? theme.colors.text
                                             : theme.colors.textMuted,
                                         fontWeight: isActive ? '600' : '400',
                                     },
@@ -271,8 +278,8 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     presetPreview: {
-        width: 32,
-        height: 32,
+        width: PREVIEW_BOX,
+        height: PREVIEW_BOX,
         alignItems: 'center',
         justifyContent: 'center',
     },

@@ -244,6 +244,31 @@ describe('AddFurnitureModal', () => {
             expect(screen.queryByTestId('furniture-preset-chip-sofa')).toBeNull();
         });
 
+        it('exposes_category_tabs_as_tablist_with_tab_roles', () => {
+            // Arrange & Act
+            render(
+                <AddFurnitureModal
+                    visible={true}
+                    roomId={testRoomId}
+                    onSubmit={mockOnSubmit}
+                    onCancel={mockOnCancel}
+                />,
+            );
+
+            // Assert: コンテナが tablist、各タブが tab として支援技術に伝わる
+            const tablist = screen.getByTestId('furniture-category-tablist');
+            expect(tablist.props.accessibilityRole).toBe('tablist');
+            for (const category of FURNITURE_CATEGORIES) {
+                const tab = screen.getByTestId(
+                    `furniture-category-tab-${category.key}`,
+                );
+                expect(tab.props.accessibilityRole).toBe('tab');
+                expect(tab.props.accessibilityState).toEqual(
+                    expect.objectContaining({ selected: category.key === 'living' }),
+                );
+            }
+        });
+
         it('submits_preset_from_non_default_tab_with_its_default_size', () => {
             // Arrange
             render(

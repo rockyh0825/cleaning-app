@@ -7,6 +7,7 @@ import {
 } from 'react-native-gesture-handler/jest-utils';
 import { StyleSheet } from 'react-native';
 import { lightTheme } from '@/shared/theme/tokens';
+import { withAlpha } from '@/shared/utils/color';
 import { FurnitureItem } from '../FurnitureItem';
 import type { Rect } from '@/shared/utils/grid';
 import type { Furniture } from '../../types';
@@ -528,6 +529,28 @@ describe('FurnitureItem', () => {
             const style = StyleSheet.flatten(label.props.style);
             expect(style.position).toBe('absolute');
             expect(style.bottom).toBeDefined();
+        });
+
+        it('paints_name_chip_with_translucent_surface_via_alpha_helper', () => {
+            // Arrange & Act: hex 連結（`${surface}E6`）は surface が 6桁 hex で
+            // ある暗黙前提に依存するため、withAlpha ヘルパー経由の rgba にする
+            render(
+                <FurnitureItem
+                    furniture={{ ...testFurniture, presetKey: 'sofa' }}
+                    cellSize={40}
+                    selected={false}
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                />,
+            );
+
+            // Assert
+            const label = screen.getByText('ソファ');
+            const style = StyleSheet.flatten(label.props.style);
+            expect(style.backgroundColor).toBe(
+                withAlpha(lightTheme.colors.surface, 0.9),
+            );
+            expect(style.backgroundColor).toMatch(/^rgba\(/);
         });
     });
 

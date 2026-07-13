@@ -4,6 +4,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { GestureType } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
+import { withAlpha } from '@/shared/utils/color';
 import type { Rect } from '@/shared/utils/grid';
 import { useDragToGrid } from '../hooks/useDragToGrid';
 import { CORNERS } from '../utils/cornerResize';
@@ -133,7 +134,9 @@ export function FurnitureItem({
                         {
                             color: theme.colors.textMuted,
                             // 下端の名前チップ。グリフの上でも読めるよう半透明の面を敷く
-                            backgroundColor: `${theme.colors.surface}E6`,
+                            // （hex 連結はトークンが 6桁 hex である前提に依存するため
+                            // withAlpha で rgba 化する）
+                            backgroundColor: withAlpha(theme.colors.surface, 0.9),
                             borderRadius: theme.radius.sm,
                         },
                     ]}

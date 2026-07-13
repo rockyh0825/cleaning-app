@@ -40,6 +40,8 @@ export function clampWithin(child: Rect, parent: Rect): Rect {
  * 部屋リサイズ時の内包家具の追従に使う。
  */
 export function fitWithin(child: Rect, parent: Rect): Rect {
+    // clampWithin と同様に UI スレッド（reanimated worklet）から呼べるようにする
+    'worklet';
     const w = Math.max(1, Math.min(child.w, parent.w));
     const h = Math.max(1, Math.min(child.h, parent.h));
     return clampWithin({ x: child.x, y: child.y, w, h }, parent);
