@@ -12,6 +12,7 @@ import { FloorPlanCanvas } from "@/features/floor-plan/components/FloorPlanCanva
 import { useAppTheme } from "@/shared/theme/useAppTheme";
 import { useHeatmap, type UseHeatmapDeps } from "../hooks/useHeatmap";
 import { HeatmapLegend } from "./HeatmapLegend";
+import { HeatmapSummary } from "./HeatmapSummary";
 
 type HeatmapViewProps = {
     userId: string;
@@ -28,10 +29,8 @@ export function HeatmapView({
     cleaningStatusCapability,
 }: HeatmapViewProps) {
     const theme = useAppTheme();
-    const { rooms, areaColors, isPending, isError, isStatusError } = useHeatmap(
-        userId,
-        { floorPlanCapability, cleaningStatusCapability },
-    );
+    const { rooms, areaColors, statusSummary, isPending, isError, isStatusError } =
+        useHeatmap(userId, { floorPlanCapability, cleaningStatusCapability });
 
     // パーツ0件のエリアでも正しい所有者種別でパーツを追加できるよう ownerType を引き継ぐ
     function openAreaDetail(areaId: string, ownerType: "ROOM" | "FURNITURE") {
@@ -152,6 +151,7 @@ export function HeatmapView({
                     </Text>
                 </View>
             )}
+            <HeatmapSummary summary={statusSummary} />
             <FloorPlanCanvas
                 floorPlan={{ rooms }}
                 readOnly
