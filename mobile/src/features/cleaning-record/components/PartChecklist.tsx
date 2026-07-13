@@ -1,19 +1,9 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  FlatList,
-} from "react-native";
+import { View, StyleSheet, FlatList } from "react-native";
 import type { Part } from "../types";
-import {
-  computeCycleElapsedRate,
-  resolveElapsedRateBadge,
-} from "../usecases/computeCycleElapsedRate";
-import { formatDateTime } from "@/shared/utils/formatDateTime";
 import { useAppTheme } from "@/shared/theme/useAppTheme";
-import { StatusPill } from "@/shared/components/StatusPill";
+import { hapticSelection } from "@/shared/haptics/haptics";
+import { PartChecklistItem } from "./PartChecklistItem";
 import { RecordButton } from "./RecordButton";
 
 type PartChecklistProps = {
@@ -41,6 +31,8 @@ export function PartChecklist({
   );
 
   const togglePart = (partId: string) => {
+    // チェック ON/OFF どちらも選択変更としてフィードバックする
+    hapticSelection();
     setSelectedPartIds((prev) => {
       const next = new Set(prev);
       if (next.has(partId)) {
@@ -61,91 +53,15 @@ export function PartChecklist({
     onLogCleaning(validSelectedPartIds);
   };
 
-  const renderItem = ({ item }: { item: Part }) => {
-    const isSelected = selectedPartIds.has(item.id);
-    // 周期に対する経過率（例: 71%）。周期未設定は null でバッジ非表示
-    const badge = resolveElapsedRateBadge(
-      computeCycleElapsedRate(item.lastCleanedAt, item.recommendedCycleDays, nowMs),
-    );
-    return (
-      <TouchableOpacity
-        testID={`part-item-${item.id}`}
-        style={[
-          styles.item,
-          {
-            borderBottomColor: theme.colors.outline,
-            backgroundColor: isSelected
-              ? theme.colors.primarySoft
-              : theme.colors.surface,
-          },
-        ]}
-        onPress={() => togglePart(item.id)}
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: isSelected }}
-      >
-        <View
-          style={[
-            styles.checkbox,
-            isSelected
-              ? {
-                  borderColor: theme.colors.primary,
-                  backgroundColor: theme.colors.primary,
-                }
-              : { borderColor: theme.colors.outline },
-          ]}
-        >
-          {isSelected && (
-            <Text style={[styles.checkmark, { color: theme.colors.onPrimary }]}>
-              ✓
-            </Text>
-          )}
-        </View>
-        <View style={styles.partInfo}>
-          <View style={styles.nameRow}>
-            <Text
-              style={[styles.partName, { color: theme.colors.text }]}
-              numberOfLines={1}
-            >
-              {item.name}
-            </Text>
-            {badge != null && (
-              <StatusPill
-                status={badge.status}
-                label={badge.label}
-                testID={`part-elapsed-badge-${item.id}`}
-              />
-            )}
-          </View>
-          <Text
-            style={[styles.lastCleanedAt, { color: theme.colors.textMuted }]}
-          >
-            最終掃除:{" "}
-            {item.lastCleanedAt != null
-              ? formatDateTime(item.lastCleanedAt)
-              : "未記録"}
-          </Text>
-        </View>
-        {onEditPart != null && (
-          <TouchableOpacity
-            testID={`part-edit-${item.id}`}
-            accessibilityRole="button"
-            accessibilityLabel={`${item.name}を編集`}
-            style={[styles.editButton, { borderColor: theme.colors.outline }]}
-            onPress={() => onEditPart(item)}
-          >
-            <Text
-              style={[
-                styles.editButtonLabel,
-                { color: theme.colors.textMuted },
-              ]}
-            >
-              編集
-            </Text>
-          </TouchableOpacity>
-        )}
-      </TouchableOpacity>
-    );
-  };
+  const renderItem = ({ item }: { item: Part }) => (
+    <PartChecklistItem
+      part={item}
+      isSelected={selectedPartIds.has(item.id)}
+      nowMs={nowMs}
+      onToggle={togglePart}
+      onEdit={onEditPart}
+    />
+  );
 
   return (
     <View style={styles.container}>
@@ -172,53 +88,6 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
-  },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    borderWidth: 2,
-    marginRight: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkmark: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  partInfo: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  editButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderRadius: 4,
-    marginLeft: 8,
-  },
-  editButtonLabel: {
-    fontSize: 12,
-  },
-  partName: {
-    fontSize: 16,
-    // 長いパーツ名でも経過率バッジを押し出さないよう名前側を縮める
-    flexShrink: 1,
-  },
-  lastCleanedAt: {
-    fontSize: 12,
-    marginTop: 2,
   },
   footer: {
     padding: 16,

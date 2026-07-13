@@ -4,6 +4,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { GestureType } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
+import { useColorTransitionStyle } from '@/shared/hooks/useColorTransitionStyle';
 import type { Rect } from '@/shared/utils/grid';
 import { GRID_COLS, GRID_ROWS } from '../constants';
 import { useDragToGrid } from '../hooks/useDragToGrid';
@@ -62,6 +63,12 @@ export function RoomShape({
     const left = room.gridX * cellSize;
     const top = room.gridY * cellSize;
     const accent = theme.roomAccents[room.type] ?? theme.roomAccents.OTHER;
+    // ヒートマップの状態色（記録完了の赤→緑など）の変化をクロスフェードにする。
+    // 静的な backgroundColor の後ろに重ね、実行時は animated style が上書きする
+    const fillTransitionStyle = useColorTransitionStyle(
+        'backgroundColor',
+        fillColor ?? accent.fill,
+    );
 
     // 移動は中央グリップの長押し起点のみ。四つ角のリサイズやタップ選択との誤操作を防ぐ
     const { gesture: panGesture, animatedStyle } = useDragToGrid({
@@ -106,6 +113,7 @@ export function RoomShape({
                             ? theme.colors.danger
                             : theme.colors.outline,
                     },
+                    fillTransitionStyle,
                     animatedStyle,
                 ]}
             >
