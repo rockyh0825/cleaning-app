@@ -4,6 +4,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { GestureType } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
+import { useColorTransitionStyle } from '@/shared/hooks/useColorTransitionStyle';
 import { withAlpha } from '@/shared/utils/color';
 import type { Rect } from '@/shared/utils/grid';
 import { useDragToGrid } from '../hooks/useDragToGrid';
@@ -64,6 +65,12 @@ export function FurnitureItem({
     const top = (bounds.y + furniture.gridY) * cellSize;
     // ドラッグ・リサイズの可動域は 0 起点の相対矩形（部屋のサイズのみ）
     const relativeBounds: Rect = { x: 0, y: 0, w: bounds.w, h: bounds.h };
+    // ヒートマップの状態色（記録完了の赤→緑など）の変化をクロスフェードにする。
+    // 静的な backgroundColor の後ろに重ね、実行時は animated style が上書きする
+    const fillTransitionStyle = useColorTransitionStyle(
+        'backgroundColor',
+        fillColor ?? theme.colors.surface,
+    );
 
     const { gesture: panGesture, animatedStyle } = useDragToGrid({
         rect: {
@@ -109,6 +116,7 @@ export function FurnitureItem({
                             ? theme.colors.primary
                             : theme.colors.outline,
                     },
+                    fillTransitionStyle,
                     animatedStyle,
                 ]}
             >
