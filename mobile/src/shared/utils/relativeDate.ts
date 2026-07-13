@@ -2,7 +2,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** ローカルタイムゾーンでその日の 0:00 を返す */
 function startOfLocalDay(date: Date): Date {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 /**
@@ -11,9 +11,9 @@ function startOfLocalDay(date: Date): Date {
  * 経過秒数ではなく「今日／昨日」の直感に合わせるための基準。
  */
 export function diffCalendarDays(from: Date, to: Date): number {
-    return Math.round(
-        (startOfLocalDay(to).getTime() - startOfLocalDay(from).getTime()) / DAY_MS,
-    );
+  return Math.round(
+    (startOfLocalDay(to).getTime() - startOfLocalDay(from).getTime()) / DAY_MS,
+  );
 }
 
 /**
@@ -25,11 +25,11 @@ export function diffCalendarDays(from: Date, to: Date): number {
  * - 未来の日時（端末時計のズレ等）→「今日」に丸める
  */
 export function formatRelativeDate(date: Date, now: Date): string {
-    const days = diffCalendarDays(date, now);
-    if (days <= 0) return '今日';
-    if (days === 1) return '昨日';
-    if (days < 7) return `${days}日前`;
-    if (days < 30) return `${Math.floor(days / 7)}週間前`;
-    if (days < 365) return `${Math.floor(days / 30)}ヶ月前`;
-    return `${Math.floor(days / 365)}年前`;
+  const days = diffCalendarDays(date, now);
+  if (days <= 0) return '今日';
+  if (days === 1) return '昨日';
+  if (days < 7) return `${days}日前`;
+  if (days < 30) return `${Math.floor(days / 7)}週間前`;
+  if (days < 365) return `${Math.floor(days / 30)}ヶ月前`;
+  return `${Math.floor(days / 365)}年前`;
 }
