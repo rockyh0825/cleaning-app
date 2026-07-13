@@ -1,4 +1,4 @@
-import { formatDateTime } from "../formatDateTime";
+import { formatDate, formatDateTime, formatTime } from "../formatDateTime";
 
 describe("formatDateTime", () => {
   it("formats_date_as_slash_separated_date_and_colon_separated_time", () => {
@@ -54,5 +54,33 @@ describe("formatDateTime", () => {
 
     // Assert
     expect(result).toBe("2025/01/01 00:00");
+  });
+});
+
+describe("formatDate", () => {
+  it("formats_date_part_only_with_zero_padding", () => {
+    // Arrange
+    const date = new Date(2026, 0, 5, 12, 34);
+
+    // Act & Assert
+    expect(formatDate(date)).toBe("2026/01/05");
+  });
+});
+
+describe("formatTime", () => {
+  it("formats_time_part_only_with_zero_padding", () => {
+    // Arrange
+    const date = new Date(2026, 6, 13, 9, 5);
+
+    // Act & Assert
+    expect(formatTime(date)).toBe("09:05");
+  });
+
+  it("formats_midnight_as_double_zero", () => {
+    // Arrange
+    const date = new Date(2026, 6, 13, 0, 0);
+
+    // Act & Assert
+    expect(formatTime(date)).toBe("00:00");
   });
 });
