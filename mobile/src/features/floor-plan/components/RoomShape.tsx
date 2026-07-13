@@ -17,7 +17,11 @@ type Props = {
     cellSize: number;
     selected: boolean;
     onPress: () => void;
-    /** ドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る */
+    /**
+     * ドラッグ確定時にスナップ・クランプ済みのグリッド矩形を受け取る。
+     * 未指定時は長押し pan 自体が無効になる（指に追従して戻るだけの
+     * 「幻のドラッグ」やキャンバスパンの待機を防ぐ）
+     */
     onDragEnd?: (rect: Rect) => void;
     /** 他の部屋と重なっているとき警告スタイルを表示する */
     overlapping?: boolean;
@@ -79,7 +83,9 @@ export function RoomShape({
         onCommit: (rect) => onDragEnd?.(rect),
         testID: `room-pan-${room.id}`,
         blocksExternal: canvasPanGesture,
-        enabled: !dragDisabled,
+        // onDragEnd 未指定（読み取り用途）では長押し pan 自体を無効化し、
+        // 指への追従だけして戻る「幻のドラッグ」やキャンバスパンの待機を防ぐ
+        enabled: !dragDisabled && onDragEnd != null,
         activateAfterLongPressMs: MOVE_ACTIVATION_MS,
     });
 
