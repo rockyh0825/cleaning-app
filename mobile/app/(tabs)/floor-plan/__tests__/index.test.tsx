@@ -33,6 +33,17 @@ import { resetUserIdCacheForTest } from '@/shared/hooks/useUserId';
 import type { Furniture } from '@/features/floor-plan/types';
 const mockUseLayout = useFloorPlan as jest.Mock;
 
+/**
+ * タップの onEnd は runOnJS 経由で JS スレッドに渡るため、状態更新は次の
+ * マクロタスクで反映される。waitFor のポーリング待ちに任せると 1 秒近くかかり
+ * CI の実行速度によってはデフォルトのタイムアウトを超えるため、明示的に流し切る。
+ */
+async function flushRunOnJS() {
+    await act(async () => {
+        await new Promise((resolve) => setImmediate(resolve));
+    });
+}
+
 function createWrapper() {
     const queryClient = new QueryClient({
         defaultOptions: {
@@ -486,11 +497,10 @@ describe('FloorPlanIndexScreen', () => {
             { state: State.ACTIVE },
             { state: State.END },
         ]);
+        await flushRunOnJS();
 
         // Assert: 操作バーが消える
-        await waitFor(() => {
-            expect(screen.queryByTestId('selection-actions')).toBeNull();
-        });
+        expect(screen.queryByTestId('selection-actions')).toBeNull();
     });
 
     it('closes_rename_screen_without_mutation_when_canvas_background_is_pressed', async () => {
@@ -509,11 +519,10 @@ describe('FloorPlanIndexScreen', () => {
             { state: State.ACTIVE },
             { state: State.END },
         ]);
+        await flushRunOnJS();
 
         // Assert: 選択解除の他経路（✕・家具タップ）と揃えてリネーム対象も破棄される
-        await waitFor(() => {
-            expect(screen.queryByTestId('rename-input')).toBeNull();
-        });
+        expect(screen.queryByTestId('rename-input')).toBeNull();
         expect(mockUpdateMutate).not.toHaveBeenCalled();
     });
 

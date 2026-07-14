@@ -18,6 +18,17 @@ import type { FloorPlan } from '../../types';
 
 jest.mock('@shopify/react-native-skia');
 
+/**
+ * タップの onEnd は runOnJS 経由で JS スレッドに渡るため、状態更新は次の
+ * マクロタスクで反映される。waitFor のポーリング待ちに任せると 1 秒近くかかり
+ * CI の実行速度によってはデフォルトのタイムアウトを超えるため、明示的に流し切る。
+ */
+async function flushRunOnJS() {
+    await act(async () => {
+        await new Promise((resolve) => setImmediate(resolve));
+    });
+}
+
 describe('clampScale', () => {
     it('returns_value_unchanged_when_within_range', () => {
         // Arrange & Act & Assert
@@ -810,9 +821,7 @@ describe('FloorPlanCanvas', () => {
             { state: State.ACTIVE },
             { state: State.END },
         ]);
-        await act(async () => {
-            await new Promise((resolve) => setImmediate(resolve));
-        });
+        await flushRunOnJS();
 
         // Assert
         expect(mockOnBackgroundPress).toHaveBeenCalledTimes(1);
@@ -834,9 +843,7 @@ describe('FloorPlanCanvas', () => {
             { state: State.BEGAN },
             { state: State.FAILED },
         ]);
-        await act(async () => {
-            await new Promise((resolve) => setImmediate(resolve));
-        });
+        await flushRunOnJS();
 
         // Assert: 選択解除は起きない
         expect(mockOnBackgroundPress).not.toHaveBeenCalled();
@@ -866,9 +873,7 @@ describe('FloorPlanCanvas', () => {
             { state: State.ACTIVE },
             { state: State.END },
         ]);
-        await act(async () => {
-            await new Promise((resolve) => setImmediate(resolve));
-        });
+        await flushRunOnJS();
 
         // Assert: 要素のタップは背景タップとして扱わない
         expect(mockOnBackgroundPress).not.toHaveBeenCalled();
@@ -900,9 +905,8 @@ describe('FloorPlanCanvas', () => {
             { state: State.ACTIVE },
             { state: State.END },
         ]);
-        await waitFor(() => {
-            expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
-        });
+        await flushRunOnJS();
+        expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
 
         // Act: 背景をタップする
         fireGestureHandler(getByGestureTestId('canvas-background-tap'), [
@@ -910,11 +914,10 @@ describe('FloorPlanCanvas', () => {
             { state: State.ACTIVE },
             { state: State.END },
         ]);
+        await flushRunOnJS();
 
         // Assert: 内部 state 駆動でも選択枠が消える
-        await waitFor(() => {
-            expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
-        });
+        expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
     });
 
     it('clears_internal_furniture_selection_when_background_is_pressed', async () => {
@@ -925,12 +928,12 @@ describe('FloorPlanCanvas', () => {
             { state: State.ACTIVE },
             { state: State.END },
         ]);
-        await waitFor(() => {
-            const item = screen.getByTestId('furniture-item-furn-1');
-            expect(StyleSheet.flatten(item.props.style).borderColor).toBe(
-                lightTheme.colors.primary,
-            );
-        });
+        await flushRunOnJS();
+        expect(
+            StyleSheet.flatten(
+                screen.getByTestId('furniture-item-furn-1').props.style,
+            ).borderColor,
+        ).toBe(lightTheme.colors.primary);
 
         // Act: 背景をタップする
         fireGestureHandler(getByGestureTestId('canvas-background-tap'), [
@@ -938,14 +941,14 @@ describe('FloorPlanCanvas', () => {
             { state: State.ACTIVE },
             { state: State.END },
         ]);
+        await flushRunOnJS();
 
         // Assert: 内部 state 駆動でも選択ボーダーが外れる
-        await waitFor(() => {
-            const item = screen.getByTestId('furniture-item-furn-1');
-            expect(StyleSheet.flatten(item.props.style).borderColor).toBe(
-                lightTheme.colors.outline,
-            );
-        });
+        expect(
+            StyleSheet.flatten(
+                screen.getByTestId('furniture-item-furn-1').props.style,
+            ).borderColor,
+        ).toBe(lightTheme.colors.outline);
     });
 
     it('disables_background_tap_when_readOnly', () => {

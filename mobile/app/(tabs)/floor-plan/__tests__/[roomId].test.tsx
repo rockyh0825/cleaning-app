@@ -74,6 +74,17 @@ function mockHookWithFurniture(
     });
 }
 
+/**
+ * タップの onEnd は runOnJS 経由で JS スレッドに渡るため、状態更新は次の
+ * マクロタスクで反映される。waitFor のポーリング待ちに任せると 1 秒近くかかり
+ * CI の実行速度によってはデフォルトのタイムアウトを超えるため、明示的に流し切る。
+ */
+async function flushRunOnJS() {
+    await act(async () => {
+        await new Promise((resolve) => setImmediate(resolve));
+    });
+}
+
 function createWrapper() {
     const queryClient = new QueryClient({
         defaultOptions: {
@@ -384,11 +395,10 @@ describe('RoomDetailScreen', () => {
             { state: State.ACTIVE },
             { state: State.END },
         ]);
+        await flushRunOnJS();
 
         // Assert
-        await waitFor(() => {
-            expect(screen.queryByTestId('selection-actions')).toBeNull();
-        });
+        expect(screen.queryByTestId('selection-actions')).toBeNull();
     });
 
     it('closes_rename_sheet_without_mutation_when_canvas_background_is_pressed', async () => {
@@ -406,11 +416,10 @@ describe('RoomDetailScreen', () => {
             { state: State.ACTIVE },
             { state: State.END },
         ]);
+        await flushRunOnJS();
 
         // Assert: 選択解除の他経路（✕・部屋タップ）と揃えてリネーム対象も破棄される
-        await waitFor(() => {
-            expect(screen.queryByTestId('rename-input')).toBeNull();
-        });
+        expect(screen.queryByTestId('rename-input')).toBeNull();
         expect(mockUpdateMutate).not.toHaveBeenCalled();
     });
 
