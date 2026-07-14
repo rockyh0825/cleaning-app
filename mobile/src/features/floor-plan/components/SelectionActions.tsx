@@ -19,6 +19,11 @@ type Props = {
      * 家具のエリア詳細（パーツの閲覧・追加・編集）への導線。読み上げ名は「掃除場所を編集」。
      */
     onOpenCleaningParts?: () => void;
+    /**
+     * 指定時のみ「回転」ボタンを表示する（部屋詳細の家具選択のみ）。
+     * 1タップで時計回りに90度回す。読み上げ名は「90度回転」。
+     */
+    onRotate?: () => void;
     /** 名称変更ボタンの文言（省略時「名称変更」。部屋では「名称修正」を渡す） */
     renameLabel?: string;
 };
@@ -82,6 +87,7 @@ export function SelectionActions({
     onDismiss,
     onEditInterior,
     onOpenCleaningParts,
+    onRotate,
     renameLabel = '名称変更',
 }: Props) {
     const theme = useAppTheme();
@@ -123,6 +129,15 @@ export function SelectionActions({
                     accessibilityLabel="掃除場所を編集"
                     color={theme.colors.primary}
                     onPress={onOpenCleaningParts}
+                />
+            )}
+            {onRotate && (
+                <ActionButton
+                    testID="selection-rotate"
+                    label="回転"
+                    accessibilityLabel="90度回転"
+                    color={theme.colors.primary}
+                    onPress={onRotate}
                 />
             )}
             <ActionButton

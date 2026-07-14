@@ -19,6 +19,7 @@ import { api } from '@/shared/app-root/providers/di';
 import { FloatingActionButton } from '@/shared/components/FloatingActionButton';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
 import { findFreePosition } from '@/shared/utils/grid';
+import { rotateClockwise } from '@/features/floor-plan/utils/rotation';
 import type { FloorPlan } from '@/features/floor-plan/types';
 
 const repository = new FloorPlanRepository(api);
@@ -72,6 +73,16 @@ export default function RoomDetailScreen() {
                 },
             ],
         );
+    }
+
+    function handleRotatePress() {
+        if (!selectedFurniture) return;
+        // 90度ごとに占有サイズも入れ替える。部屋からはみ出す場合の是正は
+        // UpdateFurnitureUseCase のクランプが行う
+        updateFurniture.mutate({
+            furnitureId: selectedFurniture.id,
+            input: rotateClockwise(selectedFurniture),
+        });
     }
 
     function handleRenameSubmit(name: string) {
@@ -204,6 +215,7 @@ export default function RoomDetailScreen() {
                         onOpenCleaningParts={() =>
                             router.push(`/area/${selectedFurniture.id}?ownerType=FURNITURE`)
                         }
+                        onRotate={handleRotatePress}
                         onDismiss={clearFurnitureSelection}
                     />
                 </View>
