@@ -44,11 +44,19 @@
     "jest": "^29.7.0",
     "jest-expo": "~53.0.14",
     "react-test-renderer": "^19.0.0",
+    "reg-cli": "0.18.16",
     "ts-jest": "^29.2.5",
     "typescript": "~5.8.3"
   },
   "jest": {
     "projects": [
+      {
+        "displayName": "scripts",
+        "testEnvironment": "node",
+        "testMatch": [
+          "<rootDir>/scripts/**/__tests__/**/*.test.js"
+        ]
+      },
       {
         "displayName": "unit",
         "preset": "ts-jest",

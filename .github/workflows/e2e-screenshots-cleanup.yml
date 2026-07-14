@@ -1,0 +1,48 @@
+# PR クローズ時に e2e-screenshots ブランチから当該 PR のスクリーンショットを削除し、
+# ブランチの肥大化を防ぐ（VRT の仕組みは issue #174 参照）
+name: E2E Screenshots Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove pr-${{ github.event.pull_request.number }} from e2e-screenshots branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # clone の失敗（ネットワークエラー等）を「ブランチが無い」と混同しないよう、
+          # 先に ls-remote でブランチの存在を確認する（--exit-code: ref が無い場合のみ exit 2）
+          set +e
+          git ls-remote --exit-code --heads "$REPO_URL" e2e-screenshots > /dev/null
+          LS_REMOTE_STATUS=$?
+          set -e
+          if [ "$LS_REMOTE_STATUS" -eq 2 ]; then
+            echo "e2e-screenshots ブランチが存在しないためスキップ"
+            exit 0
+          elif [ "$LS_REMOTE_STATUS" -ne 0 ]; then
+            echo "::error::e2e-screenshots ブランチの存在確認（git ls-remote）に失敗しました（exit ${LS_REMOTE_STATUS}）"
+            exit 1
+          fi
+          # ブランチが存在するのに clone に失敗した場合はステップごと失敗させる
+          git clone --depth 1 --branch e2e-screenshots "$REPO_URL" shots
+          cd shots
+          if [ ! -d "pr-${PR_NUMBER}" ]; then
+            echo "pr-${PR_NUMBER} ディレクトリが存在しないためスキップ"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -r --quiet "pr-${PR_NUMBER}"
+          git commit -m "cleanup: remove pr-${PR_NUMBER} (PR closed)"
+          git push origin e2e-screenshots \
+            || { git pull --rebase origin e2e-screenshots && git push origin e2e-screenshots; }
