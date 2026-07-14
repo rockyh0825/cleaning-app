@@ -1,6 +1,8 @@
 import React from 'react';
 import Svg, { Circle, Ellipse, G, Line, Path, Rect } from 'react-native-svg';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
+import type { Rotation } from '../../types';
+import { isQuarterTurn, rotationTransform } from '../../utils/rotation';
 import {
     getGlyphPalette,
     getSilhouetteGlyphPalette,
@@ -17,9 +19,13 @@ const UNITS_PER_CELL = 60;
 type Props = {
     /** サーバー保存のプリセット識別子。未知・null は汎用グリフにフォールバック */
     presetKey?: string | null;
+    /** 回転後の占有幅（セル数） */
     gridW: number;
+    /** 回転後の占有高さ（セル数） */
     gridH: number;
     cellSize: number;
+    /** 時計回りの回転角（度）。省略時は未回転 */
+    rotation?: Rotation;
     /**
      * ヒートマップ表示: 状態色（親の背景）を透過し、部品を半透明シルエットで残す。
      * マテリアル色は使わない
@@ -47,9 +53,11 @@ export function FurnitureGlyph({
     gridW,
     gridH,
     cellSize,
+    rotation = 0,
     silhouette = false,
 }: Props) {
     const theme = useAppTheme();
+    // Svg は常に回転後の占有矩形（フットプリント）と同じ大きさ
     const w = gridW * cellSize;
     const h = gridH * cellSize;
     if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
@@ -57,18 +65,27 @@ export function FurnitureGlyph({
     }
     const kind = presetKey && GLYPH_RENDERERS[presetKey] ? presetKey : 'generic';
     const renderGlyph = GLYPH_RENDERERS[kind];
+    // 各レンダラは「未回転の素材」を描く前提で書かれている。90/270 度では
+    // フットプリントに対して素材の座標系の縦横が入れ替わるので、入れ替えた寸法を渡す。
+    // これによりパラメトリックな部品（クッション等）は素材の長辺に追従したままになる
+    const swapsAxes = isQuarterTurn(rotation);
     const ctx: GlyphCtx = {
-        w,
-        h,
+        w: swapsAxes ? h : w,
+        h: swapsAxes ? w : h,
         u: cellSize / UNITS_PER_CELL,
-        gridW,
-        gridH,
+        gridW: swapsAxes ? gridH : gridW,
+        gridH: swapsAxes ? gridW : gridH,
         ink: silhouette ? getSilhouetteGlyphPalette() : getGlyphPalette(theme.mode),
         id: `furniture-glyph-${kind}`,
     };
     return (
         <Svg testID={ctx.id} width={w} height={h} pointerEvents="none">
-            {renderGlyph(ctx)}
+            <G
+                testID={`${ctx.id}-rotation`}
+                transform={rotationTransform(rotation, w, h)}
+            >
+                {renderGlyph(ctx)}
+            </G>
         </Svg>
     );
 }
