@@ -46,6 +46,7 @@ const ROOM_WITH_FURNITURE: RoomWithFurniture = {
             gridY: 0,
             gridW: 2,
             gridH: 1,
+            rotation: 0,
             createdAt: new Date("2026-07-01"),
             updatedAt: new Date("2026-07-01"),
         },

@@ -11,6 +11,7 @@ function makeFurniture(overrides: Partial<Furniture> & { id: string }): Furnitur
         gridY: 2,
         gridW: 1,
         gridH: 1,
+        rotation: 0,
         createdAt: new Date('2024-01-01'),
         updatedAt: new Date('2024-01-01'),
         ...overrides,

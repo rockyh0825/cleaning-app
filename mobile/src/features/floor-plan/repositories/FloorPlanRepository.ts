@@ -101,6 +101,7 @@ export class FloorPlanRepository {
             gridY: api.gridY,
             gridW: api.gridW,
             gridH: api.gridH,
+            rotation: api.rotation,
             createdAt: api.createdAt,
             updatedAt: api.updatedAt,
         };

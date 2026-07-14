@@ -112,6 +112,7 @@ describe('useFloorPlan', () => {
             gridY: 1,
             gridW: 2,
             gridH: 1,
+            rotation: 0,
             createdAt: new Date('2024-01-02'),
             updatedAt: new Date('2024-01-02'),
         };
@@ -241,6 +242,7 @@ describe('useFloorPlan', () => {
                 gridY: 1,
                 gridW: 2,
                 gridH: 1,
+                rotation: 0,
                 createdAt: new Date('2024-01-02'),
                 updatedAt: new Date('2024-01-02'),
             };
@@ -331,6 +333,7 @@ describe('useFloorPlan', () => {
             gridY: 1,
             gridW: 2,
             gridH: 1,
+            rotation: 0,
             createdAt: new Date('2024-01-02'),
             updatedAt: new Date('2024-01-02'),
         };
@@ -342,6 +345,7 @@ describe('useFloorPlan', () => {
             gridY: 2,
             gridW: 1,
             gridH: 1,
+            rotation: 0,
             createdAt: new Date('2024-01-02'),
             updatedAt: new Date('2024-01-02'),
         };
@@ -458,6 +462,7 @@ describe('useFloorPlan', () => {
             gridY: 1,
             gridW: 2,
             gridH: 1,
+            rotation: 0,
             createdAt: new Date('2024-01-02'),
             updatedAt: new Date('2024-01-02'),
         };
@@ -469,6 +474,7 @@ describe('useFloorPlan', () => {
             gridY: 2,
             gridW: 1,
             gridH: 1,
+            rotation: 0,
             createdAt: new Date('2024-01-02'),
             updatedAt: new Date('2024-01-02'),
         };
@@ -567,6 +573,7 @@ describe('useFloorPlan', () => {
             gridY: 1,
             gridW: 2,
             gridH: 1,
+            rotation: 0,
             createdAt: new Date('2024-01-02'),
             updatedAt: new Date('2024-01-02'),
         };
@@ -763,6 +770,7 @@ describe('useFloorPlan', () => {
                 gridY: 0,
                 gridW: 1,
                 gridH: 1,
+                rotation: 0,
                 createdAt: new Date('2024-01-03'),
                 updatedAt: new Date('2024-01-03'),
             };

@@ -11,6 +11,7 @@ const mockFurniture: Furniture = {
     gridY: 2,
     gridW: 2,
     gridH: 2,
+    rotation: 0,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
 };
@@ -89,6 +90,79 @@ describe('UpdateFurnitureUseCase', () => {
         const calledWith = (mockRepository.updateFurniture as jest.Mock).mock.calls[0][2];
         expect(calledWith.gridW).toBe(10);
         expect(calledWith.gridH).toBe(8);
+    });
+
+    it('does_not_fetch_floor_plan_when_only_rotation_changes', async () => {
+        // Arrange: 回転のみ（サイズ据え置き）は占有矩形が動かないのでクランプ不要
+        const useCase = new UpdateFurnitureUseCase(mockRepository);
+        const input: UpdateFurnitureInput = { rotation: 90 };
+
+        // Act
+        await useCase.execute('user-1', 'f-1', input);
+
+        // Assert
+        expect(mockRepository.getFloorPlan).not.toHaveBeenCalled();
+        expect(mockRepository.updateFurniture).toHaveBeenCalledWith('user-1', 'f-1', input);
+    });
+
+    it('clamps_position_when_rotated_footprint_overflows_the_room', async () => {
+        // Arrange: 部屋 10x8。1x5 の家具を x=9 に置き 90 度回すと占有は 5x1 → 右端は x=5 まで
+        (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({
+            rooms: [
+                {
+                    ...mockRoom,
+                    furniture: [{ ...mockFurniture, gridX: 9, gridY: 0, gridW: 1, gridH: 5 }],
+                },
+            ],
+        });
+        const useCase = new UpdateFurnitureUseCase(mockRepository);
+        const input: UpdateFurnitureInput = { rotation: 90, gridW: 5, gridH: 1 };
+
+        // Act
+        await useCase.execute('user-1', 'f-1', input);
+
+        // Assert
+        const calledWith = (mockRepository.updateFurniture as jest.Mock).mock.calls[0][2];
+        expect(calledWith.gridX).toBe(5);
+        expect(calledWith.gridW).toBe(5);
+        expect(calledWith.gridH).toBe(1);
+    });
+
+    it('shrinks_furniture_when_rotated_size_exceeds_the_room', async () => {
+        // Arrange: 部屋 4x8。1x8 の家具を 90 度回すと占有 8x1 だが幅 4 に収まらない
+        (mockRepository.getFloorPlan as jest.Mock).mockResolvedValue({
+            rooms: [
+                {
+                    ...mockRoom,
+                    gridW: 4,
+                    furniture: [{ ...mockFurniture, gridX: 0, gridY: 0, gridW: 1, gridH: 8 }],
+                },
+            ],
+        });
+        const useCase = new UpdateFurnitureUseCase(mockRepository);
+        const input: UpdateFurnitureInput = { rotation: 90, gridW: 8, gridH: 1 };
+
+        // Act
+        await useCase.execute('user-1', 'f-1', input);
+
+        // Assert: 部屋幅まで縮む
+        const calledWith = (mockRepository.updateFurniture as jest.Mock).mock.calls[0][2];
+        expect(calledWith.gridW).toBe(4);
+        expect(calledWith.gridH).toBe(1);
+    });
+
+    it('keeps_rotation_in_payload_when_grid_is_clamped', async () => {
+        // Arrange: クランプ経路を通っても rotation が欠落しないこと
+        const useCase = new UpdateFurnitureUseCase(mockRepository);
+        const input: UpdateFurnitureInput = { rotation: 270, gridX: 9, gridY: 7 };
+
+        // Act
+        await useCase.execute('user-1', 'f-1', input);
+
+        // Assert
+        const calledWith = (mockRepository.updateFurniture as jest.Mock).mock.calls[0][2];
+        expect(calledWith.rotation).toBe(270);
+        expect(calledWith.gridX).toBe(8);
     });
 
     it('境界値: 非原点の部屋でも家具座標は 0 起点の相対でクランプされる', async () => {

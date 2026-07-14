@@ -149,6 +149,7 @@ export class FloorPlanStore {
       gridY: 0,
       gridW: 2,
       gridH: 1,
+      rotation: 0,
       createdAt: now,
       updatedAt: now,
     };
@@ -161,6 +162,7 @@ export class FloorPlanStore {
       gridY: 0,
       gridW: 2,
       gridH: 3,
+      rotation: 0,
       createdAt: now,
       updatedAt: now,
     };
@@ -249,6 +251,8 @@ export class FloorPlanStore {
       id: this.nextId("furniture"),
       roomId: requestParameters.roomId,
       ...requestParameters.furnitureCreate,
+      // 契約の default: 0 に合わせる（バックエンドの FurnitureCreateRequest.rotation と同じ既定）
+      rotation: requestParameters.furnitureCreate.rotation ?? 0,
       createdAt: now,
       updatedAt: now,
     };
