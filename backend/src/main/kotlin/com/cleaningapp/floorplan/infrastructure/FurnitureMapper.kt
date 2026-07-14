@@ -17,16 +17,18 @@ import java.util.UUID
 interface FurnitureMapper {
     @Insert(
         """
-        INSERT INTO furniture (id, room_id, name, preset_key, grid_x, grid_y, grid_w, grid_h, created_at, updated_at)
+        INSERT INTO furniture (id, room_id, name, preset_key, grid_x, grid_y, grid_w, grid_h,
+                               rotation, created_at, updated_at)
         VALUES (#{id}, #{roomId}, #{name}, #{presetKey,jdbcType=VARCHAR},
-                #{gridX}, #{gridY}, #{gridW}, #{gridH}, #{createdAt}, #{updatedAt})
+                #{gridX}, #{gridY}, #{gridW}, #{gridH}, #{rotation}, #{createdAt}, #{updatedAt})
         """,
     )
     fun insert(furniture: Furniture)
 
     @Select(
         """
-        SELECT id, room_id, name, preset_key, grid_x, grid_y, grid_w, grid_h, created_at, updated_at
+        SELECT id, room_id, name, preset_key, grid_x, grid_y, grid_w, grid_h,
+               rotation, created_at, updated_at
         FROM furniture
         WHERE room_id = #{roomId}
         ORDER BY created_at
@@ -38,7 +40,8 @@ interface FurnitureMapper {
 
     @Select(
         """
-        SELECT id, room_id, name, preset_key, grid_x, grid_y, grid_w, grid_h, created_at, updated_at
+        SELECT id, room_id, name, preset_key, grid_x, grid_y, grid_w, grid_h,
+               rotation, created_at, updated_at
         FROM furniture
         WHERE id = #{id}
         """,
@@ -51,7 +54,7 @@ interface FurnitureMapper {
         """
         UPDATE furniture
         SET name = #{name}, grid_x = #{gridX}, grid_y = #{gridY},
-            grid_w = #{gridW}, grid_h = #{gridH}, updated_at = #{updatedAt}
+            grid_w = #{gridW}, grid_h = #{gridH}, rotation = #{rotation}, updated_at = #{updatedAt}
         WHERE id = #{id}
         """,
     )

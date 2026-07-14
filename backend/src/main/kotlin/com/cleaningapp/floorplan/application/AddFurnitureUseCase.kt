@@ -17,6 +17,8 @@ data class AddFurnitureCommand(
     val gridY: Int,
     val gridW: Int,
     val gridH: Int,
+    /** 時計回りの回転角（度）。省略時は未回転 */
+    val rotation: Int = 0,
 )
 
 @Service
@@ -39,6 +41,7 @@ class AddFurnitureUseCase(
                 gridY = command.gridY,
                 gridW = command.gridW,
                 gridH = command.gridH,
+                rotation = command.rotation,
                 createdAt = now,
                 updatedAt = now,
             )

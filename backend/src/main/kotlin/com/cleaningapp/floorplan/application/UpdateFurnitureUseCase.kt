@@ -16,6 +16,8 @@ data class UpdateFurnitureCommand(
     val gridY: Int?,
     val gridW: Int?,
     val gridH: Int?,
+    /** 時計回りの回転角（度）。null は「変更しない」 */
+    val rotation: Int? = null,
 )
 
 @Service
@@ -39,6 +41,7 @@ class UpdateFurnitureUseCase(
                 gridY = command.gridY ?: furniture.gridY,
                 gridW = command.gridW ?: furniture.gridW,
                 gridH = command.gridH ?: furniture.gridH,
+                rotation = command.rotation ?: furniture.rotation,
                 updatedAt = Instant.now(),
             )
         furnitureRepository.update(updated)
