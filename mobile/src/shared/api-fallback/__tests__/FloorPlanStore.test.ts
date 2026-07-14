@@ -131,6 +131,51 @@ describe("FloorPlanStore persistence", () => {
     expect(restoredRoom.furniture.map((f) => f.id)).toContain(furniture.id);
   });
 
+  it("defaults_rotation_to_zero_when_restoring_furniture_persisted_before_the_field_existed", async () => {
+    // Arrange: rotation 導入前のビルドが書いた永続データ（rotation キーが無い）
+    const legacyState = {
+      rooms: [
+        {
+          id: "room-1",
+          name: "リビング",
+          type: "LIVING",
+          gridX: 0,
+          gridY: 0,
+          gridW: 6,
+          gridH: 5,
+          createdAt: "2024-01-01T00:00:00.000Z",
+          updatedAt: "2024-01-01T00:00:00.000Z",
+        },
+      ],
+      furniture: [
+        {
+          id: "furniture-1",
+          roomId: "room-1",
+          name: "ソファ",
+          presetKey: "sofa",
+          gridX: 0,
+          gridY: 0,
+          gridW: 2,
+          gridH: 1,
+          createdAt: "2024-01-01T00:00:00.000Z",
+          updatedAt: "2024-01-01T00:00:00.000Z",
+        },
+      ],
+      idSequence: 2,
+    };
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(
+      JSON.stringify(legacyState),
+    );
+
+    // Act
+    const store = new FloorPlanStore();
+    const floorPlan = await store.getFloorPlan({ xUserId: "u1" });
+
+    // Assert: 未定義のまま回すと NaN になり描画が壊れるため 0 で補う
+    const [furniture] = floorPlan.rooms[0].furniture;
+    expect(furniture.rotation).toBe(0);
+  });
+
   describe("EXPO_PUBLIC_MOCK_START_EMPTY flag", () => {
     const originalEnv = process.env.EXPO_PUBLIC_MOCK_START_EMPTY;
 

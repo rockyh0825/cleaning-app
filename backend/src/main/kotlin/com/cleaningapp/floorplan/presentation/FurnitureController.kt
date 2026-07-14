@@ -42,6 +42,7 @@ class FurnitureController(
                     gridY = request.gridY,
                     gridW = request.gridW,
                     gridH = request.gridH,
+                    rotation = request.rotation,
                 ),
             ),
         )
@@ -62,6 +63,7 @@ class FurnitureController(
                     gridY = request.gridY,
                     gridW = request.gridW,
                     gridH = request.gridH,
+                    rotation = request.rotation,
                 ),
             ),
         )

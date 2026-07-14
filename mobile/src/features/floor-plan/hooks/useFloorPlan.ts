@@ -118,6 +118,7 @@ export function buildAddFurnitureMutationOptions(
                                       gridY: input.gridY,
                                       gridW: input.gridW,
                                       gridH: input.gridH,
+                                      rotation: input.rotation ?? 0,
                                       createdAt: new Date(),
                                       updatedAt: new Date(),
                                   },

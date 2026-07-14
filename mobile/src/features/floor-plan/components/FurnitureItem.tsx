@@ -142,6 +142,7 @@ export function FurnitureItem({
                         gridW={furniture.gridW}
                         gridH={furniture.gridH}
                         cellSize={cellSize}
+                        rotation={furniture.rotation}
                         silhouette={fillColor != null}
                     />
                 </View>

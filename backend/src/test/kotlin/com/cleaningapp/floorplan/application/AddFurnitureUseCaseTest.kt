@@ -75,6 +75,55 @@ class AddFurnitureUseCaseTest {
     }
 
     @Test
+    fun `saves_furniture_with_given_rotation`() {
+        // Arrange
+        every { roomRepository.findById(roomId) } returns buildRoom()
+        justRun { furnitureRepository.save(any()) }
+        val command =
+            AddFurnitureCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "ベッド",
+                presetKey = "bed",
+                gridX = 0,
+                gridY = 0,
+                gridW = 3,
+                gridH = 2,
+                rotation = 90,
+            )
+
+        // Act
+        val result = useCase.execute(command)
+
+        // Assert
+        assertThat(result.rotation).isEqualTo(90)
+    }
+
+    @Test
+    fun `defaults_rotation_to_zero_when_command_omits_rotation`() {
+        // Arrange
+        every { roomRepository.findById(roomId) } returns buildRoom()
+        justRun { furnitureRepository.save(any()) }
+        val command =
+            AddFurnitureCommand(
+                userId = userId,
+                roomId = roomId,
+                name = "棚",
+                presetKey = null,
+                gridX = 0,
+                gridY = 0,
+                gridW = 1,
+                gridH = 1,
+            )
+
+        // Act
+        val result = useCase.execute(command)
+
+        // Assert
+        assertThat(result.rotation).isEqualTo(0)
+    }
+
+    @Test
     fun `assigns_new_uuid_to_furniture`() {
         // Arrange
         every { roomRepository.findById(roomId) } returns buildRoom()

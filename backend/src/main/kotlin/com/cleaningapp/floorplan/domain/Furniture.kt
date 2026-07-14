@@ -10,6 +10,11 @@ import java.util.UUID
  *
  * [presetKey] プリセット由来の家具は識別キー（例: "sink"）を持つ。
  * 自由名称で追加した家具は null。プリセット由来かどうかの判定に使う。
+ *
+ * [rotation] 時計回りの回転角（度）。0/90/180/270 のいずれか（値域は presentation 層で検証する）。
+ * 描画にのみ影響し、占有矩形は常に [gridW] × [gridH] の軸平行矩形。
+ * 90/270 度への回転時は呼び出し側が [gridW]/[gridH] も入れ替えて保存するため、
+ * 当たり判定・クランプ・リサイズは回転を意識しなくてよい。
  */
 data class Furniture(
     val id: UUID,
@@ -20,6 +25,7 @@ data class Furniture(
     val gridY: Int,
     val gridW: Int,
     val gridH: Int,
+    val rotation: Int,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

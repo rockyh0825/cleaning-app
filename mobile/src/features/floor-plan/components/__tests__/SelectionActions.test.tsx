@@ -123,6 +123,37 @@ describe('SelectionActions', () => {
         expect(screen.getByLabelText('掃除場所を編集')).toBeTruthy();
     });
 
+    it('calls_onRotate_when_rotate_button_pressed', () => {
+        // Arrange: 家具選択時のみ回転導線を出す。表示は短縮し読み上げは説明的にする
+        const mockOnRotate = jest.fn();
+        render(
+            <SelectionActions
+                targetName="ベッド"
+                onRename={jest.fn()}
+                onDelete={jest.fn()}
+                onRotate={mockOnRotate}
+            />,
+        );
+
+        // Act
+        fireEvent.press(screen.getByTestId('selection-rotate'));
+
+        // Assert
+        expect(mockOnRotate).toHaveBeenCalledTimes(1);
+        expect(screen.getByText('回転')).toBeTruthy();
+        expect(screen.getByLabelText('90度回転')).toBeTruthy();
+    });
+
+    it('does_not_render_rotate_button_when_onRotate_is_not_provided', () => {
+        // Arrange & Act: 部屋選択（間取り一覧画面）では回転できない
+        render(
+            <SelectionActions targetName="リビング" onRename={jest.fn()} onDelete={jest.fn()} />,
+        );
+
+        // Assert
+        expect(screen.queryByTestId('selection-rotate')).toBeNull();
+    });
+
     it('does_not_render_cleaning_parts_button_when_onOpenCleaningParts_is_not_provided', () => {
         // Arrange & Act: 部屋選択（間取り一覧画面）ではこの導線を出さない
         render(

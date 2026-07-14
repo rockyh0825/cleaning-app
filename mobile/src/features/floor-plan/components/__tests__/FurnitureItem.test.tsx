@@ -24,6 +24,7 @@ describe('FurnitureItem', () => {
         gridY: 0,
         gridW: 1,
         gridH: 1,
+        rotation: 0,
         createdAt: new Date('2024-01-01'),
         updatedAt: new Date('2024-01-01'),
     };
@@ -438,6 +439,50 @@ describe('FurnitureItem', () => {
 
             // Assert
             expect(screen.getByTestId('furniture-glyph-sofa')).toBeTruthy();
+        });
+
+        it('passes_furniture_rotation_to_glyph', () => {
+            // Arrange: 90 度回転した家具
+            const rotated: Furniture = {
+                ...testFurniture,
+                presetKey: 'sofa',
+                rotation: 90,
+            };
+
+            // Act
+            render(
+                <FurnitureItem
+                    furniture={rotated}
+                    cellSize={40}
+                    selected={false}
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                />,
+            );
+
+            // Assert: グリフに回転が伝わっている（transform は matrix へ解決される）
+            expect(
+                screen.getByTestId('furniture-glyph-sofa-rotation').props.matrix,
+            ).toBeDefined();
+        });
+
+        it('does_not_rotate_glyph_when_furniture_is_unrotated', () => {
+            // Arrange & Act
+            const sofa: Furniture = { ...testFurniture, presetKey: 'sofa' };
+            render(
+                <FurnitureItem
+                    furniture={sofa}
+                    cellSize={40}
+                    selected={false}
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                />,
+            );
+
+            // Assert
+            expect(
+                screen.getByTestId('furniture-glyph-sofa-rotation').props.matrix,
+            ).toBeUndefined();
         });
 
         it('renders_generic_glyph_when_furniture_has_no_preset', () => {

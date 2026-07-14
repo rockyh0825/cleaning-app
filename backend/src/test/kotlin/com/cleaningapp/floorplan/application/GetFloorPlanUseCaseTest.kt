@@ -50,6 +50,7 @@ class GetFloorPlanUseCaseTest {
             gridY = 0,
             gridW = 2,
             gridH = 2,
+            rotation = 0,
             createdAt = Instant.now(),
             updatedAt = Instant.now(),
         )

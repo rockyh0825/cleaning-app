@@ -48,6 +48,7 @@ const mockFloorPlan: FloorPlan = {
                     gridY: 3,
                     gridW: 1,
                     gridH: 1,
+                    rotation: 0,
                     createdAt: new Date('2024-01-01'),
                     updatedAt: new Date('2024-01-01'),
                 },
@@ -172,6 +173,87 @@ describe('RoomDetailScreen', () => {
             expect(mockUpdateFurnitureMutate).toHaveBeenCalledWith({
                 furnitureId: 'furn-1',
                 input: { gridX: 3, gridY: 3, gridW: 1, gridH: 1 },
+            });
+        });
+    });
+
+    /**
+     * 回転の入替が観測できるよう、非正方形の家具を1つ持つ間取りに差し替える。
+     * 占有サイズは「その角度で実際に占めている矩形」を渡すこと（90/270 度では
+     * 未回転時の縦横が入れ替わっている）。部屋は 6x4 なのでどの向きでも収まる。
+     */
+    function useNonSquareFurniture(furniture: {
+        gridW: number;
+        gridH: number;
+        rotation: 0 | 90 | 180 | 270;
+    }) {
+        mockUseFloorPlan.mockReturnValue({
+            floorPlan: {
+                data: {
+                    rooms: [
+                        {
+                            ...mockFloorPlan.rooms[0],
+                            furniture: [
+                                {
+                                    ...mockFloorPlan.rooms[0].furniture[0],
+                                    name: 'ベッド',
+                                    presetKey: 'bed',
+                                    gridX: 0,
+                                    gridY: 0,
+                                    ...furniture,
+                                },
+                            ],
+                        },
+                    ],
+                },
+                isLoading: false,
+                isError: false,
+            },
+            addRoom: { mutate: jest.fn() },
+            addFurniture: { mutate: mockAddFurnitureMutate },
+            updateFurniture: { mutate: mockUpdateFurnitureMutate },
+            deleteRoom: { mutate: jest.fn() },
+        });
+    }
+
+    it('calls_updateFurniture_with_swapped_size_when_rotate_pressed', async () => {
+        // Arrange: 未回転（占有 2x3）の家具を選択する
+        useNonSquareFurniture({ gridW: 2, gridH: 3, rotation: 0 });
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        await waitFor(() => {
+            expect(screen.getByTestId('furniture-item-furn-1')).toBeTruthy();
+        });
+        fireEvent.press(screen.getByTestId('furniture-item-furn-1'));
+
+        // Act
+        fireEvent.press(screen.getByTestId('selection-rotate'));
+
+        // Assert: 90度回転と同時に占有サイズが 3x2 へ入れ替わる（位置は部屋内なので据え置き）
+        await waitFor(() => {
+            expect(mockUpdateFurnitureMutate).toHaveBeenCalledWith({
+                furnitureId: 'furn-1',
+                input: { rotation: 90, gridW: 3, gridH: 2, gridX: 0, gridY: 0 },
+            });
+        });
+    });
+
+    it('wraps_rotation_back_to_zero_when_rotate_pressed_at_270', async () => {
+        // Arrange: 270 度（占有 3x2）の家具 → 次のタップで 0 度・占有 2x3 に戻る（境界値）
+        useNonSquareFurniture({ gridW: 3, gridH: 2, rotation: 270 });
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        await waitFor(() => {
+            expect(screen.getByTestId('furniture-item-furn-1')).toBeTruthy();
+        });
+        fireEvent.press(screen.getByTestId('furniture-item-furn-1'));
+
+        // Act
+        fireEvent.press(screen.getByTestId('selection-rotate'));
+
+        // Assert: 角度は 0 に折り返し、占有は未回転時の 2x3 に戻る
+        await waitFor(() => {
+            expect(mockUpdateFurnitureMutate).toHaveBeenCalledWith({
+                furnitureId: 'furn-1',
+                input: { rotation: 0, gridW: 2, gridH: 3, gridX: 0, gridY: 0 },
             });
         });
     });

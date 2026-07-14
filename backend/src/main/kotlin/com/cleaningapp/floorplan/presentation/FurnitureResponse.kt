@@ -13,6 +13,7 @@ data class FurnitureResponse(
     val gridY: Int,
     val gridW: Int,
     val gridH: Int,
+    val rotation: Int,
     val createdAt: Instant,
     val updatedAt: Instant,
 ) {
@@ -27,6 +28,7 @@ data class FurnitureResponse(
                 gridY = furniture.gridY,
                 gridW = furniture.gridW,
                 gridH = furniture.gridH,
+                rotation = furniture.rotation,
                 createdAt = furniture.createdAt,
                 updatedAt = furniture.updatedAt,
             )

@@ -49,6 +49,10 @@ function reviveRoom(raw: Room): Room {
 function reviveFurniture(raw: Furniture): Furniture {
   return {
     ...raw,
+    // rotation 導入前のビルドが永続化した家具にはこのキーが無い。
+    // 未定義のまま回すと nextRotation(undefined) が NaN になり、
+    // 占有サイズだけ入れ替わってグリフが回らない状態に陥るため既定値で補う。
+    rotation: raw.rotation ?? 0,
     createdAt: new Date(raw.createdAt),
     updatedAt: new Date(raw.updatedAt),
   };
@@ -149,6 +153,7 @@ export class FloorPlanStore {
       gridY: 0,
       gridW: 2,
       gridH: 1,
+      rotation: 0,
       createdAt: now,
       updatedAt: now,
     };
@@ -161,6 +166,7 @@ export class FloorPlanStore {
       gridY: 0,
       gridW: 2,
       gridH: 3,
+      rotation: 0,
       createdAt: now,
       updatedAt: now,
     };
@@ -249,6 +255,8 @@ export class FloorPlanStore {
       id: this.nextId("furniture"),
       roomId: requestParameters.roomId,
       ...requestParameters.furnitureCreate,
+      // 契約の default: 0 に合わせる（バックエンドの FurnitureCreateRequest.rotation と同じ既定）
+      rotation: requestParameters.furnitureCreate.rotation ?? 0,
       createdAt: now,
       updatedAt: now,
     };

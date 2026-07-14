@@ -25,6 +25,36 @@ function svgColor(hex: string) {
 
 const TRANSPARENT_PAYLOAD = 0;
 
+/** 回転テストのセルサイズ（px） */
+const CELL = 40;
+
+/**
+ * react-native-svg は transform 文字列を matrix [a, b, c, d, e, f] へ解決する。
+ * matrix は (x, y) → (a·x + c·y + e, b·x + d·y + f) の写像。
+ */
+function applyMatrix(matrix: number[], x: number, y: number) {
+    const [a, b, c, d, e, f] = matrix;
+    return { x: a * x + c * y + e, y: b * x + d * y + f };
+}
+
+/** localW×localH の素材矩形を matrix で写した外接矩形 */
+function mappedBounds(matrix: number[], localW: number, localH: number) {
+    const corners = [
+        applyMatrix(matrix, 0, 0),
+        applyMatrix(matrix, localW, 0),
+        applyMatrix(matrix, 0, localH),
+        applyMatrix(matrix, localW, localH),
+    ];
+    const xs = corners.map((p) => p.x);
+    const ys = corners.map((p) => p.y);
+    return {
+        minX: Math.min(...xs),
+        maxX: Math.max(...xs),
+        minY: Math.min(...ys),
+        maxY: Math.max(...ys),
+    };
+}
+
 beforeEach(() => {
     mockUseColorScheme.mockReturnValue('light');
 });
@@ -183,6 +213,128 @@ describe('FurnitureGlyph', () => {
 
             // Assert: アームレストは「器具」なので固定サイズを保つ
             expect(wide).toBe(narrow);
+        });
+    });
+
+    describe('回転', () => {
+        it('does_not_apply_transform_when_rotation_is_zero', () => {
+            // Arrange & Act
+            renderWithTheme(
+                <FurnitureGlyph
+                    presetKey="bed"
+                    gridW={2}
+                    gridH={3}
+                    cellSize={40}
+                    rotation={0}
+                />,
+            );
+
+            // Assert: 未回転は transform 不要
+            expect(
+                screen.getByTestId('furniture-glyph-bed-rotation').props.matrix,
+            ).toBeUndefined();
+        });
+
+        // 素材（未回転で設計されたアートワーク）がフットプリント矩形にちょうど
+        // 収まることを、実際に適用される matrix で検証する。
+        // translate の押し戻しを誤ると素材が領域外へずれるため、この4隅の検査で捕まる。
+        it.each([
+            // [rotation, 占有W, 占有H, 素材W, 素材H]（セル数）
+            [90, 3, 2, 2, 3],
+            [180, 2, 3, 2, 3],
+            [270, 3, 2, 2, 3],
+        ])(
+            'maps_artwork_exactly_onto_footprint_when_rotated_%s',
+            (rotation, gridW, gridH, localGridW, localGridH) => {
+                // Arrange & Act
+                renderWithTheme(
+                    <FurnitureGlyph
+                        presetKey="bed"
+                        gridW={gridW}
+                        gridH={gridH}
+                        cellSize={CELL}
+                        rotation={rotation as 90 | 180 | 270}
+                    />,
+                );
+
+                // Assert: 素材矩形の写像がフットプリント [0,占有W]×[0,占有H] と一致する
+                const { matrix } = screen.getByTestId(
+                    'furniture-glyph-bed-rotation',
+                ).props;
+                const bounds = mappedBounds(
+                    matrix,
+                    localGridW * CELL,
+                    localGridH * CELL,
+                );
+                expect(bounds.minX).toBeCloseTo(0);
+                expect(bounds.minY).toBeCloseTo(0);
+                expect(bounds.maxX).toBeCloseTo(gridW * CELL);
+                expect(bounds.maxY).toBeCloseTo(gridH * CELL);
+            },
+        );
+
+        it('keeps_svg_size_equal_to_footprint_when_rotated', () => {
+            // Arrange & Act: 回転しても Svg 自体は占有矩形（3x2 セル = 120x80 px）のまま
+            renderWithTheme(
+                <FurnitureGlyph
+                    presetKey="bed"
+                    gridW={3}
+                    gridH={2}
+                    cellSize={40}
+                    rotation={90}
+                />,
+            );
+
+            // Assert
+            const svg = screen.getByTestId('furniture-glyph-bed');
+            expect(svg.props.width).toBe(120);
+            expect(svg.props.height).toBe(80);
+        });
+
+        it('swaps_artwork_axes_so_parametric_parts_follow_the_long_side_when_rotated_90', () => {
+            // Arrange & Act: 占有 1x4 のソファを 90 度回すと素材は 4x1（横長）になる
+            renderWithTheme(
+                <FurnitureGlyph
+                    presetKey="sofa"
+                    gridW={1}
+                    gridH={4}
+                    cellSize={40}
+                    rotation={90}
+                />,
+            );
+
+            // Assert: クッションは素材の幅 4 に追従して 4 個
+            expect(screen.getByTestId('furniture-glyph-sofa-cushion-3')).toBeTruthy();
+            expect(screen.queryByTestId('furniture-glyph-sofa-cushion-4')).toBeNull();
+        });
+
+        it('keeps_artwork_axes_when_rotated_180', () => {
+            // Arrange & Act: 180 度は縦横が入れ替わらない（境界値）
+            renderWithTheme(
+                <FurnitureGlyph
+                    presetKey="sofa"
+                    gridW={4}
+                    gridH={1}
+                    cellSize={40}
+                    rotation={180}
+                />,
+            );
+
+            // Assert: 素材の幅は 4 のままなのでクッションは 4 個
+            expect(screen.getByTestId('furniture-glyph-sofa-cushion-3')).toBeTruthy();
+            expect(screen.queryByTestId('furniture-glyph-sofa-cushion-4')).toBeNull();
+        });
+
+        it('defaults_to_unrotated_when_rotation_is_omitted', () => {
+            // Arrange & Act: rotation 省略時は 0 度扱い
+            renderWithTheme(
+                <FurnitureGlyph presetKey="bed" gridW={2} gridH={3} cellSize={40} />,
+            );
+
+            // Assert
+            expect(
+                screen.getByTestId('furniture-glyph-bed-rotation').props.matrix,
+            ).toBeUndefined();
         });
     });
 

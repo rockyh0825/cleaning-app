@@ -115,7 +115,7 @@ components:
     # サーバーが「返す」家具
     Furniture:
       type: object
-      required: [id, roomId, name, gridX, gridY, gridW, gridH, createdAt, updatedAt]
+      required: [id, roomId, name, gridX, gridY, gridW, gridH, rotation, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -141,10 +141,15 @@ components:
           description: 部屋内の相対セルY
         gridW:
           type: integer
-          description: 幅（セル数）
+          description: 幅（セル数）。回転後の占有幅（rotation が 90/270 なら素材の高さと入れ替わる）
         gridH:
           type: integer
-          description: 高さ（セル数）
+          description: 高さ（セル数）。回転後の占有高さ（rotation が 90/270 なら素材の幅と入れ替わる）
+        rotation:
+          type: integer
+          enum: [0, 90, 180, 270]
+          default: 0
+          description: 時計回りの回転角（度）。描画のみに影響し、占有矩形は常に gridW×gridH で軸平行
         createdAt:
           type: string
           format: date-time
@@ -172,6 +177,11 @@ components:
           type: integer
         gridH:
           type: integer
+        rotation:
+          type: integer
+          enum: [0, 90, 180, 270]
+          default: 0
+          description: 時計回りの回転角（度）。省略時は 0
 
     # 家具の「更新入力」。省略したフィールドは変更しない（部分更新）
     FurnitureUpdate:
@@ -193,6 +203,10 @@ components:
         gridH:
           type: integer
           description: 高さ（セル数）
+        rotation:
+          type: integer
+          enum: [0, 90, 180, 270]
+          description: 時計回りの回転角（度）
 
     # 掃除単位。cleaning-record featureと共有するエンティティ
     # 間取りエディタが生成し（部屋種別によりseed）、cleaning-recordが掃除状態を更新する

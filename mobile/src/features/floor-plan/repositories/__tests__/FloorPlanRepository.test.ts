@@ -28,6 +28,7 @@ interface ApiFurniture {
     gridY: number;
     gridW: number;
     gridH: number;
+    rotation: 0 | 90 | 180 | 270;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -64,6 +65,7 @@ const makeApiFurniture = (overrides: Partial<ApiFurniture> = {}): ApiFurniture =
     gridY: 0,
     gridW: 2,
     gridH: 3,
+    rotation: 0,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     ...overrides,
@@ -321,6 +323,19 @@ describe('FloorPlanRepository', () => {
 
             // Assert
             expect(result.presetKey).toBeNull();
+        });
+
+        it('maps_rotation_from_api_response', async () => {
+            // Arrange: 回転済みの家具が API から返る
+            const api = mockApi();
+            api.createFurniture.mockResolvedValue(makeApiFurniture({ rotation: 270 }));
+            const repo = new FloorPlanRepository(api);
+
+            // Act
+            const result = await repo.createFurniture(userId, 'room-1', { name: 'ベッド', gridX: 0, gridY: 0, gridW: 2, gridH: 3 });
+
+            // Assert
+            expect(result.rotation).toBe(270);
         });
     });
 

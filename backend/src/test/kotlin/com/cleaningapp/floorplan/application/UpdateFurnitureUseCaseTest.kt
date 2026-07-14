@@ -47,7 +47,7 @@ class UpdateFurnitureUseCaseTest {
             updatedAt = Instant.now(),
         )
 
-    private fun buildFurniture(): Furniture {
+    private fun buildFurniture(rotation: Int = 0): Furniture {
         val past = Instant.now().minusSeconds(60)
         return Furniture(
             id = furnitureId,
@@ -58,6 +58,7 @@ class UpdateFurnitureUseCaseTest {
             gridY = 0,
             gridW = 2,
             gridH = 2,
+            rotation = rotation,
             createdAt = past,
             updatedAt = past,
         )
@@ -118,6 +119,82 @@ class UpdateFurnitureUseCaseTest {
         assertThat(result.gridY).isEqualTo(original.gridY)
         assertThat(result.gridW).isEqualTo(original.gridW)
         assertThat(result.gridH).isEqualTo(original.gridH)
+    }
+
+    @Test
+    fun `updates_rotation_when_rotation_is_provided`() {
+        // Arrange
+        every { furnitureRepository.findById(furnitureId) } returns buildFurniture()
+        every { roomRepository.findById(roomId) } returns buildRoom()
+        justRun { furnitureRepository.update(any()) }
+        val command =
+            UpdateFurnitureCommand(
+                userId = userId,
+                furnitureId = furnitureId,
+                name = null,
+                gridX = null,
+                gridY = null,
+                gridW = null,
+                gridH = null,
+                rotation = 270,
+            )
+
+        // Act
+        val result = useCase.execute(command)
+
+        // Assert
+        assertThat(result.rotation).isEqualTo(270)
+    }
+
+    @Test
+    fun `keeps_existing_rotation_when_rotation_is_null`() {
+        // Arrange
+        val original = buildFurniture(rotation = 90)
+        every { furnitureRepository.findById(furnitureId) } returns original
+        every { roomRepository.findById(roomId) } returns buildRoom()
+        justRun { furnitureRepository.update(any()) }
+        val command =
+            UpdateFurnitureCommand(
+                userId = userId,
+                furnitureId = furnitureId,
+                name = null,
+                gridX = null,
+                gridY = null,
+                gridW = null,
+                gridH = null,
+                rotation = null,
+            )
+
+        // Act
+        val result = useCase.execute(command)
+
+        // Assert
+        assertThat(result.rotation).isEqualTo(90)
+    }
+
+    @Test
+    fun `updates_rotation_to_zero_when_rotation_is_zero`() {
+        // Arrange
+        every { furnitureRepository.findById(furnitureId) } returns buildFurniture(rotation = 180)
+        every { roomRepository.findById(roomId) } returns buildRoom()
+        justRun { furnitureRepository.update(any()) }
+        val command =
+            UpdateFurnitureCommand(
+                userId = userId,
+                furnitureId = furnitureId,
+                name = null,
+                gridX = null,
+                gridY = null,
+                gridW = null,
+                gridH = null,
+                rotation = 0,
+            )
+
+        // Act
+        val result = useCase.execute(command)
+
+        // Assert
+        assertThat(result.rotation).isEqualTo(0)
     }
 
     @Test

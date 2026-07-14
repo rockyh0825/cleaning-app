@@ -60,6 +60,7 @@ class DeleteRoomUseCaseTest {
             gridY = 0,
             gridW = 1,
             gridH = 1,
+            rotation = 0,
             createdAt = Instant.now(),
             updatedAt = Instant.now(),
         )

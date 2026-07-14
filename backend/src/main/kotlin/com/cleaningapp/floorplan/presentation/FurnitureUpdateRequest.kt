@@ -9,4 +9,6 @@ data class FurnitureUpdateRequest(
     @field:Min(0) val gridY: Int?,
     @field:Min(1) val gridW: Int?,
     @field:Min(1) val gridH: Int?,
+    // null は「変更しない」
+    @field:RotationDegrees val rotation: Int?,
 )

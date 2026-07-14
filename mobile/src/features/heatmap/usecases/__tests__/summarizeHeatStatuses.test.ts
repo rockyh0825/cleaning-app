@@ -24,6 +24,7 @@ function makeRoom(
             gridY: 0,
             gridW: 1,
             gridH: 1,
+            rotation: 0,
             createdAt: new Date("2026-07-01"),
             updatedAt: new Date("2026-07-01"),
         })),
