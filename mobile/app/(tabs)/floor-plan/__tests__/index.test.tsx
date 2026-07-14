@@ -31,6 +31,7 @@ import { router } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
 import { resetUserIdCacheForTest } from '@/shared/hooks/useUserId';
 import type { Furniture } from '@/features/floor-plan/types';
+import { flushRunOnJS } from '@/shared/testing/flushRunOnJS';
 const mockUseLayout = useFloorPlan as jest.Mock;
 
 function createWrapper() {
@@ -470,6 +471,49 @@ describe('FloorPlanIndexScreen', () => {
 
         // Assert: 操作バーが消える
         expect(screen.queryByTestId('selection-actions')).toBeNull();
+    });
+
+    it('hides_selection_actions_when_canvas_background_is_pressed', async () => {
+        // Arrange: 部屋を選択して操作バーを表示する
+        mockHookWithLivingRoom();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        expect(screen.getByTestId('selection-actions')).toBeTruthy();
+
+        // Act: 部屋のない空白領域をタップする（✕ を押さずに解除できる）
+        fireGestureHandler(getByGestureTestId('canvas-background-tap'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+        await flushRunOnJS();
+
+        // Assert: 操作バーが消える
+        expect(screen.queryByTestId('selection-actions')).toBeNull();
+    });
+
+    it('closes_rename_screen_without_mutation_when_canvas_background_is_pressed', async () => {
+        // Arrange: 部屋を選択して名称変更画面を開く
+        const mockUpdateMutate = jest.fn();
+        mockHookWithLivingRoom({ updateRoom: mockUpdateMutate });
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('リビング'));
+        fireEvent.press(screen.getByTestId('selection-rename'));
+        expect(screen.getByTestId('rename-input')).toBeTruthy();
+
+        // Act: 空白領域をタップする
+        fireGestureHandler(getByGestureTestId('canvas-background-tap'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+        await flushRunOnJS();
+
+        // Assert: 選択解除の他経路（✕・家具タップ）と揃えてリネーム対象も破棄される
+        expect(screen.queryByTestId('rename-input')).toBeNull();
+        expect(mockUpdateMutate).not.toHaveBeenCalled();
     });
 
     it('clears_room_selection_when_furniture_is_pressed', async () => {

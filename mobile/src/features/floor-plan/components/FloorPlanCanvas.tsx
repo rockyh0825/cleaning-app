@@ -39,6 +39,11 @@ const DEFAULT_CELL_SIZE = 40;
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 2;
 
+// 背景タップとして扱う指の移動量・押下時間の上限。これを超えたらキャンバスの
+// パン・ピンチ（または長押し）の操作とみなし、選択解除しない
+const BACKGROUND_TAP_MAX_DISTANCE_PT = 8;
+const BACKGROUND_TAP_MAX_DURATION_MS = 250;
+
 /**
  * ピンチのズーム倍率を 0.5〜2 に収める。不正値（NaN・Infinity）は等倍に戻す。
  * Reanimated 非依存の純粋関数としてテストする（UIスレッドでも呼ぶため worklet 指定）。
@@ -80,6 +85,12 @@ type Props = {
      * （ヒートマップ等の読み取り専用表示向け）。未指定なら従来の編集挙動
      */
     readOnly?: boolean;
+    /**
+     * 部屋・家具のない空白領域がタップされたときに通知する（選択解除の導線）。
+     * 制御モードの親は SelectionActions の onDismiss と同じ解除処理を渡す。
+     * readOnly では発火しない。
+     */
+    onBackgroundPress?: () => void;
 };
 
 export function FloorPlanCanvas({
@@ -93,6 +104,7 @@ export function FloorPlanCanvas({
     selectedFurnitureId,
     areaColors,
     readOnly = false,
+    onBackgroundPress,
 }: Props) {
     const theme = useAppTheme();
     // 制御プロップが渡された場合は親が真実の源。未指定なら内部 state で管理する（後方互換）
@@ -146,6 +158,26 @@ export function FloorPlanCanvas({
 
     const canvasGesture = Gesture.Simultaneous(pinchGesture, canvasPanGesture);
 
+    // 空白領域のタップで選択を解除する。ヒット領域はキャンバスを包む可視領域いっぱいの
+    // View（floorPlan-background）で、ズームアウト・パンでキャンバスの外へ出た空白も
+    // 拾える。その代わり部屋・家具のタップもこの祖先に届くため、排他は描画順ではなく
+    // 各要素の Tap 側の blocksExternalGesture（＝この Tap を待たせる）で担保する。
+    //
+    // maxDistance/maxDuration は明示指定する。iOS の既定は maxDistSq=NAN で距離判定が
+    // スキップされ、指をどれだけ動かしても Tap は自己失敗しない（RNTapHandler.m）。
+    // キャンバスのパン・ピンチとの誤発火を防いでいるのはこの距離制限そのもの。
+    // readOnly（ヒートマップ等）では選択 UI が無いのでジェスチャーごと無効化する。
+    const backgroundTapGesture = Gesture.Tap()
+        .enabled(!readOnly)
+        .maxDistance(BACKGROUND_TAP_MAX_DISTANCE_PT)
+        .maxDuration(BACKGROUND_TAP_MAX_DURATION_MS)
+        .onEnd((_event, success) => {
+            // success=false はアクティブ化後に他ジェスチャーへ奪われた場合のみ届く
+            // （BEGAN からの失敗では onEnd 自体が呼ばれない）
+            if (success) runOnJS(handleBackgroundPress)();
+        })
+        .withTestId('canvas-background-tap');
+
     // 依存配列は Babel プラグイン無しの環境（ts-jest でのテスト実行）でも動くよう明示する
     const canvasAnimatedStyle = useAnimatedStyle(
         () => ({
@@ -195,86 +227,99 @@ export function FloorPlanCanvas({
         onFurniturePress?.(furnitureId);
     }
 
+    function handleBackgroundPress() {
+        // 制御モードでは親が選択 state を更新するため内部 state は触らない
+        if (!isRoomSelectionControlled) {
+            setInternalSelectedRoomId(null);
+        }
+        if (!isFurnitureSelectionControlled) {
+            setInternalSelectedFurnitureId(null);
+        }
+        onBackgroundPress?.();
+    }
+
+    // 部屋と家具の描画。背景タップは要素も含めて覆う祖先に付くため、各要素の Tap に
+    // 「この Tap が失敗するまで背景タップを待たせる」関係（blocksExternalGesture）を
+    // 張って排他にする。これが無いと部屋・家具のタップで選択が即座に解除される
+    const roomLayers = floorPlan.rooms.map((room) => (
+        <React.Fragment key={room.id}>
+            <RoomShape
+                room={room}
+                cellSize={cellSize}
+                scale={gridScale}
+                canvasPanGesture={canvasPanGesture}
+                backgroundTapGesture={backgroundTapGesture}
+                selected={!readOnly && resolvedSelectedRoomId === room.id}
+                onPress={() => handleRoomPress(room.id)}
+                onDragEnd={(rect) => effectiveOnRoomDragEnd?.(room.id, rect)}
+                overlapping={overlappingRoomIds.has(room.id)}
+                fillColor={areaColors?.get(room.id)}
+                dragDisabled={readOnly}
+                onResizeEnd={
+                    // 四つ角リサイズは x/y も変わるため矩形をそのまま渡す
+                    effectiveOnRoomDragEnd
+                        ? (rect) => effectiveOnRoomDragEnd(room.id, rect)
+                        : undefined
+                }
+            />
+            {room.furniture.map((furn) => (
+                <FurnitureItem
+                    key={furn.id}
+                    furniture={furn}
+                    cellSize={cellSize}
+                    scale={gridScale}
+                    canvasPanGesture={canvasPanGesture}
+                    backgroundTapGesture={backgroundTapGesture}
+                    selected={!readOnly && resolvedSelectedFurnitureId === furn.id}
+                    onPress={() => handleFurniturePress(furn.id)}
+                    bounds={{
+                        x: room.gridX,
+                        y: room.gridY,
+                        w: room.gridW,
+                        h: room.gridH,
+                    }}
+                    fillColor={areaColors?.get(furn.id)}
+                    dragDisabled={readOnly}
+                    onDragEnd={(rect) => effectiveOnFurnitureDragEnd?.(furn.id, rect)}
+                    onResizeEnd={
+                        // 四つ角リサイズは x/y も変わるため矩形をそのまま渡す
+                        effectiveOnFurnitureDragEnd
+                            ? (rect) => effectiveOnFurnitureDragEnd(furn.id, rect)
+                            : undefined
+                    }
+                />
+            ))}
+        </React.Fragment>
+    ));
+
     return (
         <GestureDetector gesture={canvasGesture}>
             <View testID="floorPlan-viewport" style={styles.viewport}>
-                <Animated.View
-                    testID="floorPlan-canvas"
-                    style={[
-                        styles.container,
-                        {
-                            width: canvasWidth,
-                            height: canvasHeight,
-                            backgroundColor: theme.colors.surface,
-                        },
-                        canvasAnimatedStyle,
-                    ]}
-                >
-                    {renderGrid(canvasWidth, canvasHeight, cellSize, theme)}
-
-                    {floorPlan.rooms.map((room) => (
-                        <React.Fragment key={room.id}>
-                            <RoomShape
-                                room={room}
-                                cellSize={cellSize}
-                                scale={gridScale}
-                                canvasPanGesture={canvasPanGesture}
-                                selected={
-                                    !readOnly && resolvedSelectedRoomId === room.id
-                                }
-                                onPress={() => handleRoomPress(room.id)}
-                                onDragEnd={(rect) =>
-                                    effectiveOnRoomDragEnd?.(room.id, rect)
-                                }
-                                overlapping={overlappingRoomIds.has(room.id)}
-                                fillColor={areaColors?.get(room.id)}
-                                dragDisabled={readOnly}
-                                onResizeEnd={
-                                    // 四つ角リサイズは x/y も変わるため矩形をそのまま渡す
-                                    effectiveOnRoomDragEnd
-                                        ? (rect) =>
-                                              effectiveOnRoomDragEnd(room.id, rect)
-                                        : undefined
-                                }
-                            />
-                            {room.furniture.map((furn) => (
-                                <FurnitureItem
-                                    key={furn.id}
-                                    furniture={furn}
-                                    cellSize={cellSize}
-                                    scale={gridScale}
-                                    canvasPanGesture={canvasPanGesture}
-                                    selected={
-                                        !readOnly &&
-                                        resolvedSelectedFurnitureId === furn.id
-                                    }
-                                    onPress={() => handleFurniturePress(furn.id)}
-                                    bounds={{
-                                        x: room.gridX,
-                                        y: room.gridY,
-                                        w: room.gridW,
-                                        h: room.gridH,
-                                    }}
-                                    fillColor={areaColors?.get(furn.id)}
-                                    dragDisabled={readOnly}
-                                    onDragEnd={(rect) =>
-                                        effectiveOnFurnitureDragEnd?.(furn.id, rect)
-                                    }
-                                    onResizeEnd={
-                                        // 四つ角リサイズは x/y も変わるため矩形をそのまま渡す
-                                        effectiveOnFurnitureDragEnd
-                                            ? (rect) =>
-                                                  effectiveOnFurnitureDragEnd(
-                                                      furn.id,
-                                                      rect,
-                                                  )
-                                            : undefined
-                                    }
-                                />
-                            ))}
-                        </React.Fragment>
-                    ))}
-                </Animated.View>
+                {/* 背景タップのヒット領域。キャンバスは 800x800 固定でズーム・パンにより
+                    可視領域の一部しか覆わないため、ヒット領域はキャンバスの中ではなく
+                    可視領域いっぱいに広がるキャンバスの親に置く */}
+                <GestureDetector gesture={backgroundTapGesture}>
+                    <View
+                        testID="floorPlan-background"
+                        style={StyleSheet.absoluteFill}
+                    >
+                        <Animated.View
+                            testID="floorPlan-canvas"
+                            style={[
+                                styles.container,
+                                {
+                                    width: canvasWidth,
+                                    height: canvasHeight,
+                                    backgroundColor: theme.colors.surface,
+                                },
+                                canvasAnimatedStyle,
+                            ]}
+                        >
+                            {renderGrid(canvasWidth, canvasHeight, cellSize, theme)}
+                            {roomLayers}
+                        </Animated.View>
+                    </View>
+                </GestureDetector>
             </View>
         </GestureDetector>
     );

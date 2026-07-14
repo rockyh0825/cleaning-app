@@ -30,6 +30,12 @@ type Props = {
     scale?: number;
     /** この部屋のドラッグ判定が終わるまで待機させるキャンバスパン */
     canvasPanGesture?: GestureType;
+    /**
+     * このタップ判定が終わるまで待機させる背景タップ（キャンバスの空白タップで選択解除）。
+     * 背景タップは部屋を含む可視領域全体を覆う祖先に付くため、この関係が無いと
+     * 部屋のタップが背景タップとしても扱われ選択が即座に解除される
+     */
+    backgroundTapGesture?: GestureType;
     /** 指定時は種別色の代わりにこの色で塗る（ヒートマップ用）。未指定なら従来の種別色 */
     fillColor?: string;
     /**
@@ -54,6 +60,7 @@ export function RoomShape({
     onResizeEnd,
     scale = 1,
     canvasPanGesture,
+    backgroundTapGesture,
     fillColor,
     dragDisabled = false,
 }: Props) {
@@ -88,6 +95,8 @@ export function RoomShape({
             if (success) runOnJS(onPress)();
         })
         .withTestId(`room-tap-${room.id}`);
+    // 部屋のタップが失敗するまで背景タップ（空白タップでの選択解除）を待たせる
+    if (backgroundTapGesture) tapGesture.blocksExternalGesture(backgroundTapGesture);
 
     return (
         <GestureDetector gesture={tapGesture}>

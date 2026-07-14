@@ -39,6 +39,15 @@ export default function FloorPlanIndexScreen() {
     setSelectedRoomId(roomId);
   }
 
+  /**
+   * 選択解除の唯一の経路。選択とリネーム対象は必ずセットで破棄する
+   * （✕・家具タップ・空白タップ・削除確定のどこから来ても挙動を揃えるため）
+   */
+  function clearRoomSelection() {
+    setSelectedRoomId(null);
+    setRenamingRoomId(null);
+  }
+
   function handleDeletePress() {
     if (!selectedRoom) return;
     const roomId = selectedRoom.id;
@@ -59,9 +68,7 @@ export default function FloorPlanIndexScreen() {
                 );
               },
             });
-            setSelectedRoomId(null);
-            // 選択解除の各経路（✕・家具タップ）と揃えてリネーム対象も破棄する
-            setRenamingRoomId(null);
+            clearRoomSelection();
           },
         },
       ],
@@ -171,10 +178,9 @@ export default function FloorPlanIndexScreen() {
           selectedRoomId={selectedRoomId}
           onRoomPress={handleRoomPress}
           // 間取り一覧では家具への操作は提供しないため、部屋の選択解除のみ行う（誤削除防止）
-          onFurniturePress={() => {
-            setSelectedRoomId(null);
-            setRenamingRoomId(null);
-          }}
+          onFurniturePress={clearRoomSelection}
+          // 空白領域のタップでも解除できるようにする（✕ を押さずに済む）
+          onBackgroundPress={clearRoomSelection}
           onRoomDragEnd={(roomId, rect) => {
             updateRoom.mutate({
               roomId,
@@ -206,10 +212,7 @@ export default function FloorPlanIndexScreen() {
             renameLabel="名称修正"
             onRename={() => setRenamingRoomId(selectedRoom.id)}
             onDelete={handleDeletePress}
-            onDismiss={() => {
-              setSelectedRoomId(null);
-              setRenamingRoomId(null);
-            }}
+            onDismiss={clearRoomSelection}
           />
         </View>
       )}
