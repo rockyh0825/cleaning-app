@@ -80,6 +80,12 @@ type Props = {
      * （ヒートマップ等の読み取り専用表示向け）。未指定なら従来の編集挙動
      */
     readOnly?: boolean;
+    /**
+     * 部屋・家具のない空白領域がタップされたときに通知する（選択解除の導線）。
+     * 制御モードの親は SelectionActions の onDismiss と同じ解除処理を渡す。
+     * readOnly では発火しない。
+     */
+    onBackgroundPress?: () => void;
 };
 
 export function FloorPlanCanvas({
@@ -93,6 +99,7 @@ export function FloorPlanCanvas({
     selectedFurnitureId,
     areaColors,
     readOnly = false,
+    onBackgroundPress,
 }: Props) {
     const theme = useAppTheme();
     // 制御プロップが渡された場合は親が真実の源。未指定なら内部 state で管理する（後方互換）
@@ -146,6 +153,17 @@ export function FloorPlanCanvas({
 
     const canvasGesture = Gesture.Simultaneous(pinchGesture, canvasPanGesture);
 
+    // 空白領域のタップで選択を解除する。ヒット領域は部屋・家具の背面に敷いた専用 View の
+    // ため、部屋・家具の上のタップはこの Tap に届かない（ジェスチャーの合成ではなく
+    // ヒットテストで排他にする）。パン・ピンチ中は Tap 自体が失敗するため誤発火しない。
+    // readOnly（ヒートマップ等）では選択 UI が無いのでジェスチャーごと無効化する。
+    const backgroundTapGesture = Gesture.Tap()
+        .enabled(!readOnly)
+        .onEnd((_event, success) => {
+            if (success) runOnJS(handleBackgroundPress)();
+        })
+        .withTestId('canvas-background-tap');
+
     // 依存配列は Babel プラグイン無しの環境（ts-jest でのテスト実行）でも動くよう明示する
     const canvasAnimatedStyle = useAnimatedStyle(
         () => ({
@@ -195,6 +213,17 @@ export function FloorPlanCanvas({
         onFurniturePress?.(furnitureId);
     }
 
+    function handleBackgroundPress() {
+        // 制御モードでは親が選択 state を更新するため内部 state は触らない
+        if (!isRoomSelectionControlled) {
+            setInternalSelectedRoomId(null);
+        }
+        if (!isFurnitureSelectionControlled) {
+            setInternalSelectedFurnitureId(null);
+        }
+        onBackgroundPress?.();
+    }
+
     return (
         <GestureDetector gesture={canvasGesture}>
             <View testID="floorPlan-viewport" style={styles.viewport}>
@@ -211,6 +240,15 @@ export function FloorPlanCanvas({
                     ]}
                 >
                     {renderGrid(canvasWidth, canvasHeight, cellSize, theme)}
+
+                    {/* 背景タップのヒット領域。部屋・家具より先に描画される背面の兄弟の
+                        ため、部屋・家具の上のタップはこの View に届かない */}
+                    <GestureDetector gesture={backgroundTapGesture}>
+                        <View
+                            testID="floorPlan-background"
+                            style={StyleSheet.absoluteFill}
+                        />
+                    </GestureDetector>
 
                     {floorPlan.rooms.map((room) => (
                         <React.Fragment key={room.id}>

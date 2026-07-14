@@ -167,6 +167,11 @@ export default function RoomDetailScreen() {
                     setSelectedFurnitureId(null);
                     setRenamingFurnitureId(null);
                 }}
+                // 空白領域のタップでも解除できるようにする（✕ を押さずに済む）
+                onBackgroundPress={() => {
+                    setSelectedFurnitureId(null);
+                    setRenamingFurnitureId(null);
+                }}
                 onFurnitureDragEnd={(furnitureId, rect) =>
                     updateFurniture.mutate({
                         furnitureId,

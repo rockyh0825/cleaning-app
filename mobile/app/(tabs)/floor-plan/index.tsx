@@ -175,6 +175,11 @@ export default function FloorPlanIndexScreen() {
             setSelectedRoomId(null);
             setRenamingRoomId(null);
           }}
+          // 空白領域のタップでも解除できるようにする（✕ を押さずに済む）
+          onBackgroundPress={() => {
+            setSelectedRoomId(null);
+            setRenamingRoomId(null);
+          }}
           onRoomDragEnd={(roomId, rect) => {
             updateRoom.mutate({
               roomId,

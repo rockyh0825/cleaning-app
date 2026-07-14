@@ -1,6 +1,12 @@
 import React from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
-import { act, render, screen, waitFor } from '@testing-library/react-native';
+import {
+    act,
+    render,
+    screen,
+    waitFor,
+    within,
+} from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import {
     fireGestureHandler,
@@ -785,5 +791,180 @@ describe('FloorPlanCanvas', () => {
             screen.getByTestId('furniture-item-furn-1').props.style,
         );
         expect(roomStyle.zIndex ?? 0).toBe(furnitureStyle.zIndex ?? 0);
+    });
+
+    it('calls_onBackgroundPress_when_background_is_pressed', async () => {
+        // Arrange
+        const mockOnBackgroundPress = jest.fn();
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                selectedRoomId="room-1"
+                onBackgroundPress={mockOnBackgroundPress}
+            />,
+        );
+
+        // Act: 部屋・家具のない空白領域をタップする
+        fireGestureHandler(getByGestureTestId('canvas-background-tap'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+        await act(async () => {
+            await new Promise((resolve) => setImmediate(resolve));
+        });
+
+        // Assert
+        expect(mockOnBackgroundPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('does_not_call_onBackgroundPress_when_background_tap_fails', async () => {
+        // Arrange: パン・ピンチに主導権を奪われた Tap は失敗で終わる
+        const mockOnBackgroundPress = jest.fn();
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                selectedRoomId="room-1"
+                onBackgroundPress={mockOnBackgroundPress}
+            />,
+        );
+
+        // Act: 成功せずに終わるタップを流す
+        fireGestureHandler(getByGestureTestId('canvas-background-tap'), [
+            { state: State.BEGAN },
+            { state: State.FAILED },
+        ]);
+        await act(async () => {
+            await new Promise((resolve) => setImmediate(resolve));
+        });
+
+        // Assert: 選択解除は起きない
+        expect(mockOnBackgroundPress).not.toHaveBeenCalled();
+    });
+
+    it('does_not_call_onBackgroundPress_when_room_or_furniture_is_pressed', async () => {
+        // Arrange
+        const mockOnBackgroundPress = jest.fn();
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                selectedRoomId="room-1"
+                onRoomPress={jest.fn()}
+                onFurniturePress={jest.fn()}
+                onBackgroundPress={mockOnBackgroundPress}
+            />,
+        );
+
+        // Act: 部屋・家具をタップする
+        fireGestureHandler(getByGestureTestId('room-tap-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+        fireGestureHandler(getByGestureTestId('furniture-tap-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+        await act(async () => {
+            await new Promise((resolve) => setImmediate(resolve));
+        });
+
+        // Assert: 要素のタップは背景タップとして扱わない
+        expect(mockOnBackgroundPress).not.toHaveBeenCalled();
+    });
+
+    it('renders_background_hit_area_without_rooms_and_furniture', () => {
+        // Arrange & Act
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onBackgroundPress={jest.fn()}
+            />,
+        );
+
+        // Assert: 背景のヒット領域に部屋・家具を含めないことが、要素タップが
+        // 背景タップへ伝播しないことの担保（ヒットテストによる排他）
+        const background = screen.getByTestId('floorPlan-background');
+        expect(within(background).queryByTestId('room-shape-room-1')).toBeNull();
+        expect(
+            within(background).queryByTestId('furniture-item-furn-1'),
+        ).toBeNull();
+    });
+
+    it('clears_internal_room_selection_when_background_is_pressed', async () => {
+        // Arrange: 非制御（後方互換）でまず部屋を選択する
+        render(<FloorPlanCanvas floorPlan={floorplanWithRoom} />);
+        fireGestureHandler(getByGestureTestId('room-tap-room-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+        await waitFor(() => {
+            expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
+        });
+
+        // Act: 背景をタップする
+        fireGestureHandler(getByGestureTestId('canvas-background-tap'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+
+        // Assert: 内部 state 駆動でも選択枠が消える
+        await waitFor(() => {
+            expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
+        });
+    });
+
+    it('clears_internal_furniture_selection_when_background_is_pressed', async () => {
+        // Arrange: 非制御（後方互換）でまず家具を選択する
+        render(<FloorPlanCanvas floorPlan={floorplanWithRoom} />);
+        fireGestureHandler(getByGestureTestId('furniture-tap-furn-1'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+        await waitFor(() => {
+            const item = screen.getByTestId('furniture-item-furn-1');
+            expect(StyleSheet.flatten(item.props.style).borderColor).toBe(
+                lightTheme.colors.primary,
+            );
+        });
+
+        // Act: 背景をタップする
+        fireGestureHandler(getByGestureTestId('canvas-background-tap'), [
+            { state: State.BEGAN },
+            { state: State.ACTIVE },
+            { state: State.END },
+        ]);
+
+        // Assert: 内部 state 駆動でも選択ボーダーが外れる
+        await waitFor(() => {
+            const item = screen.getByTestId('furniture-item-furn-1');
+            expect(StyleSheet.flatten(item.props.style).borderColor).toBe(
+                lightTheme.colors.outline,
+            );
+        });
+    });
+
+    it('disables_background_tap_when_readOnly', () => {
+        // Arrange & Act: readOnly では選択 UI が無いため背景タップも無効化する
+        render(<FloorPlanCanvas floorPlan={floorplanWithRoom} readOnly />);
+
+        // Assert
+        expect(getByGestureTestId('canvas-background-tap').config.enabled).toBe(
+            false,
+        );
+    });
+
+    it('keeps_background_tap_enabled_when_readOnly_is_omitted', () => {
+        // Arrange & Act
+        render(<FloorPlanCanvas floorPlan={floorplanWithRoom} />);
+
+        // Assert
+        expect(getByGestureTestId('canvas-background-tap').config.enabled).toBe(
+            true,
+        );
     });
 });
