@@ -1,4 +1,5 @@
 import type { Rotation } from '../types';
+import { clampWithin } from '@/shared/utils/grid';
 
 /** 1タップあたりの回転量（度）。時計回り */
 const ROTATION_STEP = 90;
@@ -20,22 +21,44 @@ export function isQuarterTurn(rotation: Rotation): boolean {
 }
 
 /**
- * 家具を時計回りに 90 度回した結果の rotation と占有サイズを返す。
+ * 家具を部屋の中で時計回りに 90 度回した結果のパッチを返す。
  *
  * 90 度回すたびに占有矩形の縦横は必ず入れ替わるため gridW/gridH をスワップする。
  * こうすると占有矩形は常に軸平行のままなので、当たり判定・クランプ・リサイズは
  * 回転を一切意識しなくてよい（設計の要）。
- * 回した結果が部屋からはみ出す場合の是正は UpdateFurnitureUseCase のクランプに委ねる。
+ *
+ * 入れ替えたサイズが部屋に収まらない場合は、縮めるのではなく回転自体を諦めて null を返す。
+ * サイズを部屋に合わせて切り詰めると、次の回転で元のサイズへ戻れず情報が永久に失われる
+ * （例: 4x2 の部屋の 3x1 を 4 回まわすと 2x1 に痩せる）。位置のクランプは移動で復元できるので許容する。
+ *
+ * @returns 回転後の rotation・占有サイズ・クランプ済み座標。収まらない場合は null
  */
-export function rotateClockwise(furniture: {
-    gridW: number;
-    gridH: number;
-    rotation: Rotation;
-}): { rotation: Rotation; gridW: number; gridH: number } {
+export function rotateClockwiseWithin(
+    furniture: {
+        gridX: number;
+        gridY: number;
+        gridW: number;
+        gridH: number;
+        rotation: Rotation;
+    },
+    room: { gridW: number; gridH: number },
+): { rotation: Rotation; gridW: number; gridH: number; gridX: number; gridY: number } | null {
+    const rotated = { w: furniture.gridH, h: furniture.gridW };
+
+    if (rotated.w > room.gridW || rotated.h > room.gridH) return null;
+
+    // 家具座標は部屋相対（0基点）。可動域は部屋サイズの相対矩形
+    const clamped = clampWithin(
+        { x: furniture.gridX, y: furniture.gridY, w: rotated.w, h: rotated.h },
+        { x: 0, y: 0, w: room.gridW, h: room.gridH },
+    );
+
     return {
         rotation: nextRotation(furniture.rotation),
-        gridW: furniture.gridH,
-        gridH: furniture.gridW,
+        gridW: clamped.w,
+        gridH: clamped.h,
+        gridX: clamped.x,
+        gridY: clamped.y,
     };
 }
 

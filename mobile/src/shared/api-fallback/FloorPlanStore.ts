@@ -49,6 +49,10 @@ function reviveRoom(raw: Room): Room {
 function reviveFurniture(raw: Furniture): Furniture {
   return {
     ...raw,
+    // rotation 導入前のビルドが永続化した家具にはこのキーが無い。
+    // 未定義のまま回すと nextRotation(undefined) が NaN になり、
+    // 占有サイズだけ入れ替わってグリフが回らない状態に陥るため既定値で補う。
+    rotation: raw.rotation ?? 0,
     createdAt: new Date(raw.createdAt),
     updatedAt: new Date(raw.updatedAt),
   };

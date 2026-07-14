@@ -276,6 +276,42 @@ describe('RoomDetailScreen', () => {
         expect(mockUpdateMutate).not.toHaveBeenCalled();
     });
 
+    it('does_not_rotate_and_explains_why_when_the_rotated_furniture_would_not_fit_the_room', async () => {
+        // Arrange: 4x2 の部屋に 3x1 のソファ。90 度回すと 1x3 になり高さ 2 に収まらない
+        const alertSpy = jest.spyOn(Alert, 'alert');
+        const mockUpdateMutate = jest.fn();
+        mockUseFloorPlan.mockReturnValue({
+            floorPlan: {
+                data: {
+                    rooms: [
+                        {
+                            ...targetRoom,
+                            gridW: 4,
+                            gridH: 2,
+                            furniture: [{ ...sofa, gridW: 3, gridH: 1, rotation: 0 }],
+                        },
+                    ],
+                },
+                isLoading: false,
+                isError: false,
+            },
+            addFurniture: { mutate: jest.fn() },
+            updateFurniture: { mutate: mockUpdateMutate },
+            deleteFurniture: { mutate: jest.fn() },
+        });
+        render(<RoomDetailScreen />, { wrapper: createWrapper() });
+        fireEvent.press(await screen.findByText('ソファ'));
+
+        // Act
+        fireEvent.press(screen.getByTestId('selection-rotate'));
+
+        // Assert: 縮めるくらいなら回さない。ただし黙って無視せず理由を伝える
+        expect(mockUpdateMutate).not.toHaveBeenCalled();
+        expect(alertSpy).toHaveBeenCalledTimes(1);
+        const [title, message] = alertSpy.mock.calls[0];
+        expect(`${title}${message}`).toMatch(/はみ出/);
+    });
+
     it('hides_selection_actions_when_room_is_pressed', async () => {
         // Arrange: 家具を選択して操作バーを表示する
         mockHookWithFurniture([sofa]);
