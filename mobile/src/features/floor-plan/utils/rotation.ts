@@ -1,5 +1,4 @@
 import type { Rotation } from '../types';
-import { clampWithin } from '@/shared/utils/grid';
 
 /** 1タップあたりの回転量（度）。時計回り */
 const ROTATION_STEP = 90;
@@ -21,45 +20,58 @@ export function isQuarterTurn(rotation: Rotation): boolean {
 }
 
 /**
- * 家具を部屋の中で時計回りに 90 度回した結果のパッチを返す。
+ * 家具を時計回りに 90 度回した結果のパッチを返す。部屋は見ないし、拒否もしない。
  *
  * 90 度回すたびに占有矩形の縦横は必ず入れ替わるため gridW/gridH をスワップする。
  * こうすると占有矩形は常に軸平行のままなので、当たり判定・クランプ・リサイズは
  * 回転を一切意識しなくてよい（設計の要）。
  *
- * 入れ替えたサイズが部屋に収まらない場合は、縮めるのではなく回転自体を諦めて null を返す。
- * サイズを部屋に合わせて切り詰めると、次の回転で元のサイズへ戻れず情報が永久に失われる
- * （例: 4x2 の部屋の 3x1 を 4 回まわすと 2x1 に痩せる）。位置のクランプは移動で復元できるので許容する。
+ * ピボットは家具の**中心**。左上を固定して回すと 3x1 が縦に伸びた分だけ下へせり出し、
+ * それを部屋の中へクランプすると家具が一方向へ「歩く」。クランプは押し戻すだけで
+ * 引き戻さない片道ラチェットなので、一周しても元の位置へ帰らず抜けた跡が余白として残る
+ * （例: 4x4 の部屋の 3x1 を (1,2) から 4 回まわすと (1,1) に居座る）。
+ * 中心ピボットなら回転は純粋な可逆変換になり、その場で回るという直感とも一致する。
  *
- * @returns 回転後の rotation・占有サイズ・クランプ済み座標。収まらない場合は null
+ * 収まるかどうかの判定は呼び出し側（fitsWithin）の責務。はみ出す回転もそのまま返し、
+ * 保存するか保留にするかは画面が決める。ここで拒否すると「回せないので直せない」に陥る。
  */
-export function rotateClockwiseWithin(
-    furniture: {
-        gridX: number;
-        gridY: number;
-        gridW: number;
-        gridH: number;
-        rotation: Rotation;
-    },
-    room: { gridW: number; gridH: number },
-): { rotation: Rotation; gridW: number; gridH: number; gridX: number; gridY: number } | null {
-    const rotated = { w: furniture.gridH, h: furniture.gridW };
-
-    if (rotated.w > room.gridW || rotated.h > room.gridH) return null;
-
-    // 家具座標は部屋相対（0基点）。可動域は部屋サイズの相対矩形
-    const clamped = clampWithin(
-        { x: furniture.gridX, y: furniture.gridY, w: rotated.w, h: rotated.h },
-        { x: 0, y: 0, w: room.gridW, h: room.gridH },
-    );
+export function rotateClockwise(furniture: {
+    gridX: number;
+    gridY: number;
+    gridW: number;
+    gridH: number;
+    rotation: Rotation;
+}): { rotation: Rotation; gridW: number; gridH: number; gridX: number; gridY: number } {
+    // 中心を保ったまま縦横を入れ替えると、左上は各軸へ ±(gridW - gridH)/2 だけ動く
+    const halfDelta = (furniture.gridW - furniture.gridH) / 2;
+    // 辺の長さの差が奇数だと中心が半セルずれ、丸めなしにはグリッドへ戻せない。
+    // 0/180 では切り捨て・90/270 では切り上げと向きを対にすることで、往路で落とした
+    // 半セルを復路で必ず拾い直す（同じ向きに丸めると 1 タップごとに半セルずつ歩く）
+    const snap = isQuarterTurn(furniture.rotation) ? Math.ceil : Math.floor;
 
     return {
         rotation: nextRotation(furniture.rotation),
-        gridW: clamped.w,
-        gridH: clamped.h,
-        gridX: clamped.x,
-        gridY: clamped.y,
+        gridW: furniture.gridH,
+        gridH: furniture.gridW,
+        gridX: snap(furniture.gridX + halfDelta),
+        gridY: snap(furniture.gridY - halfDelta),
     };
+}
+
+/**
+ * 家具の占有矩形が部屋の中に完全に収まっているか判定する。
+ * 家具座標は部屋相対（0基点）なので、部屋側は原点とサイズだけで表せる。
+ */
+export function fitsWithin(
+    furniture: { gridX: number; gridY: number; gridW: number; gridH: number },
+    room: { gridW: number; gridH: number },
+): boolean {
+    return (
+        furniture.gridX >= 0 &&
+        furniture.gridY >= 0 &&
+        furniture.gridX + furniture.gridW <= room.gridW &&
+        furniture.gridY + furniture.gridH <= room.gridH
+    );
 }
 
 /**

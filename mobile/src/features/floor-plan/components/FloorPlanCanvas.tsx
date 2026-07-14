@@ -91,6 +91,11 @@ type Props = {
      * readOnly では発火しない。
      */
     onBackgroundPress?: () => void;
+    /**
+     * 保留中（サーバー未保存）として破線表示する家具の id。
+     * 部屋からはみ出す回転はローカルにだけ持つため、確定済みと見分けが付くようにする。
+     */
+    pendingFurnitureId?: string | null;
 };
 
 export function FloorPlanCanvas({
@@ -105,6 +110,7 @@ export function FloorPlanCanvas({
     areaColors,
     readOnly = false,
     onBackgroundPress,
+    pendingFurnitureId,
 }: Props) {
     const theme = useAppTheme();
     // 制御プロップが渡された場合は親が真実の源。未指定なら内部 state で管理する（後方互換）
@@ -271,6 +277,7 @@ export function FloorPlanCanvas({
                     canvasPanGesture={canvasPanGesture}
                     backgroundTapGesture={backgroundTapGesture}
                     selected={!readOnly && resolvedSelectedFurnitureId === furn.id}
+                    pending={!readOnly && pendingFurnitureId === furn.id}
                     onPress={() => handleFurniturePress(furn.id)}
                     bounds={{
                         x: room.gridX,

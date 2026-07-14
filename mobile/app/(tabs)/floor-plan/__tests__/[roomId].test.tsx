@@ -8,6 +8,7 @@ import {
     waitFor,
     within,
 } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import {
     fireGestureHandler,
@@ -276,40 +277,193 @@ describe('RoomDetailScreen', () => {
         expect(mockUpdateMutate).not.toHaveBeenCalled();
     });
 
-    it('does_not_rotate_and_explains_why_when_the_rotated_furniture_would_not_fit_the_room', async () => {
-        // Arrange: 4x2 の部屋に 3x1 のソファ。90 度回すと 1x3 になり高さ 2 に収まらない
-        const alertSpy = jest.spyOn(Alert, 'alert');
-        const mockUpdateMutate = jest.fn();
-        mockUseFloorPlan.mockReturnValue({
-            floorPlan: {
-                data: {
-                    rooms: [
-                        {
-                            ...targetRoom,
-                            gridW: 4,
-                            gridH: 2,
-                            furniture: [{ ...sofa, gridW: 3, gridH: 1, rotation: 0 }],
-                        },
-                    ],
+    describe('回転がはみ出すときは保留する', () => {
+        /** 4x2 の部屋の 3x1 ソファ。90 度回すと 1x3 になり高さ 2 に構造的に収まらない */
+        function renderTightRoom() {
+            const mockUpdateMutate = jest.fn();
+            mockUseFloorPlan.mockReturnValue({
+                floorPlan: {
+                    data: {
+                        rooms: [
+                            {
+                                ...targetRoom,
+                                gridW: 4,
+                                gridH: 2,
+                                furniture: [
+                                    { ...sofa, gridX: 0, gridY: 0, gridW: 3, gridH: 1, rotation: 0 },
+                                ],
+                            },
+                        ],
+                    },
+                    isLoading: false,
+                    isError: false,
                 },
-                isLoading: false,
-                isError: false,
-            },
-            addFurniture: { mutate: jest.fn() },
-            updateFurniture: { mutate: mockUpdateMutate },
-            deleteFurniture: { mutate: jest.fn() },
+                addFurniture: { mutate: jest.fn() },
+                updateFurniture: { mutate: mockUpdateMutate },
+                deleteFurniture: { mutate: jest.fn() },
+            });
+            return mockUpdateMutate;
+        }
+
+        it('does_not_save_the_rotation_when_the_furniture_would_poke_out_of_the_room', async () => {
+            // Arrange
+            const mockUpdateMutate = renderTightRoom();
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+            fireEvent.press(await screen.findByText('ソファ'));
+
+            // Act
+            fireEvent.press(screen.getByTestId('selection-rotate'));
+
+            // Assert: はみ出す向きはサーバーへ送らない（保留）
+            expect(mockUpdateMutate).not.toHaveBeenCalled();
         });
-        render(<RoomDetailScreen />, { wrapper: createWrapper() });
-        fireEvent.press(await screen.findByText('ソファ'));
 
-        // Act
-        fireEvent.press(screen.getByTestId('selection-rotate'));
+        it('rotates_the_furniture_on_screen_even_though_it_pokes_out_so_the_user_is_never_stuck', async () => {
+            // Arrange
+            renderTightRoom();
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+            fireEvent.press(await screen.findByText('ソファ'));
 
-        // Assert: 縮めるくらいなら回さない。ただし黙って無視せず理由を伝える
-        expect(mockUpdateMutate).not.toHaveBeenCalled();
-        expect(alertSpy).toHaveBeenCalledTimes(1);
-        const [title, message] = alertSpy.mock.calls[0];
-        expect(`${title}${message}`).toMatch(/はみ出/);
+            // Act
+            fireEvent.press(screen.getByTestId('selection-rotate'));
+
+            // Assert: 拒否せず 1x3 に回った姿を描く（3セル×40px = 120）
+            const item = screen.getByTestId('furniture-item-furn-1');
+            const style = StyleSheet.flatten(item.props.style);
+            expect(style.width).toBe(40);
+            expect(style.height).toBe(120);
+        });
+
+        it('marks_the_pending_furniture_as_unsaved', async () => {
+            // Arrange
+            renderTightRoom();
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+            fireEvent.press(await screen.findByText('ソファ'));
+
+            // Act
+            fireEvent.press(screen.getByTestId('selection-rotate'));
+
+            // Assert: 未保存であることが見て分かる
+            const item = screen.getByTestId('furniture-item-furn-1');
+            const style = StyleSheet.flatten(item.props.style);
+            expect(style.borderStyle).toBe('dashed');
+        });
+
+        it('tells_the_user_the_rotation_is_held_instead_of_blocking_the_button', async () => {
+            // Arrange: Alert で操作を止めるのではなく、保留中であることを画面に出す
+            renderTightRoom();
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+            fireEvent.press(await screen.findByText('ソファ'));
+
+            // Act
+            fireEvent.press(screen.getByTestId('selection-rotate'));
+
+            // Assert
+            expect(screen.getByTestId('pending-rotation-notice')).toBeTruthy();
+        });
+
+        it('saves_the_rotation_as_soon_as_another_turn_brings_it_back_inside_the_room', async () => {
+            // Arrange: 保留状態から更に 90 度回すと 3x1 に戻り、部屋に収まる
+            const mockUpdateMutate = renderTightRoom();
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+            fireEvent.press(await screen.findByText('ソファ'));
+            fireEvent.press(screen.getByTestId('selection-rotate'));
+
+            // Act
+            fireEvent.press(screen.getByTestId('selection-rotate'));
+
+            // Assert: 保留していた分をまとめて確定する（180 度・元のサイズ・元の位置）
+            expect(mockUpdateMutate).toHaveBeenCalledTimes(1);
+            expect(mockUpdateMutate).toHaveBeenCalledWith({
+                furnitureId: 'furn-1',
+                input: { rotation: 180, gridW: 3, gridH: 1, gridX: 0, gridY: 0 },
+            });
+        });
+
+        it('clears_the_pending_notice_once_the_rotation_is_saved', async () => {
+            // Arrange
+            renderTightRoom();
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+            fireEvent.press(await screen.findByText('ソファ'));
+            fireEvent.press(screen.getByTestId('selection-rotate'));
+
+            // Act
+            fireEvent.press(screen.getByTestId('selection-rotate'));
+
+            // Assert
+            expect(screen.queryByTestId('pending-rotation-notice')).toBeNull();
+        });
+
+        it('saves_the_rotation_immediately_when_it_fits_the_room', async () => {
+            // Arrange: 4x4 の広い部屋なら 3x1 → 1x3 は収まる（正常系）
+            const mockUpdateMutate = jest.fn();
+            mockUseFloorPlan.mockReturnValue({
+                floorPlan: {
+                    data: {
+                        rooms: [
+                            {
+                                ...targetRoom,
+                                furniture: [
+                                    { ...sofa, gridX: 1, gridY: 2, gridW: 3, gridH: 1, rotation: 0 },
+                                ],
+                            },
+                        ],
+                    },
+                    isLoading: false,
+                    isError: false,
+                },
+                addFurniture: { mutate: jest.fn() },
+                updateFurniture: { mutate: mockUpdateMutate },
+                deleteFurniture: { mutate: jest.fn() },
+            });
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+            fireEvent.press(await screen.findByText('ソファ'));
+
+            // Act
+            fireEvent.press(screen.getByTestId('selection-rotate'));
+
+            // Assert: 中心 (2.5,2.5) を保ったまま 1x3 になる。保留にはしない
+            expect(mockUpdateMutate).toHaveBeenCalledWith({
+                furnitureId: 'furn-1',
+                input: { rotation: 90, gridW: 1, gridH: 3, gridX: 2, gridY: 1 },
+            });
+            expect(screen.queryByTestId('pending-rotation-notice')).toBeNull();
+        });
+
+        it('does_not_leave_a_gap_behind_after_a_full_turn', async () => {
+            // Arrange: 左上ピボット＋クランプ時代は (1,2) の 3x1 が 4 タップ後 (1,1) に居座り
+            // 元居た場所に余白が残った（回帰テスト）
+            const mockUpdateMutate = jest.fn();
+            const furniture = { ...sofa, gridX: 1, gridY: 2, gridW: 3, gridH: 1, rotation: 0 };
+            let current = furniture;
+            mockUseFloorPlan.mockImplementation(() => ({
+                floorPlan: {
+                    data: { rooms: [{ ...targetRoom, furniture: [current] }] },
+                    isLoading: false,
+                    isError: false,
+                },
+                addFurniture: { mutate: jest.fn() },
+                // 保存された値を次のレンダーへ反映し、実際の往復を再現する
+                updateFurniture: {
+                    mutate: (args: { input: Record<string, number> }) => {
+                        mockUpdateMutate(args);
+                        current = { ...current, ...args.input };
+                    },
+                },
+                deleteFurniture: { mutate: jest.fn() },
+            }));
+            const { rerender } = render(<RoomDetailScreen />, { wrapper: createWrapper() });
+            fireEvent.press(await screen.findByText('ソファ'));
+
+            // Act: 4 回まわす
+            for (let i = 0; i < 4; i++) {
+                fireEvent.press(screen.getByTestId('selection-rotate'));
+                rerender(<RoomDetailScreen />);
+            }
+
+            // Assert: 一周して元の位置・サイズ・向きへ完全に戻る
+            expect(current).toMatchObject({ gridX: 1, gridY: 2, gridW: 3, gridH: 1, rotation: 0 });
+        });
     });
 
     it('hides_selection_actions_when_room_is_pressed', async () => {

@@ -48,6 +48,11 @@ type Props = {
      * 読み取り専用表示で指への追従やキャンバスパンの阻害を防ぐ。未指定なら従来どおりドラッグ可能
      */
     dragDisabled?: boolean;
+    /**
+     * true で「保留中（サーバー未保存）」として破線・danger 色で描く。
+     * 部屋からはみ出す回転はローカルにだけ持つため、確定済みの家具と見分けが付く必要がある。
+     */
+    pending?: boolean;
 };
 
 export function FurnitureItem({
@@ -63,6 +68,7 @@ export function FurnitureItem({
     backgroundTapGesture,
     fillColor,
     dragDisabled = false,
+    pending = false,
 }: Props) {
     const theme = useAppTheme();
     const width = furniture.gridW * cellSize;
@@ -120,10 +126,15 @@ export function FurnitureItem({
                         top,
                         backgroundColor: fillColor ?? theme.colors.surface,
                         borderRadius: theme.radius.sm,
-                        borderWidth: selected ? 2 : 1,
-                        borderColor: selected
-                            ? theme.colors.primary
-                            : theme.colors.outline,
+                        borderWidth: selected || pending ? 2 : 1,
+                        // 保留（未保存）は選択より優先して伝える。保留中は常に選択中でもあるため、
+                        // 選択枠を優先すると「まだ保存されていない」ことを示す手段が無くなる
+                        borderColor: pending
+                            ? theme.colors.danger
+                            : selected
+                              ? theme.colors.primary
+                              : theme.colors.outline,
+                        borderStyle: pending ? 'dashed' : 'solid',
                     },
                     fillTransitionStyle,
                     animatedStyle,

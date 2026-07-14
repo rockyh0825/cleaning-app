@@ -19,12 +19,34 @@ import { api } from '@/shared/app-root/providers/di';
 import { FloatingActionButton } from '@/shared/components/FloatingActionButton';
 import { useAppTheme } from '@/shared/theme/useAppTheme';
 import { findFreePosition } from '@/shared/utils/grid';
-import { rotateClockwiseWithin } from '@/features/floor-plan/utils/rotation';
-import type { FloorPlan } from '@/features/floor-plan/types';
+import type { Rect } from '@/shared/utils/grid';
+import { fitsWithin, rotateClockwise } from '@/features/floor-plan/utils/rotation';
+import type { FloorPlan, Furniture, RoomWithFurniture } from '@/features/floor-plan/types';
+
+/** 回転で生じる家具のパッチ（向き＋占有矩形）。保留中はこれをローカルに持つ */
+type FurniturePatch = Pick<Furniture, 'rotation' | 'gridX' | 'gridY' | 'gridW' | 'gridH'>;
 
 const repository = new FloorPlanRepository(api);
 
 const EMPTY_FLOORPLAN: FloorPlan = { rooms: [] };
+
+/**
+ * 保留中の回転を部屋のスナップショットへ重ねる。保存前の向きを画面に映すための描画専用の合成で、
+ * サーバーへ送る値には使わない。対象の家具が消えている場合（削除・別部屋）は何もしない。
+ */
+function applyPendingRotation(
+    room: RoomWithFurniture | undefined,
+    pending: { furnitureId: string; patch: FurniturePatch } | null,
+): RoomWithFurniture | undefined {
+    if (!room || !pending) return room;
+    if (!room.furniture.some((f) => f.id === pending.furnitureId)) return room;
+    return {
+        ...room,
+        furniture: room.furniture.map((f) =>
+            f.id === pending.furnitureId ? { ...f, ...pending.patch } : f,
+        ),
+    };
+}
 
 export default function RoomDetailScreen() {
     const theme = useAppTheme();
@@ -34,6 +56,15 @@ export default function RoomDetailScreen() {
     const [selectedFurnitureId, setSelectedFurnitureId] = useState<string | null>(null);
     // boolean だと対象消失後の別家具選択でシートが誤って開くため、対象の家具 id で追跡する
     const [renamingFurnitureId, setRenamingFurnitureId] = useState<string | null>(null);
+    /**
+     * 部屋からはみ出したまま確定できない回転。サーバーへは送らずローカルに保留する。
+     * 回転を拒否すると「収まらない向きの家具は二度と回せない」という詰みが生まれるため、
+     * 回転そのものは必ず成立させ、保存だけを収まるまで待つ
+     */
+    const [pendingRotation, setPendingRotation] = useState<{
+        furnitureId: string;
+        patch: FurniturePatch;
+    } | null>(null);
 
     const { floorPlan, addFurniture, updateFurniture, deleteFurniture } = useFloorPlan(
         userId ?? '',
@@ -41,10 +72,15 @@ export default function RoomDetailScreen() {
     );
 
     const floorPlanData = floorPlan.data ?? EMPTY_FLOORPLAN;
-    const room = floorPlanData.rooms.find((r) => r.id === roomId);
+    const savedRoom = floorPlanData.rooms.find((r) => r.id === roomId);
+    // 保留中の向きはサーバー値より優先して描く（ユーザーの操作が画面に映らないと壊れて見える）
+    const room = applyPendingRotation(savedRoom, pendingRotation);
     // 楽観的削除などでキャッシュから消えた家具は選択扱いにしない
     const selectedFurniture =
         room?.furniture.find((f) => f.id === selectedFurnitureId) ?? null;
+    const hasPendingRotation =
+        pendingRotation != null &&
+        room?.furniture.some((f) => f.id === pendingRotation.furnitureId) === true;
 
     /**
      * 選択解除の唯一の経路。選択とリネーム対象は必ずセットで破棄する
@@ -68,6 +104,10 @@ export default function RoomDetailScreen() {
                     style: 'destructive',
                     onPress: () => {
                         deleteFurniture.mutate(furnitureId);
+                        // 消えた家具の保留を残すと、以後の判定が幽霊の id を参照し続ける
+                        if (pendingRotation?.furnitureId === furnitureId) {
+                            setPendingRotation(null);
+                        }
                         clearFurnitureSelection();
                     },
                 },
@@ -77,20 +117,44 @@ export default function RoomDetailScreen() {
 
     function handleRotatePress() {
         if (!selectedFurniture || !room) return;
-        // 90度ごとに占有サイズも入れ替える。入れ替えたサイズが部屋に収まらない場合は
-        // 縮めず回転を諦める（縮めると一周しても元のサイズに戻れなくなるため）
-        const rotated = rotateClockwiseWithin(selectedFurniture, room);
+        // selectedFurniture には保留中のパッチが既に適用済みなので、保留からの続きも自然に繋がる
+        const rotated = rotateClockwise(selectedFurniture);
 
-        if (!rotated) {
-            // 黙って無視すると壊れたボタンに見えるため、回らない理由を伝える
-            Alert.alert('回転できません', '回転すると部屋からはみ出します。');
+        if (!fitsWithin(rotated, room)) {
+            // 拒否せず保留する。回転自体は成立させないと、収まらない向きの家具が
+            // 二度と回せなくなり直しようがなくなる
+            setPendingRotation({ furnitureId: selectedFurniture.id, patch: rotated });
             return;
         }
 
+        setPendingRotation(null);
         updateFurniture.mutate({
             furnitureId: selectedFurniture.id,
             input: rotated,
         });
+    }
+
+    /**
+     * 移動・リサイズの確定。保留中の家具なら、この移動で部屋に収まったかを見直し、
+     * 収まったなら待たせていた向きごとまとめて保存する（保留を解く導線は回転だけではない）
+     */
+    function handleFurnitureDragEnd(furnitureId: string, rect: Rect) {
+        const moved = { gridX: rect.x, gridY: rect.y, gridW: rect.w, gridH: rect.h };
+
+        if (!room || !hasPendingRotation || pendingRotation.furnitureId !== furnitureId) {
+            updateFurniture.mutate({ furnitureId, input: moved });
+            return;
+        }
+
+        const patch = { ...pendingRotation.patch, ...moved };
+
+        if (!fitsWithin(patch, room)) {
+            setPendingRotation({ furnitureId, patch });
+            return;
+        }
+
+        setPendingRotation(null);
+        updateFurniture.mutate({ furnitureId, input: patch });
     }
 
     function handleRenameSubmit(name: string) {
@@ -187,23 +251,40 @@ export default function RoomDetailScreen() {
                 selectedRoomId={null}
                 // 選択状態を単一の source にする（バーと選択ボーダーを同時に制御）
                 selectedFurnitureId={selectedFurnitureId}
+                pendingFurnitureId={hasPendingRotation ? pendingRotation.furnitureId : null}
                 onFurniturePress={setSelectedFurnitureId}
                 // 部屋タップは家具の選択解除に使う（index.tsx の家具タップと対称）
                 onRoomPress={clearFurnitureSelection}
                 // 空白領域のタップでも解除できるようにする（✕ を押さずに済む）
                 onBackgroundPress={clearFurnitureSelection}
-                onFurnitureDragEnd={(furnitureId, rect) =>
-                    updateFurniture.mutate({
-                        furnitureId,
-                        input: {
-                            gridX: rect.x,
-                            gridY: rect.y,
-                            gridW: rect.w,
-                            gridH: rect.h,
-                        },
-                    })
-                }
+                onFurnitureDragEnd={handleFurnitureDragEnd}
             />
+
+            {hasPendingRotation && (
+                <View
+                    testID="pending-rotation-notice"
+                    style={[
+                        styles.pendingNotice,
+                        {
+                            backgroundColor: theme.colors.dangerSoft,
+                            borderColor: theme.colors.danger,
+                            borderRadius: theme.radius.sm,
+                            padding: theme.spacing.sm,
+                            bottom: theme.spacing.md,
+                            left: theme.spacing.md,
+                            right: theme.spacing.md,
+                        },
+                    ]}
+                    accessibilityRole="alert"
+                >
+                    <Text style={[theme.typography.label, { color: theme.colors.danger }]}>
+                        部屋からはみ出しているため保存していません
+                    </Text>
+                    <Text style={[theme.typography.caption, { color: theme.colors.danger }]}>
+                        もう一度回すか、部屋の中へ動かすと保存されます
+                    </Text>
+                </View>
+            )}
 
             {selectedFurniture && (
                 <View
@@ -292,5 +373,11 @@ const styles = StyleSheet.create({
     // FAB（右下）や「掃除を記録」ボタンと重ならないよう画面上部に置く
     selectionActionsContainer: {
         position: 'absolute',
+    },
+    // 「掃除を記録」ボタンより上に出す。保留は見落とされると未保存のまま画面を離れてしまう
+    pendingNotice: {
+        position: 'absolute',
+        borderWidth: 1,
+        gap: 2,
     },
 });

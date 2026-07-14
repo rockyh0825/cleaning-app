@@ -1,5 +1,5 @@
 import { UpdateFurnitureUseCase } from '../UpdateFurnitureUseCase';
-import { rotateClockwiseWithin } from '../../utils/rotation';
+import { fitsWithin, rotateClockwise } from '../../utils/rotation';
 import type { FloorPlanRepository } from '../../repositories/FloorPlanRepository';
 import type { Furniture, RoomWithFurniture, UpdateFurnitureInput } from '../../types';
 
@@ -193,11 +193,11 @@ describe('UpdateFurnitureUseCase', () => {
 });
 
 /**
- * 回転は「rotateClockwiseWithin でパッチを組み立てて UpdateFurnitureUseCase に流す」
- * 2 段構えのため、痩せ細りのような不具合は単体テストの隙間に落ちる。
+ * 回転は「rotateClockwise でパッチを組み立て、収まるものだけ UpdateFurnitureUseCase に流す」
+ * 2 段構えのため、痩せ細り・じわじわ歩くといった不具合は単体テストの隙間に落ちる。
  * ここでは両者を実物のまま繋いだ結合テストで一周の可逆性を保証する。
  */
-describe('回転の結合: rotateClockwiseWithin + UpdateFurnitureUseCase', () => {
+describe('回転の結合: rotateClockwise + UpdateFurnitureUseCase', () => {
     /** 更新を実際に反映する簡易リポジトリ（回転を繰り返すには状態が要るため） */
     function createStatefulRepository(room: RoomWithFurniture, furniture: Furniture) {
         const state = { ...furniture };
@@ -213,87 +213,110 @@ describe('回転の結合: rotateClockwiseWithin + UpdateFurnitureUseCase', () =
         return { repository, state };
     }
 
-    /** 回転ボタンの 1 タップ相当（拒否された場合は何も更新しない） */
+    /**
+     * 回転ボタン 1 タップ相当。画面と同じ判断をする:
+     * 部屋に収まるなら保存し、はみ出すならローカル保留のまま次のタップへ持ち越す。
+     * pending は「まだ保存していない見かけ上の姿」
+     */
     async function pressRotate(
         useCase: UpdateFurnitureUseCase,
         current: Furniture,
         room: RoomWithFurniture,
-    ): Promise<void> {
-        const patch = rotateClockwiseWithin(current, room);
-        if (!patch) return;
+    ): Promise<Furniture | null> {
+        const patch = rotateClockwise(current);
+        if (!fitsWithin(patch, room)) return { ...current, ...patch };
         await useCase.execute('user-1', current.id, patch);
+        return null;
     }
 
-    it('returns_to_the_original_size_after_four_rotations_when_the_room_is_too_tight_to_rotate', async () => {
-        // Arrange: 4x2 の部屋に 3x1 のソファ。90 度回すと 1x3 になり高さ 2 に収まらない
+    /** 保留を持ち越しながら n 回まわす（画面のタップ連打と同じ） */
+    async function pressRotateTimes(
+        useCase: UpdateFurnitureUseCase,
+        state: Furniture,
+        room: RoomWithFurniture,
+        times: number,
+    ) {
+        let pending: Furniture | null = null;
+        for (let i = 0; i < times; i++) {
+            pending = await pressRotate(useCase, pending ?? { ...state }, room);
+        }
+        return pending;
+    }
+
+    it('returns_to_the_original_footprint_after_four_rotations_when_the_room_is_too_tight_to_rotate', async () => {
+        // Arrange: 4x2 の部屋に 3x1 のソファ。90 度回すと 1x3 になり高さ 2 に構造的に収まらない
         const room: RoomWithFurniture = { ...mockRoom, gridW: 4, gridH: 2, furniture: [] };
         const sofa: Furniture = { ...mockFurniture, gridX: 0, gridY: 0, gridW: 3, gridH: 1 };
         const { repository, state } = createStatefulRepository(room, sofa);
         const useCase = new UpdateFurnitureUseCase(repository);
 
         // Act: 一周ぶん回す（4 回 = 意味的には無操作）
-        for (let i = 0; i < 4; i++) {
-            await pressRotate(useCase, { ...state }, room);
-        }
+        const pending = await pressRotateTimes(useCase, state, room, 4);
 
-        // Assert: 一周して元のサイズ・角度に戻る（セルが永久に失われない）
-        expect({ gridW: state.gridW, gridH: state.gridH, rotation: state.rotation }).toEqual({
-            gridW: 3,
-            gridH: 1,
-            rotation: 0,
-        });
+        // Assert: 一周して元の姿に戻り、保留も残らない（セルが永久に失われない）
+        expect(pending).toBeNull();
+        expect({
+            gridX: state.gridX,
+            gridY: state.gridY,
+            gridW: state.gridW,
+            gridH: state.gridH,
+            rotation: state.rotation,
+        }).toEqual({ gridX: 0, gridY: 0, gridW: 3, gridH: 1, rotation: 0 });
     });
 
-    it('returns_to_the_original_size_after_four_rotations_when_the_room_has_room_to_rotate', async () => {
-        // Arrange: 4x3 の部屋なら 3x1 のソファは 1x3 に回せる
+    it('returns_to_the_original_footprint_after_four_rotations_when_the_room_has_room_to_rotate', async () => {
+        // Arrange: 4x3 の部屋で上下に余裕のある位置なら 3x1 のソファは 1x3 に回せる
         const room: RoomWithFurniture = { ...mockRoom, gridW: 4, gridH: 3, furniture: [] };
-        const sofa: Furniture = { ...mockFurniture, gridX: 0, gridY: 0, gridW: 3, gridH: 1 };
+        const sofa: Furniture = { ...mockFurniture, gridX: 0, gridY: 1, gridW: 3, gridH: 1 };
         const { repository, state } = createStatefulRepository(room, sofa);
         const useCase = new UpdateFurnitureUseCase(repository);
 
         // Act
-        for (let i = 0; i < 4; i++) {
-            await pressRotate(useCase, { ...state }, room);
-        }
+        const pending = await pressRotateTimes(useCase, state, room, 4);
 
-        // Assert: 4 回転で元の姿に戻る
-        expect({ gridW: state.gridW, gridH: state.gridH, rotation: state.rotation }).toEqual({
-            gridW: 3,
-            gridH: 1,
-            rotation: 0,
-        });
+        // Assert: 4 回転で位置ごと元の姿に戻る（歩かない = 余白を残さない）
+        expect(pending).toBeNull();
+        expect({
+            gridX: state.gridX,
+            gridY: state.gridY,
+            gridW: state.gridW,
+            gridH: state.gridH,
+            rotation: state.rotation,
+        }).toEqual({ gridX: 0, gridY: 1, gridW: 3, gridH: 1, rotation: 0 });
     });
 
-    it('does_not_update_anything_when_the_rotation_does_not_fit_the_room', async () => {
-        // Arrange: 4x2 の部屋の 3x1 は回せない（異常系）
+    it('does_not_touch_the_repository_while_the_rotation_is_held_pending', async () => {
+        // Arrange: 4x2 の部屋の 3x1 は回すと必ずはみ出す（異常系）
         const room: RoomWithFurniture = { ...mockRoom, gridW: 4, gridH: 2, furniture: [] };
         const sofa: Furniture = { ...mockFurniture, gridX: 0, gridY: 0, gridW: 3, gridH: 1 };
         const { repository } = createStatefulRepository(room, sofa);
         const useCase = new UpdateFurnitureUseCase(repository);
 
         // Act
-        await pressRotate(useCase, sofa, room);
+        const pending = await pressRotate(useCase, sofa, room);
 
-        // Assert: 回転が拒否されたので repository には一切触れない
+        // Assert: 保留中はサーバーへ送らない。ただし回転自体は成立している
         expect(repository.updateFurniture).not.toHaveBeenCalled();
+        expect(pending).toMatchObject({ rotation: 90, gridW: 1, gridH: 3 });
     });
 
-    it('keeps_the_size_and_only_clamps_the_position_when_the_rotated_footprint_overflows', async () => {
-        // Arrange: 部屋 10x8。右端 x=9 の 1x5 を回すと 5x1 で右にはみ出す
-        const room: RoomWithFurniture = { ...mockRoom, furniture: [] };
-        const shelf: Furniture = { ...mockFurniture, gridX: 9, gridY: 0, gridW: 1, gridH: 5 };
-        const { repository, state } = createStatefulRepository(room, shelf);
+    it('saves_the_held_rotation_as_soon_as_a_further_turn_brings_it_back_inside', async () => {
+        // Arrange: 4x2 の部屋の 3x1。1 タップ目は保留、2 タップ目で 180 度・3x1 に戻り収まる
+        const room: RoomWithFurniture = { ...mockRoom, gridW: 4, gridH: 2, furniture: [] };
+        const sofa: Furniture = { ...mockFurniture, gridX: 0, gridY: 0, gridW: 3, gridH: 1 };
+        const { repository, state } = createStatefulRepository(room, sofa);
         const useCase = new UpdateFurnitureUseCase(repository);
 
         // Act
-        await pressRotate(useCase, shelf, room);
+        const pending = await pressRotateTimes(useCase, state, room, 2);
 
-        // Assert: サイズは 5x1 のまま、位置だけ押し戻される
-        expect({ gridX: state.gridX, gridW: state.gridW, gridH: state.gridH }).toEqual({
-            gridX: 5,
-            gridW: 5,
+        // Assert: 保留していた分をまとめて 1 回だけ保存する
+        expect(pending).toBeNull();
+        expect(repository.updateFurniture).toHaveBeenCalledTimes(1);
+        expect({ gridW: state.gridW, gridH: state.gridH, rotation: state.rotation }).toEqual({
+            gridW: 3,
             gridH: 1,
+            rotation: 180,
         });
     });
 });
-

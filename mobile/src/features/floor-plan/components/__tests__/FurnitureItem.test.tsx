@@ -29,6 +29,66 @@ describe('FurnitureItem', () => {
         updatedAt: new Date('2024-01-01'),
     };
 
+    describe('保留中（未保存）の表示', () => {
+        it('marks_the_furniture_as_pending_so_the_unsaved_rotation_is_visible', () => {
+            // Arrange & Act: 部屋からはみ出す回転はローカル保留になり、まだ保存されていない
+            render(
+                <FurnitureItem
+                    furniture={testFurniture}
+                    cellSize={40}
+                    selected={false}
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                    pending
+                />,
+            );
+
+            // Assert: 破線 + danger 色で「確定していない」ことを伝える
+            const item = screen.getByTestId('furniture-item-furn-1');
+            const style = StyleSheet.flatten(item.props.style);
+            expect(style.borderColor).toBe(lightTheme.colors.danger);
+            expect(style.borderStyle).toBe('dashed');
+        });
+
+        it('keeps_the_pending_outline_visible_while_selected', () => {
+            // Arrange & Act: 保留中は必ず選択中でもある（回転直後）。選択枠に上書きされてはいけない
+            render(
+                <FurnitureItem
+                    furniture={testFurniture}
+                    cellSize={40}
+                    selected
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                    pending
+                />,
+            );
+
+            // Assert
+            const item = screen.getByTestId('furniture-item-furn-1');
+            const style = StyleSheet.flatten(item.props.style);
+            expect(style.borderColor).toBe(lightTheme.colors.danger);
+        });
+
+        it('renders_a_solid_outline_when_not_pending', () => {
+            // Arrange & Act: 通常時（回帰）
+            render(
+                <FurnitureItem
+                    furniture={testFurniture}
+                    cellSize={40}
+                    selected={false}
+                    onPress={jest.fn()}
+                    bounds={roomBounds}
+                />,
+            );
+
+            // Assert
+            const item = screen.getByTestId('furniture-item-furn-1');
+            const style = StyleSheet.flatten(item.props.style);
+            expect(style.borderColor).toBe(lightTheme.colors.outline);
+            expect(style.borderStyle).not.toBe('dashed');
+        });
+    });
+
     it('renders_furniture_name', () => {
         // Arrange & Act
         render(
