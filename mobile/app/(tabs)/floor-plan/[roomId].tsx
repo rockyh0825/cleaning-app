@@ -45,6 +45,15 @@ export default function RoomDetailScreen() {
     const selectedFurniture =
         room?.furniture.find((f) => f.id === selectedFurnitureId) ?? null;
 
+    /**
+     * 選択解除の唯一の経路。選択とリネーム対象は必ずセットで破棄する
+     * （✕・部屋タップ・空白タップ・削除確定のどこから来ても挙動を揃えるため）
+     */
+    function clearFurnitureSelection() {
+        setSelectedFurnitureId(null);
+        setRenamingFurnitureId(null);
+    }
+
     function handleDeletePress() {
         if (!selectedFurniture) return;
         const furnitureId = selectedFurniture.id;
@@ -58,9 +67,7 @@ export default function RoomDetailScreen() {
                     style: 'destructive',
                     onPress: () => {
                         deleteFurniture.mutate(furnitureId);
-                        setSelectedFurnitureId(null);
-                        // 選択解除の各経路（✕・部屋タップ）と揃えてリネーム対象も破棄する
-                        setRenamingFurnitureId(null);
+                        clearFurnitureSelection();
                     },
                 },
             ],
@@ -163,15 +170,9 @@ export default function RoomDetailScreen() {
                 selectedFurnitureId={selectedFurnitureId}
                 onFurniturePress={setSelectedFurnitureId}
                 // 部屋タップは家具の選択解除に使う（index.tsx の家具タップと対称）
-                onRoomPress={() => {
-                    setSelectedFurnitureId(null);
-                    setRenamingFurnitureId(null);
-                }}
+                onRoomPress={clearFurnitureSelection}
                 // 空白領域のタップでも解除できるようにする（✕ を押さずに済む）
-                onBackgroundPress={() => {
-                    setSelectedFurnitureId(null);
-                    setRenamingFurnitureId(null);
-                }}
+                onBackgroundPress={clearFurnitureSelection}
                 onFurnitureDragEnd={(furnitureId, rect) =>
                     updateFurniture.mutate({
                         furnitureId,
@@ -203,10 +204,7 @@ export default function RoomDetailScreen() {
                         onOpenCleaningParts={() =>
                             router.push(`/area/${selectedFurniture.id}?ownerType=FURNITURE`)
                         }
-                        onDismiss={() => {
-                            setSelectedFurnitureId(null);
-                            setRenamingFurnitureId(null);
-                        }}
+                        onDismiss={clearFurnitureSelection}
                     />
                 </View>
             )}

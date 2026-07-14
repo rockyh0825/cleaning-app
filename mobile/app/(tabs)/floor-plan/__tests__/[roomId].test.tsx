@@ -14,6 +14,7 @@ import {
     getByGestureTestId,
 } from 'react-native-gesture-handler/jest-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { flushRunOnJS } from '@/shared/testing/flushRunOnJS';
 import RoomDetailScreen from '../[roomId]';
 
 jest.mock('@/features/floor-plan/hooks/useFloorPlan', () => ({
@@ -71,17 +72,6 @@ function mockHookWithFurniture(
         addFurniture: { mutate: jest.fn() },
         updateFurniture: { mutate: mutations.updateFurniture ?? jest.fn() },
         deleteFurniture: { mutate: mutations.deleteFurniture ?? jest.fn() },
-    });
-}
-
-/**
- * タップの onEnd は runOnJS 経由で JS スレッドに渡るため、状態更新は次の
- * マクロタスクで反映される。waitFor のポーリング待ちに任せると 1 秒近くかかり
- * CI の実行速度によってはデフォルトのタイムアウトを超えるため、明示的に流し切る。
- */
-async function flushRunOnJS() {
-    await act(async () => {
-        await new Promise((resolve) => setImmediate(resolve));
     });
 }
 

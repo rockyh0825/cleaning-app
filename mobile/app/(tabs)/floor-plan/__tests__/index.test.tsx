@@ -31,18 +31,8 @@ import { router } from 'expo-router';
 import { useFloorPlan } from '@/features/floor-plan/hooks/useFloorPlan';
 import { resetUserIdCacheForTest } from '@/shared/hooks/useUserId';
 import type { Furniture } from '@/features/floor-plan/types';
+import { flushRunOnJS } from '@/shared/testing/flushRunOnJS';
 const mockUseLayout = useFloorPlan as jest.Mock;
-
-/**
- * タップの onEnd は runOnJS 経由で JS スレッドに渡るため、状態更新は次の
- * マクロタスクで反映される。waitFor のポーリング待ちに任せると 1 秒近くかかり
- * CI の実行速度によってはデフォルトのタイムアウトを超えるため、明示的に流し切る。
- */
-async function flushRunOnJS() {
-    await act(async () => {
-        await new Promise((resolve) => setImmediate(resolve));
-    });
-}
 
 function createWrapper() {
     const queryClient = new QueryClient({

@@ -35,6 +35,12 @@ type Props = {
     scale?: number;
     /** この家具のドラッグ判定が終わるまで待機させるキャンバスパン */
     canvasPanGesture?: GestureType;
+    /**
+     * このタップ判定が終わるまで待機させる背景タップ（キャンバスの空白タップで選択解除）。
+     * 背景タップは家具を含む可視領域全体を覆う祖先に付くため、この関係が無いと
+     * 家具のタップが背景タップとしても扱われ選択が即座に解除される
+     */
+    backgroundTapGesture?: GestureType;
     /** 指定時は surface 色の代わりにこの色で塗る（ヒートマップ用）。未指定なら従来の surface 色 */
     fillColor?: string;
     /**
@@ -54,6 +60,7 @@ export function FurnitureItem({
     onResizeEnd,
     scale = 1,
     canvasPanGesture,
+    backgroundTapGesture,
     fillColor,
     dragDisabled = false,
 }: Props) {
@@ -93,6 +100,8 @@ export function FurnitureItem({
             if (success) runOnJS(onPress)();
         })
         .withTestId(`furniture-tap-${furniture.id}`);
+    // 家具のタップが失敗するまで背景タップ（空白タップでの選択解除）を待たせる
+    if (backgroundTapGesture) tapGesture.blocksExternalGesture(backgroundTapGesture);
 
     // Pan（移動）と Tap（選択）は排他。先にアクティブになった方が勝つ
     const composedGesture = Gesture.Race(panGesture, tapGesture);

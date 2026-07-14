@@ -15,18 +15,20 @@ import {
 import { lightTheme } from '@/shared/theme/tokens';
 import { clampScale, FloorPlanCanvas } from '../FloorPlanCanvas';
 import type { FloorPlan } from '../../types';
+import { flushRunOnJS } from '@/shared/testing/flushRunOnJS';
 
 jest.mock('@shopify/react-native-skia');
 
 /**
- * タップの onEnd は runOnJS 経由で JS スレッドに渡るため、状態更新は次の
- * マクロタスクで反映される。waitFor のポーリング待ちに任せると 1 秒近くかかり
- * CI の実行速度によってはデフォルトのタイムアウトを超えるため、明示的に流し切る。
+ * blocksExternalGesture で「このジェスチャーが失敗するまで待たせる相手」として
+ * 宣言された testId を返す。config.blocksHandlers は GestureRef[]（数値・ref・
+ * ジェスチャー）だが、本コンポーネントはジェスチャーオブジェクトのみを渡している。
  */
-async function flushRunOnJS() {
-    await act(async () => {
-        await new Promise((resolve) => setImmediate(resolve));
-    });
+function blockedGestureTestIds(gestureTestId: string): (string | undefined)[] {
+    const blocked = getByGestureTestId(gestureTestId).config.blocksHandlers ?? [];
+    return blocked.map(
+        (ref) => (ref as { config?: { testId?: string } }).config?.testId,
+    );
 }
 
 describe('clampScale', () => {
@@ -827,8 +829,8 @@ describe('FloorPlanCanvas', () => {
         expect(mockOnBackgroundPress).toHaveBeenCalledTimes(1);
     });
 
-    it('does_not_call_onBackgroundPress_when_background_tap_fails', async () => {
-        // Arrange: パン・ピンチに主導権を奪われた Tap は失敗で終わる
+    it('does_not_call_onBackgroundPress_when_background_tap_is_cancelled', async () => {
+        // Arrange: アクティブ化後に他ジェスチャーへ奪われた Tap は success=false で終わる
         const mockOnBackgroundPress = jest.fn();
         render(
             <FloorPlanCanvas
@@ -838,10 +840,12 @@ describe('FloorPlanCanvas', () => {
             />,
         );
 
-        // Act: 成功せずに終わるタップを流す
+        // Act: ACTIVE から CANCELLED へ抜ける（onEnd が success=false で呼ばれる唯一の経路。
+        // BEGAN からの FAILED では onEnd 自体が呼ばれず if (success) を踏めない）
         fireGestureHandler(getByGestureTestId('canvas-background-tap'), [
             { state: State.BEGAN },
-            { state: State.FAILED },
+            { state: State.ACTIVE },
+            { state: State.CANCELLED },
         ]);
         await flushRunOnJS();
 
@@ -879,7 +883,7 @@ describe('FloorPlanCanvas', () => {
         expect(mockOnBackgroundPress).not.toHaveBeenCalled();
     });
 
-    it('renders_background_hit_area_without_rooms_and_furniture', () => {
+    it('spreads_background_hit_area_over_the_viewport_around_the_zoomable_canvas', () => {
         // Arrange & Act
         render(
             <FloorPlanCanvas
@@ -888,13 +892,63 @@ describe('FloorPlanCanvas', () => {
             />,
         );
 
-        // Assert: 背景のヒット領域に部屋・家具を含めないことが、要素タップが
-        // 背景タップへ伝播しないことの担保（ヒットテストによる排他）
-        const background = screen.getByTestId('floorPlan-background');
-        expect(within(background).queryByTestId('room-shape-room-1')).toBeNull();
-        expect(
-            within(background).queryByTestId('furniture-item-furn-1'),
-        ).toBeNull();
+        // Assert: ヒット領域はズーム・パンで動く固定サイズのキャンバスの「中」ではなく、
+        // キャンバスを包む可視領域（viewport）いっぱいの祖先でなければならない。
+        // 内側に置くとズームアウトでキャンバスの外へ出た空白がタップできなくなる（issue #172）
+        const viewport = screen.getByTestId('floorPlan-viewport');
+        const background = within(viewport).getByTestId('floorPlan-background');
+        expect(within(background).getByTestId('floorPlan-canvas')).toBeTruthy();
+        expect(StyleSheet.flatten(background.props.style)).toMatchObject(
+            StyleSheet.absoluteFillObject,
+        );
+    });
+
+    it('makes_room_tap_block_background_tap', () => {
+        // Arrange & Act
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onBackgroundPress={jest.fn()}
+            />,
+        );
+
+        // Assert: 背景タップは viewport 全体を覆う祖先に付くため部屋のタップも届く。
+        // 部屋のタップが失敗するまで待たせることで初めて誤発火しない（排他の中核）
+        expect(blockedGestureTestIds('room-tap-room-1')).toContain(
+            'canvas-background-tap',
+        );
+    });
+
+    it('makes_furniture_tap_block_background_tap', () => {
+        // Arrange & Act
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onBackgroundPress={jest.fn()}
+            />,
+        );
+
+        // Assert: 家具のタップも同様に背景タップを待たせる
+        expect(blockedGestureTestIds('furniture-tap-furn-1')).toContain(
+            'canvas-background-tap',
+        );
+    });
+
+    it('limits_background_tap_distance_and_duration_explicitly', () => {
+        // Arrange & Act
+        render(
+            <FloorPlanCanvas
+                floorPlan={floorplanWithRoom}
+                onBackgroundPress={jest.fn()}
+            />,
+        );
+
+        // Assert: iOS の既定は maxDistSq=NAN で距離判定がスキップされ、指を動かしても
+        // Tap は自己失敗しない。パン・ピンチでの誤発火はこの明示指定だけが防いでいる。
+        // 既定値（undefined）に落ちたことを検出するため実値をリテラルで固定する
+        const config = getByGestureTestId('canvas-background-tap').config;
+        expect(config.maxDist).toBe(8);
+        expect(config.maxDurationMs).toBe(250);
     });
 
     it('clears_internal_room_selection_when_background_is_pressed', async () => {
