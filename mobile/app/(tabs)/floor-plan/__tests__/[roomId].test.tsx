@@ -430,6 +430,118 @@ describe('RoomDetailScreen', () => {
             expect(screen.queryByTestId('pending-rotation-notice')).toBeNull();
         });
 
+        it('reverts_the_pending_rotation_when_revert_is_pressed', async () => {
+            // Arrange: 部屋より長い家具は回しても動かしても収まらない。諦める導線が要る
+            renderTightRoom();
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+            fireEvent.press(await screen.findByText('ソファ'));
+            fireEvent.press(screen.getByTestId('selection-rotate'));
+            expect(screen.getByTestId('pending-rotation-notice')).toBeTruthy();
+
+            // Act
+            fireEvent.press(screen.getByTestId('pending-rotation-revert'));
+
+            // Assert: 保存済みの姿（3x1）へ戻り、帯も消える
+            expect(screen.queryByTestId('pending-rotation-notice')).toBeNull();
+            const item = screen.getByTestId('furniture-item-furn-1');
+            const style = StyleSheet.flatten(item.props.style);
+            expect(style.width).toBe(120);
+            expect(style.height).toBe(40);
+        });
+
+        it('discards_the_pending_rotation_when_a_different_furniture_is_selected', async () => {
+            // Arrange: 保留スロットは1つ。別の家具へ移る時点で捨てないと、次にその家具を
+            // 回した瞬間に無関係な保留が黙って消える
+            mockUseFloorPlan.mockReturnValue({
+                floorPlan: {
+                    data: {
+                        rooms: [
+                            {
+                                ...targetRoom,
+                                gridW: 4,
+                                gridH: 2,
+                                furniture: [
+                                    { ...sofa, gridX: 0, gridY: 0, gridW: 3, gridH: 1, rotation: 0 },
+                                    {
+                                        ...sofa,
+                                        id: 'furn-2',
+                                        name: 'ランプ',
+                                        gridX: 3,
+                                        gridY: 0,
+                                        gridW: 1,
+                                        gridH: 1,
+                                        rotation: 0,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    isLoading: false,
+                    isError: false,
+                },
+                addFurniture: { mutate: jest.fn() },
+                updateFurniture: { mutate: jest.fn() },
+                deleteFurniture: { mutate: jest.fn() },
+            });
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+            fireEvent.press(await screen.findByText('ソファ'));
+            fireEvent.press(screen.getByTestId('selection-rotate'));
+            expect(screen.getByTestId('pending-rotation-notice')).toBeTruthy();
+
+            // Act: 別の家具を選ぶ
+            fireEvent.press(screen.getByText('ランプ'));
+
+            // Assert: 保留はその場で解け、ソファは保存済みの姿に戻る
+            expect(screen.queryByTestId('pending-rotation-notice')).toBeNull();
+            const sofaStyle = StyleSheet.flatten(
+                screen.getByTestId('furniture-item-furn-1').props.style,
+            );
+            expect(sofaStyle.width).toBe(120);
+        });
+
+        it('places_new_furniture_clear_of_the_saved_footprint_while_a_rotation_is_pending', async () => {
+            // Arrange: 保留は描画専用。未確定の位置を障害物にすると、実際に置かれている
+            // 家具の上へ新品を重ねてしまう
+            const mockAddMutate = jest.fn();
+            mockUseFloorPlan.mockReturnValue({
+                floorPlan: {
+                    data: {
+                        rooms: [
+                            {
+                                ...targetRoom,
+                                gridW: 4,
+                                gridH: 2,
+                                furniture: [
+                                    { ...sofa, gridX: 0, gridY: 0, gridW: 3, gridH: 1, rotation: 0 },
+                                ],
+                            },
+                        ],
+                    },
+                    isLoading: false,
+                    isError: false,
+                },
+                addFurniture: { mutate: mockAddMutate },
+                updateFurniture: { mutate: jest.fn() },
+                deleteFurniture: { mutate: jest.fn() },
+            });
+            render(<RoomDetailScreen />, { wrapper: createWrapper() });
+            fireEvent.press(await screen.findByText('ソファ'));
+            // ソファを保留（1x3 が (1,-1) へ）にしてから家具を追加する
+            fireEvent.press(screen.getByTestId('selection-rotate'));
+
+            // Act: 1x1 の家具を追加する
+            fireEvent.press(screen.getByTestId('fab'));
+            fireEvent.changeText(screen.getByPlaceholderText('家具名'), '本棚');
+            fireEvent.press(screen.getByText('追加'));
+
+            // Assert: 保存済みの 3x1 (0,0) を避けた位置に置く（(0,0) に重ねない）
+            expect(mockAddMutate).toHaveBeenCalledTimes(1);
+            const placed = mockAddMutate.mock.calls[0][0].input;
+            const overlapsSavedSofa =
+                placed.gridX < 3 && placed.gridX + placed.gridW > 0 && placed.gridY === 0;
+            expect(overlapsSavedSofa).toBe(false);
+        });
+
         it('does_not_leave_a_gap_behind_after_a_full_turn', async () => {
             // Arrange: 左上ピボット＋クランプ時代は (1,2) の 3x1 が 4 タップ後 (1,1) に居座り
             // 元居た場所に余白が残った（回帰テスト）
@@ -461,7 +573,10 @@ describe('RoomDetailScreen', () => {
                 rerender(<RoomDetailScreen />);
             }
 
-            // Assert: 一周して元の位置・サイズ・向きへ完全に戻る
+            // Assert: 4タップとも実際に保存されている。これが無いと「回転が何もしなかった」でも
+            // 下の位置アサーションが通ってしまう（初期値と期待値が同じため）
+            expect(mockUpdateMutate).toHaveBeenCalledTimes(4);
+            // 一周して元の位置・サイズ・向きへ完全に戻る
             expect(current).toMatchObject({ gridX: 1, gridY: 2, gridW: 3, gridH: 1, rotation: 0 });
         });
     });
