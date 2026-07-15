@@ -516,8 +516,38 @@ describe('FloorPlanIndexScreen', () => {
         expect(mockUpdateMutate).not.toHaveBeenCalled();
     });
 
-    it('clears_room_selection_when_furniture_is_pressed', async () => {
-        // Arrange: 家具付きの部屋を選択して操作バーを表示する
+    it('selects_the_owning_room_when_furniture_is_pressed', async () => {
+        // Arrange: 家具付きの部屋。一覧では家具は操作対象ではなく部屋の一部として扱う
+        mockHookWithLivingRoom({}, [
+            {
+                id: 'furn-1',
+                roomId: 'room-1',
+                name: 'ソファ',
+                presetKey: 'sofa',
+                gridX: 0,
+                gridY: 0,
+                gridW: 1,
+                gridH: 1,
+                rotation: 0,
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-01'),
+            },
+        ]);
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
+        render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
+        await screen.findByText('リビング');
+
+        // Act: 家具をタップする
+        fireEvent.press(screen.getByText('ソファ'));
+
+        // Assert: 家具が乗っている部屋が選ばれる。家具で埋め尽くされた部屋でも選択できる導線
+        expect(
+            within(screen.getByTestId('selection-actions')).getByText('リビング'),
+        ).toBeTruthy();
+    });
+
+    it('keeps_the_room_selected_when_its_own_furniture_is_pressed', async () => {
+        // Arrange: 部屋を選択済みの状態で家具をタップしても選択は落ちない（回帰）
         mockHookWithLivingRoom({}, [
             {
                 id: 'furn-1',
@@ -538,11 +568,11 @@ describe('FloorPlanIndexScreen', () => {
         fireEvent.press(await screen.findByText('リビング'));
         expect(screen.getByTestId('selection-actions')).toBeTruthy();
 
-        // Act: 家具をタップする
+        // Act
         fireEvent.press(screen.getByText('ソファ'));
 
-        // Assert: 部屋を対象にした操作バーは消える（誤削除防止）
-        expect(screen.queryByTestId('selection-actions')).toBeNull();
+        // Assert
+        expect(screen.getByTestId('selection-actions')).toBeTruthy();
     });
 
     it('shows_room_selection_outline_when_room_is_selected', async () => {
@@ -573,8 +603,8 @@ describe('FloorPlanIndexScreen', () => {
         expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
     });
 
-    it('hides_room_selection_outline_when_furniture_is_pressed', async () => {
-        // Arrange: 家具付きの部屋を選択して選択枠を表示する
+    it('shows_the_room_selection_outline_when_its_furniture_is_pressed', async () => {
+        // Arrange
         mockHookWithLivingRoom({}, [
             {
                 id: 'furn-1',
@@ -592,14 +622,13 @@ describe('FloorPlanIndexScreen', () => {
         ]);
         (AsyncStorage.getItem as jest.Mock).mockResolvedValue('existing-uuid');
         render(<FloorPlanIndexScreen />, { wrapper: createWrapper() });
-        fireEvent.press(await screen.findByText('リビング'));
-        expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
+        await screen.findByText('リビング');
 
         // Act: 家具をタップする
         fireEvent.press(screen.getByText('ソファ'));
 
-        // Assert: バーと同時にキャンバス内の選択枠も消える
-        expect(screen.queryByTestId('room-selected-room-1')).toBeNull();
+        // Assert: バーと同時にキャンバス内の選択枠も出る
+        expect(screen.getByTestId('room-selected-room-1')).toBeTruthy();
     });
 
     it('does_not_reopen_rename_sheet_for_next_selection_after_target_room_disappears', async () => {

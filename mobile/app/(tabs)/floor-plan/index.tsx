@@ -40,6 +40,19 @@ export default function FloorPlanIndexScreen() {
   }
 
   /**
+   * 家具は部屋より後に描かれる絶対配置の兄弟のため、常に部屋よりも前でタップを奪う。
+   * 一覧では家具そのものへの操作を提供しないので、家具へのタップはその家具が乗っている
+   * 部屋へのタップとして扱う。こうしないと家具で隙間なく埋まった部屋は、部屋の地を
+   * 一点も触れず永久に選択できなくなる
+   */
+  function handleFurniturePress(furnitureId: string) {
+    const owner = rooms.find((room) =>
+      room.furniture.some((furniture) => furniture.id === furnitureId),
+    );
+    if (owner) setSelectedRoomId(owner.id);
+  }
+
+  /**
    * 選択解除の唯一の経路。選択とリネーム対象は必ずセットで破棄する
    * （✕・家具タップ・空白タップ・削除確定のどこから来ても挙動を揃えるため）
    */
@@ -177,8 +190,10 @@ export default function FloorPlanIndexScreen() {
           // 選択状態を単一の source にする（バーと選択枠・ハンドルを同時に制御）
           selectedRoomId={selectedRoomId}
           onRoomPress={handleRoomPress}
-          // 間取り一覧では家具への操作は提供しないため、部屋の選択解除のみ行う（誤削除防止）
-          onFurniturePress={clearRoomSelection}
+          // 一覧では家具そのものを選択させない（操作対象は部屋だけ）
+          selectedFurnitureId={null}
+          // 家具に覆われた部屋も選べるよう、家具タップはその部屋のタップとして扱う
+          onFurniturePress={handleFurniturePress}
           // 空白領域のタップでも解除できるようにする（✕ を押さずに済む）
           onBackgroundPress={clearRoomSelection}
           onRoomDragEnd={(roomId, rect) => {

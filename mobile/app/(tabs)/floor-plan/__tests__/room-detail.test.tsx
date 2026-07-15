@@ -186,6 +186,8 @@ describe('RoomDetailScreen', () => {
         gridW: number;
         gridH: number;
         rotation: 0 | 90 | 180 | 270;
+        gridX?: number;
+        gridY?: number;
     }) {
         mockUseFloorPlan.mockReturnValue({
             floorPlan: {
@@ -217,8 +219,9 @@ describe('RoomDetailScreen', () => {
     }
 
     it('calls_updateFurniture_with_swapped_size_when_rotate_pressed', async () => {
-        // Arrange: 未回転（占有 2x3）の家具を選択する
-        useNonSquareFurniture({ gridW: 2, gridH: 3, rotation: 0 });
+        // Arrange: 未回転（占有 2x3）の家具を、四方に余裕のある位置で選択する。
+        // 回転は中心ピボットなので、壁際だと回した先が部屋の外に出て保留になる
+        useNonSquareFurniture({ gridW: 2, gridH: 3, rotation: 0, gridX: 2, gridY: 1 });
         render(<RoomDetailScreen />, { wrapper: createWrapper() });
         await waitFor(() => {
             expect(screen.getByTestId('furniture-item-furn-1')).toBeTruthy();
@@ -228,18 +231,18 @@ describe('RoomDetailScreen', () => {
         // Act
         fireEvent.press(screen.getByTestId('selection-rotate'));
 
-        // Assert: 90度回転と同時に占有サイズが 3x2 へ入れ替わる（位置は部屋内なので据え置き）
+        // Assert: 90度回転と同時に占有サイズが 3x2 へ入れ替わり、中心 (3, 2.5) を保つ
         await waitFor(() => {
             expect(mockUpdateFurnitureMutate).toHaveBeenCalledWith({
                 furnitureId: 'furn-1',
-                input: { rotation: 90, gridW: 3, gridH: 2, gridX: 0, gridY: 0 },
+                input: { rotation: 90, gridW: 3, gridH: 2, gridX: 1, gridY: 1 },
             });
         });
     });
 
     it('wraps_rotation_back_to_zero_when_rotate_pressed_at_270', async () => {
         // Arrange: 270 度（占有 3x2）の家具 → 次のタップで 0 度・占有 2x3 に戻る（境界値）
-        useNonSquareFurniture({ gridW: 3, gridH: 2, rotation: 270 });
+        useNonSquareFurniture({ gridW: 3, gridH: 2, rotation: 270, gridX: 1, gridY: 1 });
         render(<RoomDetailScreen />, { wrapper: createWrapper() });
         await waitFor(() => {
             expect(screen.getByTestId('furniture-item-furn-1')).toBeTruthy();
@@ -253,7 +256,7 @@ describe('RoomDetailScreen', () => {
         await waitFor(() => {
             expect(mockUpdateFurnitureMutate).toHaveBeenCalledWith({
                 furnitureId: 'furn-1',
-                input: { rotation: 0, gridW: 2, gridH: 3, gridX: 0, gridY: 0 },
+                input: { rotation: 0, gridW: 2, gridH: 3, gridX: 2, gridY: 1 },
             });
         });
     });

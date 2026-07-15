@@ -1,7 +1,8 @@
 import {
+    fitsWithin,
     isQuarterTurn,
     nextRotation,
-    rotateClockwiseWithin,
+    rotateClockwise,
     rotationTransform,
 } from '../rotation';
 import type { Rotation } from '../../types';
@@ -34,116 +35,121 @@ describe('isQuarterTurn', () => {
     });
 });
 
-describe('rotateClockwiseWithin', () => {
-    /** 十分に広い部屋（クランプも拒否も起きない） */
-    const spaciousRoom = { gridW: 10, gridH: 10 } as const;
+describe('rotateClockwise', () => {
+    /** 中心ピボットが可逆であることの不変条件。どこから始めても4タップで元に戻る */
+    function rotateTimes(
+        furniture: { gridX: number; gridY: number; gridW: number; gridH: number; rotation: Rotation },
+        times: number,
+    ) {
+        let current = furniture;
+        for (let i = 0; i < times; i++) current = { ...current, ...rotateClockwise(current) };
+        return current;
+    }
 
-    it('swaps_grid_size_and_advances_rotation_when_rotated_once', () => {
-        // Arrange: 2x3 の未回転の家具
-        const furniture = { gridX: 0, gridY: 0, gridW: 2, gridH: 3, rotation: 0 } as const;
+    it('swaps_the_occupied_size_on_every_step', () => {
+        // Arrange
+        const furniture = { gridX: 4, gridY: 4, gridW: 3, gridH: 1, rotation: 0 } as const;
 
         // Act
-        const result = rotateClockwiseWithin(furniture, spaciousRoom);
+        const result = rotateClockwise(furniture);
 
-        // Assert: 占有矩形は 3x2 に入れ替わる
-        expect(result).toEqual({ rotation: 90, gridW: 3, gridH: 2, gridX: 0, gridY: 0 });
+        // Assert: 占有矩形は常に回転後の軸平行矩形
+        expect(result.gridW).toBe(1);
+        expect(result.gridH).toBe(3);
+        expect(result.rotation).toBe(90);
     });
 
-    it('swaps_grid_size_on_every_step_including_180', () => {
-        // Arrange: 90 度（3x2）から更に 90 度回すと 180 度（2x3）へ戻る
-        const furniture = { gridX: 1, gridY: 1, gridW: 3, gridH: 2, rotation: 90 } as const;
+    it('pivots_around_the_center_so_the_furniture_spins_in_place', () => {
+        // Arrange: 3x1 を (1,2) に置くと中心は (2.5, 2.5)
+        const furniture = { gridX: 1, gridY: 2, gridW: 3, gridH: 1, rotation: 0 } as const;
 
         // Act
-        const result = rotateClockwiseWithin(furniture, spaciousRoom);
+        const result = rotateClockwise(furniture);
 
-        // Assert
-        expect(result).toEqual({ rotation: 180, gridW: 2, gridH: 3, gridX: 1, gridY: 1 });
+        // Assert: 中心 (2.5,2.5) を保ったまま 1x3 になる = (2,1)
+        expect(result).toEqual({ rotation: 90, gridW: 1, gridH: 3, gridX: 2, gridY: 1 });
     });
 
-    it('wraps_around_to_zero_rotation_after_270', () => {
-        // Arrange: 270 度（3x2）の次は 0 度・2x3（境界値）
-        const furniture = { gridX: 0, gridY: 0, gridW: 3, gridH: 2, rotation: 270 } as const;
+    it('returns_to_the_original_position_and_size_after_four_steps', () => {
+        // Arrange: 左上ピボット＋クランプ時代に家具が1セル歩いて余白を残したケース（回帰）
+        const original = { gridX: 1, gridY: 2, gridW: 3, gridH: 1, rotation: 0 } as const;
 
         // Act
-        const result = rotateClockwiseWithin(furniture, spaciousRoom);
-
-        // Assert
-        expect(result).toEqual({ rotation: 0, gridW: 2, gridH: 3, gridX: 0, gridY: 0 });
-    });
-
-    it('keeps_square_footprint_unchanged_in_size_when_rotated', () => {
-        // Arrange: 正方形は入れ替えても寸法が変わらない（境界値）
-        const furniture = { gridX: 0, gridY: 0, gridW: 2, gridH: 2, rotation: 180 } as const;
-
-        // Act
-        const result = rotateClockwiseWithin(furniture, spaciousRoom);
-
-        // Assert
-        expect(result).toEqual({ rotation: 270, gridW: 2, gridH: 2, gridX: 0, gridY: 0 });
-    });
-
-    it('returns_to_original_rotation_and_size_after_four_steps', () => {
-        // Arrange: 4 回まわすと元に戻る（回転が可逆であることの不変条件）
-        const original = { gridX: 0, gridY: 0, gridW: 2, gridH: 3, rotation: 0 } as const;
-
-        // Act
-        const result = [1, 2, 3, 4].reduce<{
-            gridX: number;
-            gridY: number;
-            gridW: number;
-            gridH: number;
-            rotation: Rotation;
-        }>(
-            (furniture) => rotateClockwiseWithin(furniture, spaciousRoom)!,
-            original,
-        );
+        const result = rotateTimes(original, 4);
 
         // Assert
         expect(result).toEqual(original);
     });
 
-    it('clamps_position_so_the_rotated_footprint_stays_inside_the_room', () => {
-        // Arrange: 部屋 10x8。1x5 の家具を右端 x=9 に置くと、90 度回した 5x1 は右へはみ出す
-        const furniture = { gridX: 9, gridY: 0, gridW: 1, gridH: 5, rotation: 0 } as const;
+    it('returns_to_the_original_position_after_four_steps_when_the_side_lengths_differ_by_an_odd_number', () => {
+        // Arrange: 2x1 は中心が半セルずれるため丸めが必要（境界値）。丸め方向を誤ると1タップ毎に歩く
+        const original = { gridX: 5, gridY: 5, gridW: 2, gridH: 1, rotation: 0 } as const;
 
         // Act
-        const result = rotateClockwiseWithin(furniture, { gridW: 10, gridH: 8 });
+        const result = rotateTimes(original, 4);
 
-        // Assert: サイズは入れ替えたまま、位置だけ右端 x=5 へ押し戻す
-        expect(result).toEqual({ rotation: 90, gridW: 5, gridH: 1, gridX: 5, gridY: 0 });
+        // Assert
+        expect(result).toEqual(original);
     });
 
-    it('returns_null_when_the_rotated_size_does_not_fit_the_room', () => {
-        // Arrange: 部屋 4x2。3x1 のソファを回すと 1x3 になり高さ 2 に収まらない（異常系）
+    it('returns_to_the_original_position_after_two_steps_because_180_degrees_keeps_the_footprint', () => {
+        // Arrange: 180 度は占有矩形が元と一致するため位置も元どおりでなければならない
+        const original = { gridX: 5, gridY: 5, gridW: 2, gridH: 1, rotation: 0 } as const;
+
+        // Act
+        const result = rotateTimes(original, 2);
+
+        // Assert
+        expect(result).toEqual({ ...original, rotation: 180 });
+    });
+
+    it('keeps_the_position_unchanged_for_a_square_footprint', () => {
+        // Arrange: 正方形は縦横が同じなので中心ピボットでも動かない
+        const furniture = { gridX: 3, gridY: 7, gridW: 2, gridH: 2, rotation: 90 } as const;
+
+        // Act
+        const result = rotateClockwise(furniture);
+
+        // Assert
+        expect(result).toEqual({ rotation: 180, gridW: 2, gridH: 2, gridX: 3, gridY: 7 });
+    });
+
+    it('rotates_out_of_the_room_instead_of_refusing_so_the_furniture_is_never_stuck', () => {
+        // Arrange: 部屋 4x2 の 3x1 は構造的に回せない（異常系）。それでも回転は成立させる
         const furniture = { gridX: 0, gridY: 0, gridW: 3, gridH: 1, rotation: 0 } as const;
 
         // Act
-        const result = rotateClockwiseWithin(furniture, { gridW: 4, gridH: 2 });
+        const result = rotateClockwise(furniture);
 
-        // Assert: 縮めるくらいなら回さない（回転は不可逆な情報欠損を起こしてはならない）
-        expect(result).toBeNull();
+        // Assert: 拒否せず 1x3 を返す。部屋に収まるかの判定は fitsWithin の責務
+        expect(result).toEqual({ rotation: 90, gridW: 1, gridH: 3, gridX: 1, gridY: -1 });
+    });
+});
+
+describe('fitsWithin', () => {
+    it('returns_true_when_the_footprint_is_inside_the_room', () => {
+        // Arrange & Act & Assert
+        expect(fitsWithin({ gridX: 0, gridY: 0, gridW: 3, gridH: 1 }, { gridW: 4, gridH: 2 })).toBe(true);
     });
 
-    it('returns_null_when_the_rotated_width_alone_exceeds_the_room', () => {
-        // Arrange: 部屋 4x8。1x8 の家具を回すと 8x1 で幅 4 に収まらない（異常系）
-        const furniture = { gridX: 0, gridY: 0, gridW: 1, gridH: 8, rotation: 0 } as const;
-
-        // Act
-        const result = rotateClockwiseWithin(furniture, { gridW: 4, gridH: 8 });
-
-        // Assert
-        expect(result).toBeNull();
+    it('returns_true_when_the_footprint_exactly_fills_the_room', () => {
+        // Arrange & Act & Assert: 境界値。ぴったりは収まっている
+        expect(fitsWithin({ gridX: 0, gridY: 0, gridW: 4, gridH: 2 }, { gridW: 4, gridH: 2 })).toBe(true);
     });
 
-    it('rotates_when_the_swapped_size_exactly_fills_the_room_width', () => {
-        // Arrange: 部屋 3x3。2x3 の家具を回した 3x2 は幅がちょうど部屋幅と一致する（境界値）
-        const furniture = { gridX: 0, gridY: 0, gridW: 2, gridH: 3, rotation: 0 } as const;
+    it('returns_false_when_the_footprint_pokes_out_of_the_right_edge', () => {
+        // Arrange & Act & Assert
+        expect(fitsWithin({ gridX: 2, gridY: 0, gridW: 3, gridH: 1 }, { gridW: 4, gridH: 2 })).toBe(false);
+    });
 
-        // Act
-        const result = rotateClockwiseWithin(furniture, { gridW: 3, gridH: 3 });
+    it('returns_false_when_the_footprint_pokes_out_of_the_top_edge', () => {
+        // Arrange & Act & Assert: 中心ピボットは負の座標も生む
+        expect(fitsWithin({ gridX: 1, gridY: -1, gridW: 1, gridH: 3 }, { gridW: 4, gridH: 2 })).toBe(false);
+    });
 
-        // Assert: ちょうど収まる場合は拒否しない
-        expect(result).toEqual({ rotation: 90, gridW: 3, gridH: 2, gridX: 0, gridY: 0 });
+    it('returns_false_when_the_footprint_is_taller_than_the_room', () => {
+        // Arrange & Act & Assert: 部屋 4x2 に 1x3 は置き場所を問わず収まらない
+        expect(fitsWithin({ gridX: 0, gridY: 0, gridW: 1, gridH: 3 }, { gridW: 4, gridH: 2 })).toBe(false);
     });
 });
 
